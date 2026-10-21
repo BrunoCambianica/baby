@@ -131,7 +131,9 @@ function daybar(state, date) {
 
 function banners(state, ctx) {
   const out = [];
-  if (ctx.forecast.offline) {
+  if (!ctx.input.forecast.hourly.length) {
+    out.push('<div class="banner warn"><span>Les prévisions enregistrées ne couvrent pas ce jour : actualisez avec une connexion.</span><button class="btn-ghost" data-action="refresh">Actualiser</button></div>');
+  } else if (ctx.forecast.offline) {
     out.push(`<div class="banner warn"><span>Hors ligne : prévisions de ${esc(clock(ctx.forecast.at))}.</span><button class="btn-ghost" data-action="refresh">Réessayer</button></div>`);
   }
   if (state.installPrompt) {
