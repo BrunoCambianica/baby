@@ -1,0 +1,545 @@
+{
+  "version": "0.1.0",
+  "defaults": {
+    "date": "2026-11-05",
+    "now": "07:30",
+    "profile": {
+      "birth": "2026-05-10",
+      "transport": "poussette",
+      "outing_window": { "from": "09:00", "to": "18:00" },
+      "outing_duration_h": 1,
+      "outfit_offset": 0,
+      "room_temp_c": null,
+      "inventory": {}
+    },
+    "forecast": {
+      "daylight": { "sunrise": "07:55", "sunset": "17:15" },
+      "hourly": {
+        "from": "07:00",
+        "to": "21:00",
+        "base": { "feels_c": 6, "precip_prob": 0, "precip_mm": 0, "gust_kmh": 15, "uv": 1 }
+      }
+    },
+    "alerts": { "vigilance": [], "air": null },
+    "outlook": []
+  },
+  "vectors": [
+    {
+      "id": "creneau-hiver-sec",
+      "description": "Hiver sec : on sort à l'heure la plus douce",
+      "input": {
+        "forecast": { "hourly": { "base": { "feels_c": 4 }, "overrides": { "12:00-15:00": { "feels_c": 7 }, "13:00": { "feels_c": 8 } } } }
+      },
+      "expect": {
+        "outing.window": { "start": "13:00", "end": "14:00" },
+        "outfit.band": "froid",
+        "relays.include": ["relay.cold.layers"],
+        "relays.exclude": ["relay.sun.under_1y"],
+        "widget.lines.length": 3,
+        "widget.lines.0.contains": "13:00"
+      }
+    },
+    {
+      "id": "creneau-pluie-apres-midi",
+      "description": "Pluie l'après-midi : créneau du matin, rappel d'habillage pluie pour le retour",
+      "input": {
+        "forecast": { "hourly": { "base": { "feels_c": 10 }, "overrides": { "11:00": { "feels_c": 12 }, "13:00-19:00": { "precip_prob": 80, "precip_mm": 1.2 } } } }
+      },
+      "expect": {
+        "outing.window": { "start": "11:00", "end": "12:00" },
+        "outfit.band": "froid_modere",
+        "outfit.notes.include": ["practical.rain.later"],
+        "params.hour": "13:00"
+      }
+    },
+    {
+      "id": "creneau-pluie-toute-la-journee",
+      "description": "Pluie toute la journée : pas de créneau, tenue proposée avec habillage pluie",
+      "input": {
+        "forecast": { "hourly": { "base": { "precip_prob": 85, "precip_mm": 2 } } }
+      },
+      "expect": {
+        "outing.window": null,
+        "outing.reason": "pluie",
+        "outfit.notes.include": ["practical.rain.cover"],
+        "widget.lines.0.contains": "Pas de créneau sec"
+      }
+    },
+    {
+      "id": "creneau-fortes-chaleurs",
+      "description": "33 °C sans vigilance : sorties avant 11 h, repères chaleur et soleil (bébé de 2 mois)",
+      "input": {
+        "date": "2026-07-15",
+        "forecast": {
+          "daylight": { "sunrise": "06:05", "sunset": "21:50" },
+          "hourly": {
+            "from": "06:00", "to": "22:00",
+            "base": { "feels_c": 31, "uv": 7 },
+            "overrides": {
+              "06:00-09:00": { "feels_c": 21, "uv": 1 },
+              "09:00": { "feels_c": 24, "uv": 3 },
+              "10:00": { "feels_c": 27, "uv": 5 },
+              "11:00-17:00": { "feels_c": 33, "uv": 8 },
+              "20:00-22:00": { "feels_c": 26, "uv": 0 }
+            }
+          }
+        }
+      },
+      "expect": {
+        "outing.window": { "start": "09:00", "end": "10:00" },
+        "outfit.band": "chaud",
+        "relays.include": ["relay.heat.outing_hours", "relay.heat.vehicle", "relay.sun.under_1y"],
+        "relays.exclude": ["relay.sun.protect"]
+      }
+    },
+    {
+      "id": "creneau-vigilance-canicule-orange",
+      "description": "Vigilance canicule orange à 29 °C : la vigilance suffit à déclencher les repères chaleur",
+      "input": {
+        "date": "2026-07-20",
+        "forecast": {
+          "daylight": { "sunrise": "06:10", "sunset": "21:45" },
+          "hourly": {
+            "from": "06:00", "to": "22:00",
+            "base": { "feels_c": 29, "uv": 6 },
+            "overrides": {
+              "06:00-09:00": { "feels_c": 20, "uv": 1 },
+              "09:00": { "feels_c": 25, "uv": 2 },
+              "10:00": { "feels_c": 27, "uv": 4 }
+            }
+          }
+        },
+        "alerts": { "vigilance": [{ "phenomenon": "canicule", "color": "orange" }] }
+      },
+      "expect": {
+        "outing.window": { "start": "09:00", "end": "10:00" },
+        "relays.include": ["relay.vigilance.active", "relay.heat.outing_hours"],
+        "params.color": "orange"
+      }
+    },
+    {
+      "id": "creneau-vigilance-rouge-orages",
+      "description": "Vigilance rouge : aucun créneau, seulement le relais officiel",
+      "input": { "alerts": { "vigilance": [{ "phenomenon": "orages", "color": "rouge" }] } },
+      "expect": {
+        "outing.window": null,
+        "outing.reason": "vigilance",
+        "outfit": null,
+        "relays.include": ["relay.vigilance.active"],
+        "widget.lines.0.contains": "vigilance"
+      }
+    },
+    {
+      "id": "creneau-vigilance-orange-vent",
+      "description": "Vigilance orange vent violent : aucun créneau",
+      "input": { "alerts": { "vigilance": [{ "phenomenon": "vent-violent", "color": "orange" }] } },
+      "expect": { "outing.window": null, "outing.reason": "vigilance" }
+    },
+    {
+      "id": "creneau-ozone-apres-midi",
+      "description": "Épisode d'ozone : pas de sortie de 12 h à 18 h",
+      "input": {
+        "date": "2026-06-20",
+        "forecast": {
+          "daylight": { "sunrise": "05:50", "sunset": "21:55" },
+          "hourly": {
+            "from": "06:00", "to": "22:00",
+            "base": { "feels_c": 22, "uv": 2 },
+            "overrides": {
+              "10:00": { "feels_c": 23, "uv": 3 },
+              "11:00": { "feels_c": 25, "uv": 4 },
+              "12:00-16:00": { "feels_c": 27, "uv": 6 },
+              "16:00-18:00": { "feels_c": 26, "uv": 3 }
+            }
+          }
+        },
+        "alerts": { "air": { "episode": true, "pollutant": "ozone" } }
+      },
+      "expect": {
+        "outing.window": { "start": "09:00", "end": "10:00" },
+        "relays.include": ["relay.air.ozone", "relay.sun.under_1y"],
+        "relays.exclude": ["relay.air.particles"]
+      }
+    },
+    {
+      "id": "creneau-pollution-particules",
+      "description": "Épisode de particules : la sortie est maintenue, avec le relais du ministère",
+      "input": {
+        "forecast": { "hourly": { "base": { "feels_c": 4 }, "overrides": { "12:00-15:00": { "feels_c": 7 }, "13:00": { "feels_c": 8 } } } },
+        "alerts": { "air": { "episode": true, "pollutant": "pm10" } }
+      },
+      "expect": {
+        "outing.window": { "start": "13:00", "end": "14:00" },
+        "relays.include": ["relay.air.particles"],
+        "relays.exclude": ["relay.air.ozone"]
+      }
+    },
+    {
+      "id": "creneau-uv-bebe-8-mois",
+      "description": "UV 6 à midi, bébé de 8 mois : créneau hors 12 h-16 h, pas de soleil direct",
+      "input": {
+        "date": "2026-05-20",
+        "profile": { "birth": "2025-09-15" },
+        "forecast": {
+          "daylight": { "sunrise": "06:00", "sunset": "21:30" },
+          "hourly": {
+            "from": "06:00", "to": "22:00",
+            "base": { "feels_c": 20, "uv": 2 },
+            "overrides": {
+              "10:00": { "uv": 3 },
+              "11:00": { "feels_c": 21, "uv": 4 },
+              "12:00-16:00": { "feels_c": 22, "uv": 6 },
+              "16:00": { "feels_c": 22, "uv": 4 },
+              "17:00": { "feels_c": 21, "uv": 2 }
+            }
+          }
+        }
+      },
+      "expect": {
+        "outing.window": { "start": "09:00", "end": "10:00" },
+        "outfit.band": "doux",
+        "relays.include": ["relay.sun.under_1y", "relay.sun.hours"],
+        "relays.exclude": ["relay.sun.protect"]
+      }
+    },
+    {
+      "id": "creneau-uv-enfant-20-mois",
+      "description": "Même journée, enfant de 20 mois : repères de protection solaire des enfants",
+      "input": {
+        "date": "2026-05-20",
+        "profile": { "birth": "2024-09-15" },
+        "forecast": {
+          "daylight": { "sunrise": "06:00", "sunset": "21:30" },
+          "hourly": {
+            "from": "06:00", "to": "22:00",
+            "base": { "feels_c": 20, "uv": 2 },
+            "overrides": {
+              "10:00": { "uv": 3 },
+              "11:00": { "feels_c": 21, "uv": 4 },
+              "12:00-16:00": { "feels_c": 22, "uv": 6 },
+              "16:00": { "feels_c": 22, "uv": 4 },
+              "17:00": { "feels_c": 21, "uv": 2 }
+            }
+          }
+        }
+      },
+      "expect": {
+        "outing.window": { "start": "09:00", "end": "10:00" },
+        "relays.include": ["relay.sun.hours", "relay.sun.protect"],
+        "relays.exclude": ["relay.sun.under_1y"]
+      }
+    },
+    {
+      "id": "creneau-grand-froid",
+      "description": "Ressenti -7 °C toute la journée : pas de créneau, relais grand froid",
+      "input": {
+        "date": "2026-12-15",
+        "forecast": { "daylight": { "sunrise": "08:35", "sunset": "16:55" }, "hourly": { "base": { "feels_c": -7 } } }
+      },
+      "expect": {
+        "outing.window": null,
+        "outing.reason": "froid_extreme",
+        "outfit.band": "tres_froid",
+        "relays.include": ["relay.cold.avoid_outings", "relay.cold.layers"]
+      }
+    },
+    {
+      "id": "creneau-rafales-apres-midi",
+      "description": "Rafales à 65 km/h de 13 h à 16 h : créneau juste avant",
+      "input": {
+        "forecast": { "hourly": { "base": { "feels_c": 9 }, "overrides": { "12:00": { "feels_c": 11 }, "13:00-16:00": { "feels_c": 12, "gust_kmh": 65 } } } }
+      },
+      "expect": {
+        "outing.window": { "start": "12:00", "end": "13:00" },
+        "outfit.notes.exclude": ["practical.wind"]
+      }
+    },
+    {
+      "id": "creneau-hors-jour",
+      "description": "Plage 17 h 30-20 h en décembre : il fait nuit",
+      "input": {
+        "date": "2026-12-15",
+        "profile": { "outing_window": { "from": "17:30", "to": "20:00" } },
+        "forecast": { "daylight": { "sunrise": "08:35", "sunset": "16:55" } }
+      },
+      "expect": { "outing.window": null, "outing.reason": "hors_jour" }
+    },
+    {
+      "id": "tenue-poussette-12",
+      "description": "12 °C ressentis en poussette",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 12 } } } },
+      "expect": {
+        "outfit.band": "froid_modere",
+        "outfit.items.include": ["bonnet_fin", "combi_legere"]
+      }
+    },
+    {
+      "id": "tenue-porte-bebe-12",
+      "description": "12 °C en porte-bébé : une tranche plus légère",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 12 } } } },
+      "expect": {
+        "outfit.band": "frais",
+        "outfit.base_band": "froid_modere",
+        "outfit.notes.include": ["practical.carrier.body_heat"]
+      }
+    },
+    {
+      "id": "tenue-porte-bebe-gel",
+      "description": "-2 °C en porte-bébé : relais Santé.fr poussette plutôt que porte-bébé",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": -2 } } } },
+      "expect": {
+        "outfit.band": "froid",
+        "outfit.items.exclude": ["chanceliere"],
+        "relays.include": ["relay.cold.stroller_rather_than_carrier", "relay.cold.layers"],
+        "widget.lines.2.contains": "poussette plutôt que porte-bébé"
+      }
+    },
+    {
+      "id": "tenue-porte-bebe-2-degres",
+      "description": "2 °C en porte-bébé : pas encore le relais grand froid",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 2 } } } },
+      "expect": {
+        "outfit.band": "froid",
+        "relays.exclude": ["relay.cold.stroller_rather_than_carrier"]
+      }
+    },
+    {
+      "id": "tenue-voiture-5",
+      "description": "5 °C en voiture : manteau enlevé dans le siège auto",
+      "input": { "profile": { "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
+      "expect": { "outfit.band": "froid", "relays.include": ["relay.car.coat"] }
+    },
+    {
+      "id": "tenue-decalage-personnel",
+      "description": "Retours « trop froid » : une tranche plus chaude",
+      "input": { "profile": { "outfit_offset": 1 }, "forecast": { "hourly": { "base": { "feels_c": 19 } } } },
+      "expect": { "outfit.band": "frais", "outfit.base_band": "doux" }
+    },
+    {
+      "id": "tenue-28-sans-canicule",
+      "description": "28 °C sans vigilance : tenue légère, pas de repères canicule",
+      "input": {
+        "date": "2026-07-10",
+        "forecast": { "daylight": { "sunrise": "06:00", "sunset": "21:50" }, "hourly": { "from": "06:00", "to": "22:00", "base": { "feels_c": 28 } } }
+      },
+      "expect": {
+        "outing.window": { "start": "09:00" },
+        "outfit.band": "tres_chaud",
+        "relays.exclude": ["relay.heat.outing_hours"]
+      }
+    },
+    {
+      "id": "nuit-19",
+      "description": "Chambre à 19 °C : dans la plage officielle",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 19 } },
+      "expect": {
+        "night.room_status": "in_range",
+        "night.tog": "2,5",
+        "night.relays.include": ["relay.sleep.basics", "relay.sleep.room_range", "relay.sleep.season_thickness"],
+        "widget.lines.length": 3,
+        "widget.lines.0.contains": "19",
+        "widget.lines.1.contains": "2,5 TOG"
+      }
+    },
+    {
+      "id": "nuit-22-5",
+      "description": "Chambre à 22,5 °C : au-dessus de la plage",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 22.5 } },
+      "expect": {
+        "night.room_status": "above",
+        "night.tog": "1",
+        "night.relays.exclude": ["relay.heat.shutters"],
+        "widget.lines.0.contains": "22,5"
+      }
+    },
+    {
+      "id": "nuit-17",
+      "description": "Chambre à 17 °C : en dessous de la plage",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 17 } },
+      "expect": { "night.room_status": "below", "night.tog": "2,5" }
+    },
+    {
+      "id": "nuit-27-5",
+      "description": "Chambre à 27,5 °C : relais volets et aération",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 27.5 } },
+      "expect": {
+        "night.room_status": "above",
+        "night.tog": "0,2",
+        "night.relays.include": ["relay.heat.shutters"]
+      }
+    },
+    {
+      "id": "nuit-sans-releve",
+      "description": "Pas de relevé : repères officiels seulement, aucun TOG",
+      "input": { "now": "20:30" },
+      "expect": {
+        "night.room_status": "unknown",
+        "night.tog": null,
+        "night.relays.include": ["relay.sleep.basics", "relay.sleep.room_range"],
+        "night.relays.exclude": ["relay.sleep.season_thickness"],
+        "widget.lines.length": 2,
+        "widget.lines.0.contains": "18 et 20"
+      }
+    },
+    {
+      "id": "achats-gigoteuse-taille-suivante",
+      "description": "Bébé de 5,8 mois : la gigoteuse chaude 0-6 mois ne suffira plus la semaine prochaine",
+      "input": {
+        "date": "2026-10-26",
+        "now": "20:30",
+        "profile": {
+          "birth": "2026-05-01",
+          "room_temp_c": 19,
+          "inventory": { "gigoteuse_hiver": ["0-6m"], "accessoires_hiver": ["0-6m", "6-12m"] }
+        },
+        "outlook": [
+          { "week_start": "2026-10-26", "tmax_mean": 12, "tmean": 9, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-02", "tmax_mean": 12, "tmean": 9, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-09", "tmax_mean": 12, "tmean": 9, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-16", "tmax_mean": 12, "tmean": 9, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-23", "tmax_mean": 12, "tmean": 9, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-30", "tmax_mean": 12, "tmean": 9, "rainy_days": 1, "uv_max_mean": 1 }
+        ]
+      },
+      "expect": {
+        "purchases.*.key": ["gigoteuse_hiver:6-18m"],
+        "purchases.0.needed_from": "2026-11-02",
+        "purchases.0.order_by": "2026-10-26",
+        "purchases.0.reasons": ["nuits_fraiches", "taille"],
+        "purchases.0.relays.include": ["relay.sleep.size_adapted"],
+        "widget.lines.2.contains": "gigoteuse chaude"
+      }
+    },
+    {
+      "id": "achats-combi-anticipation",
+      "description": "Froid dès la semaine prochaine, bébé de 3 mois : combinaison pilote en 6 mois",
+      "input": {
+        "date": "2026-10-26",
+        "profile": {
+          "birth": "2026-07-20",
+          "inventory": { "accessoires_hiver": ["0-6m"], "chanceliere": ["unique"], "gigoteuse_hiver": ["0-6m"] }
+        },
+        "outlook": [
+          { "week_start": "2026-10-26", "tmax_mean": 13, "tmean": 10, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-02", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-09", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-16", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-23", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-30", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 }
+        ]
+      },
+      "expect": {
+        "purchases.*.key": ["combi_pilote:6m"],
+        "purchases.0.needed_from": "2026-11-02",
+        "purchases.0.reasons": ["froid", "taille"]
+      }
+    },
+    {
+      "id": "achats-printemps-14-mois",
+      "description": "UV qui remontent, enfant de 13 mois : chapeau, lunettes, crème enfant",
+      "input": {
+        "date": "2026-04-06",
+        "profile": { "birth": "2025-03-01", "inventory": { "gigoteuse_hiver": ["6-18m"] } },
+        "outlook": [
+          { "week_start": "2026-04-06", "tmax_mean": 16, "tmean": 11, "rainy_days": 1, "uv_max_mean": 2 },
+          { "week_start": "2026-04-13", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-04-20", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-04-27", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-05-04", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-05-11", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 }
+        ]
+      },
+      "expect": {
+        "purchases.*.key": ["chapeau_soleil:12-24m", "lunettes_soleil:12-24m", "creme_solaire_enfant:unique"],
+        "purchases.0.order_by": "2026-04-06",
+        "purchases.0.relays.include": ["relay.sun.protect"]
+      }
+    },
+    {
+      "id": "achats-printemps-7-mois",
+      "description": "Même printemps, bébé de 7 mois : chapeau seulement, rappel pas de soleil direct",
+      "input": {
+        "date": "2026-04-06",
+        "profile": { "birth": "2025-09-01", "inventory": { "gigoteuse_hiver": ["6-18m"] } },
+        "outlook": [
+          { "week_start": "2026-04-06", "tmax_mean": 16, "tmean": 11, "rainy_days": 1, "uv_max_mean": 2 },
+          { "week_start": "2026-04-13", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-04-20", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-04-27", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-05-04", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-05-11", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 }
+        ]
+      },
+      "expect": {
+        "purchases.*.key": ["chapeau_soleil:6-12m"],
+        "purchases.0.relays.include": ["relay.sun.under_1y"]
+      }
+    },
+    {
+      "id": "achats-rien-a-prevoir",
+      "description": "Garde-robe complète : aucune suggestion",
+      "input": {
+        "date": "2026-10-26",
+        "profile": {
+          "birth": "2026-07-20",
+          "inventory": {
+            "accessoires_hiver": ["0-6m"], "chanceliere": ["unique"], "gigoteuse_hiver": ["0-6m"], "combi_pilote": ["3m", "6m"]
+          }
+        },
+        "outlook": [
+          { "week_start": "2026-10-26", "tmax_mean": 13, "tmean": 10, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-02", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-09", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-16", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-23", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-30", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 }
+        ]
+      },
+      "expect": { "purchases.*.key": [] }
+    },
+    {
+      "id": "achats-pluie-poussette",
+      "description": "Semaines pluvieuses en poussette : habillage pluie",
+      "input": {
+        "date": "2026-10-26",
+        "profile": { "birth": "2026-07-20", "inventory": { "gigoteuse_hiver": ["0-6m"] } },
+        "outlook": [
+          { "week_start": "2026-10-26", "tmax_mean": 14, "tmean": 11, "rainy_days": 4, "uv_max_mean": 1 },
+          { "week_start": "2026-11-02", "tmax_mean": 14, "tmean": 11, "rainy_days": 4, "uv_max_mean": 1 }
+        ]
+      },
+      "expect": { "purchases.*.key": ["habillage_pluie:unique"], "purchases.0.order_by": "2026-10-26" }
+    },
+    {
+      "id": "achats-pluie-porte-bebe",
+      "description": "Mêmes semaines en porte-bébé : pas d'habillage poussette",
+      "input": {
+        "date": "2026-10-26",
+        "profile": { "birth": "2026-07-20", "transport": "porte_bebe", "inventory": { "gigoteuse_hiver": ["0-6m"] } },
+        "outlook": [
+          { "week_start": "2026-10-26", "tmax_mean": 14, "tmean": 11, "rainy_days": 4, "uv_max_mean": 1 },
+          { "week_start": "2026-11-02", "tmax_mean": 14, "tmean": 11, "rainy_days": 4, "uv_max_mean": 1 }
+        ]
+      },
+      "expect": { "purchases.*.key": [] }
+    },
+    {
+      "id": "produit-tour-de-lit",
+      "description": "Un tour de lit n'est jamais proposé",
+      "input": { "check_product": "tour_de_lit" },
+      "expect": { "product.allowed": false, "product.relay": "relay.sleep.basics" }
+    },
+    {
+      "id": "produit-creme-solaire-6-mois",
+      "description": "Pas de crème solaire proposée avant 1 an : relais pas de soleil direct",
+      "input": { "check_product": "creme_solaire_enfant" },
+      "expect": { "product.allowed": false, "product.relay": "relay.sun.under_1y" }
+    },
+    {
+      "id": "produit-creme-solaire-2-ans",
+      "description": "Crème solaire adaptée aux enfants proposée à 2 ans",
+      "input": { "check_product": "creme_solaire_enfant", "profile": { "birth": "2024-10-01" } },
+      "expect": { "product.allowed": true }
+    }
+  ]
+}

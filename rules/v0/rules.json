@@ -1,0 +1,242 @@
+{
+  "id": "baby-rules",
+  "version": "0.1.0",
+  "status": "brouillon, à relire avant toute diffusion",
+  "updated": "2026-10-21",
+  "locale": "fr-FR",
+  "policy": {
+    "medical_advice": false,
+    "official_message_levels": ["A", "A-etranger"],
+    "kinds": {
+      "officiel": "Repère officiel, cité avec sa source",
+      "pratique": "Suggestion pratique, sans portée sanitaire",
+      "fabricant": "Indication des fabricants ou d'une norme produit",
+      "meteo": "Donnée météo"
+    },
+    "out_of_scope": [
+      "fièvre, maladie, symptômes, médicaments",
+      "diagnostic, triage ou réassurance sur l'état de santé de l'enfant",
+      "promesse de sécurité ou de prévention de la mort inattendue du nourrisson",
+      "produits présentés comme protégeant la santé"
+    ]
+  },
+  "outing": {
+    "default_window": { "from": "09:00", "to": "18:00" },
+    "default_duration_h": 1,
+    "vigilance": {
+      "block_all_from_color": "rouge",
+      "block_all_if_orange_for": [
+        "vent-violent", "orages", "pluie-inondation", "crues",
+        "neige-verglas", "avalanches", "vagues-submersion", "grand-froid"
+      ],
+      "source": "meteofrance-vigilance"
+    },
+    "heat": {
+      "trigger_vigilance_canicule_from": "jaune",
+      "trigger_tmax_c_at_least": 30,
+      "blocked_hours": { "from": "11:00", "to": "21:00" },
+      "source": "spf-fortes-chaleurs-bebes"
+    },
+    "ozone_episode_blocked_hours": { "from": "12:00", "to": "18:00", "source": "santefr-pollution" },
+    "slot_exclusions": {
+      "feels_c_at_most": -5,
+      "precip_prob_at_least": 60,
+      "precip_mm_at_least": 0.5,
+      "gust_kmh_at_least": 60
+    },
+    "scoring": {
+      "base": 100,
+      "rain_prob_free": 20,
+      "rain_prob_weight": 1,
+      "comfort_low_c": 15,
+      "comfort_low_weight": 2,
+      "comfort_high_c": 24,
+      "comfort_high_weight": 3,
+      "gust_free_kmh": 30,
+      "gust_weight": 0.5,
+      "uv_free": 2,
+      "uv_weight": 10,
+      "uv_weight_under_12m": 20
+    },
+    "none_reason_priority": [
+      "canicule_heures_chaudes", "ozone_apres_midi", "froid_extreme", "vent", "pluie", "duree"
+    ]
+  },
+  "outfit": {
+    "bands": [
+      { "id": "tres_chaud", "min_feels_c": 27, "items": ["body_leger", "tenue_ample_claire", "chapeau"] },
+      { "id": "chaud", "min_feels_c": 22, "items": ["body_mc", "tenue_legere", "chapeau_si_soleil"] },
+      { "id": "doux", "min_feels_c": 18, "items": ["body_mc", "pyjama_leger", "gilet_fin"] },
+      { "id": "frais", "min_feels_c": 14, "items": ["body_ml", "pyjama", "gilet"] },
+      { "id": "froid_modere", "min_feels_c": 9, "items": ["body_ml", "pyjama", "gilet_chaud", "combi_legere", "bonnet_fin"] },
+      { "id": "froid", "min_feels_c": 3, "items": ["body_ml", "pyjama_chaud", "pull", "combi_pilote", "bonnet", "chaussons"] },
+      { "id": "tres_froid", "min_feels_c": null, "items": ["body_ml", "pyjama_chaud", "pull", "combi_pilote_doublee", "bonnet", "moufles", "chaussons", "chanceliere"] }
+    ],
+    "transport": {
+      "poussette": { "band_shift": 0, "remove_items": [], "notes": [] },
+      "porte_bebe": { "band_shift": -1, "remove_items": ["chanceliere"], "notes": ["practical.carrier.body_heat"] },
+      "voiture": { "band_shift": 0, "remove_items": ["chanceliere"], "notes": [] }
+    },
+    "overlays": {
+      "rain_cover_prob_at_least": 30,
+      "rain_later_prob_at_least": 50,
+      "wind_gust_kmh_at_least": 40
+    }
+  },
+  "relay_triggers": {
+    "cold_layers_bands": ["froid", "tres_froid"],
+    "carrier_cold_feels_c_at_most": 0,
+    "car_coat_bands": ["froid_modere", "froid", "tres_froid"],
+    "uv_at_least": 3,
+    "uv_source": "oms-indice-uv",
+    "under_1y_months": 12
+  },
+  "night": {
+    "room_range_c": { "min": 18, "max": 20, "source": "carnet-1000-jours" },
+    "always": ["relay.sleep.basics", "relay.sleep.room_range"],
+    "when_room_known": ["relay.sleep.season_thickness"],
+    "heat_room_c_at_least": 26,
+    "tog_hint": {
+      "source": "fabricants-tog",
+      "round_room_temp": true,
+      "bins": [
+        { "max_c": 15, "tog": "3,5" },
+        { "max_c": 20, "tog": "2,5" },
+        { "max_c": 24, "tog": "1" },
+        { "max_c": 27, "tog": "0,5" },
+        { "max_c": null, "tog": "0,2" }
+      ]
+    }
+  },
+  "purchases": {
+    "horizon_weeks": 6,
+    "lead_days": 14,
+    "size_lookahead_days": 28,
+    "max_suggestions": 3,
+    "size_systems": {
+      "vetement": [
+        { "code": "1m", "label": "1 mois", "max_age_m": 2 },
+        { "code": "3m", "label": "3 mois", "max_age_m": 4 },
+        { "code": "6m", "label": "6 mois", "max_age_m": 7 },
+        { "code": "9m", "label": "9 mois", "max_age_m": 10 },
+        { "code": "12m", "label": "12 mois", "max_age_m": 13 },
+        { "code": "18m", "label": "18 mois", "max_age_m": 19 },
+        { "code": "24m", "label": "24 mois", "max_age_m": 25 },
+        { "code": "36m", "label": "36 mois", "max_age_m": 37 }
+      ],
+      "gigoteuse": [
+        { "code": "0-6m", "label": "0-6 mois", "max_age_m": 6 },
+        { "code": "6-18m", "label": "6-18 mois", "max_age_m": 18 },
+        { "code": "18-36m", "label": "18-36 mois", "max_age_m": 36 }
+      ],
+      "accessoire": [
+        { "code": "0-6m", "label": "0-6 mois", "max_age_m": 6 },
+        { "code": "6-12m", "label": "6-12 mois", "max_age_m": 12 },
+        { "code": "12-24m", "label": "12-24 mois", "max_age_m": 24 },
+        { "code": "24-36m", "label": "24-36 mois", "max_age_m": 36 }
+      ],
+      "unique": [
+        { "code": "unique", "label": "taille unique", "max_age_m": 999 }
+      ]
+    },
+    "size_note": "Correspondance âge/taille indicative (convention des étiquettes) ; la taille réellement portée, saisie par le parent, prime.",
+    "categories": [
+      {
+        "id": "gigoteuse_hiver", "size_system": "gigoteuse", "priority": 1,
+        "need_if": { "week_tmean_below": 15 },
+        "reason": "nuits_fraiches",
+        "relays": ["relay.sleep.size_adapted", "fabricant.sleepbag.norm"]
+      },
+      {
+        "id": "gigoteuse_ete", "size_system": "gigoteuse", "priority": 2,
+        "need_if": { "week_tmax_at_least": 27 },
+        "reason": "nuits_chaudes",
+        "relays": ["relay.sleep.size_adapted", "fabricant.sleepbag.norm"]
+      },
+      {
+        "id": "combi_pilote", "size_system": "vetement", "priority": 1,
+        "need_if": { "week_band_in": ["froid", "tres_froid"] },
+        "reason": "froid",
+        "relays": ["relay.cold.layers"]
+      },
+      {
+        "id": "accessoires_hiver", "size_system": "accessoire", "priority": 2,
+        "need_if": { "week_band_in": ["froid_modere", "froid", "tres_froid"] },
+        "reason": "froid",
+        "relays": ["relay.cold.layers"]
+      },
+      {
+        "id": "chanceliere", "size_system": "unique", "priority": 3,
+        "need_if": { "week_band_in": ["froid", "tres_froid"], "transport_in": ["poussette"] },
+        "reason": "froid",
+        "relays": []
+      },
+      {
+        "id": "habillage_pluie", "size_system": "unique", "priority": 3,
+        "need_if": { "week_rainy_days_at_least": 3, "transport_in": ["poussette"] },
+        "reason": "pluie",
+        "relays": []
+      },
+      {
+        "id": "chapeau_soleil", "size_system": "accessoire", "priority": 1,
+        "need_if": { "week_uv_max_at_least": 3 },
+        "reason": "soleil",
+        "relays": [],
+        "relays_under_12m": ["relay.sun.under_1y"],
+        "relays_from_12m": ["relay.sun.protect"]
+      },
+      {
+        "id": "vetements_longs_legers", "size_system": "vetement", "priority": 2,
+        "need_if": { "week_uv_max_at_least": 3, "week_tmax_at_least": 22 },
+        "reason": "soleil",
+        "relays": [],
+        "relays_under_12m": ["relay.sun.under_1y"],
+        "relays_from_12m": ["relay.sun.protect"]
+      },
+      {
+        "id": "lunettes_soleil", "size_system": "accessoire", "priority": 3,
+        "min_age_m": 12, "under_min_age_relay": "relay.sun.under_1y",
+        "need_if": { "week_uv_max_at_least": 3 },
+        "reason": "soleil",
+        "relays": ["relay.sun.protect"]
+      },
+      {
+        "id": "creme_solaire_enfant", "size_system": "unique", "priority": 4,
+        "min_age_m": 12, "under_min_age_relay": "relay.sun.under_1y",
+        "need_if": { "week_uv_max_at_least": 3 },
+        "reason": "soleil",
+        "relays": ["relay.sun.protect"]
+      }
+    ],
+    "never_suggest": [
+      { "id": "tour_de_lit", "relay": "relay.sleep.basics" },
+      { "id": "couverture_couette_oreiller", "relay": "relay.sleep.basics" },
+      { "id": "cale_bebe", "relay": "relay.sleep.no_positioners" },
+      { "id": "reducteur_de_lit", "relay": "relay.sleep.no_positioners" }
+    ]
+  },
+  "relay_priority": [
+    "relay.vigilance.active",
+    "relay.cold.avoid_outings",
+    "relay.heat.outing_hours",
+    "relay.heat.protect",
+    "relay.heat.vehicle",
+    "relay.heat.stroller_sun",
+    "relay.sun.under_1y",
+    "relay.sun.hours",
+    "relay.sun.protect",
+    "relay.air.ozone",
+    "relay.air.particles",
+    "relay.cold.stroller_rather_than_carrier",
+    "relay.car.coat",
+    "relay.cold.layers",
+    "relay.heat.shutters",
+    "relay.heat.info_line",
+    "relay.sleep.basics",
+    "relay.sleep.room_range",
+    "relay.sleep.season_thickness",
+    "relay.sleep.size_adapted",
+    "relay.sleep.no_positioners",
+    "relay.emergency"
+  ]
+}

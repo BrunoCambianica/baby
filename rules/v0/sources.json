@@ -1,0 +1,160 @@
+{
+  "version": "0.1.0",
+  "consulted": "2026-10-21",
+  "levels": {
+    "A": "Autorité publique française (santé, solidarités, Santé publique France, HAS, ARS, Santé.fr, collectivité/PMI, Météo-France, service public)",
+    "A-etranger": "Autorité publique étrangère ou internationale, utilisée seulement faute de source française, et nommée comme telle",
+    "B": "Société savante ou association de professionnels de santé, en complément d'une source A",
+    "C": "Fabricant, notice ou norme produit : information produit, jamais un repère de santé"
+  },
+  "verification": {
+    "lu": "Page lue directement le jour de consultation",
+    "lu_via_recherche": "Contenu lu au travers d'un moteur de recherche ; relire la source avant publication",
+    "a_verifier": "Citation ou date non confirmée sur la source d'origine ; bloquant avant publication"
+  },
+  "sources": [
+    {
+      "id": "carnet-1000-jours",
+      "publisher": "Ministère des Solidarités et de la Santé",
+      "title": "1000 premiers jours : carnet de bienvenue dans la parentalité",
+      "url": "https://solidarites.gouv.fr/sites/solidarite/files/2023-01/1000-premiers-jours-carnet-de-bienvenue-dans-la-parentalite_0.pdf",
+      "published": "2023-01",
+      "level": "A",
+      "verification": "lu_via_recherche",
+      "notes": "Serveur indisponible (503) le 21/10/2026 : relire le PDF. Couchage sur le dos, à plat, dans son lit, turbulette ou gigoteuse adaptée à sa taille, matelas ferme, ni couverture, ni couette, ni oreiller, ni tour de lit, chambre entre 18 et 20 °C."
+    },
+    {
+      "id": "santefr-grand-froid",
+      "publisher": "Santé.fr (RecoSanté, recommandations validées par le HCSP et Santé publique France)",
+      "title": "Quels réflexes à prendre pour protéger son enfant du grand froid ?",
+      "url": "https://sante.fr/quels-reflexes-prendre-pour-proteger-son-enfant-du-grand-froid",
+      "published": "2025-07-23",
+      "level": "A",
+      "verification": "lu"
+    },
+    {
+      "id": "santefr-uv-enfants",
+      "publisher": "Santé.fr (RecoSanté)",
+      "title": "Les rayons UV : quels effets sur la santé et celle de vos enfants ?",
+      "url": "https://sante.fr/les-rayons-uv-quels-effets-sur-la-sante-et-celle-de-vos-enfants",
+      "published": "2025-07-09",
+      "level": "A",
+      "verification": "lu"
+    },
+    {
+      "id": "santefr-pollution",
+      "publisher": "Ministère chargé de la santé, via Santé.fr",
+      "title": "Recommandations en cas d'épisode de pollution",
+      "url": "https://sante.fr/recommandations-en-cas-depisode-de-pollution",
+      "published": "2024-08-09",
+      "level": "A",
+      "verification": "lu"
+    },
+    {
+      "id": "spf-canicule-precautions",
+      "publisher": "Santé publique France",
+      "title": "Canicule : les précautions à prendre",
+      "url": "https://www.santepubliquefrance.fr/les-actualites/canicule-les-precautions-a-prendre",
+      "published": "2019-07-24",
+      "level": "A",
+      "verification": "lu",
+      "notes": "Page de 2019 : vérifier chaque été qu'une version plus récente n'existe pas."
+    },
+    {
+      "id": "spf-fortes-chaleurs-bebes",
+      "publisher": "Santé publique France",
+      "title": "Document de prévention fortes chaleurs (PDF, titre non confirmé)",
+      "url": "https://www.santepubliquefrance.fr/content/download/358276/3089502",
+      "published": null,
+      "level": "A",
+      "verification": "a_verifier",
+      "notes": "Citations lues via moteur de recherche ; le lien redirige vers l'accueil du site. Retrouver le document, son titre et sa date."
+    },
+    {
+      "id": "meteofrance-vigilance",
+      "publisher": "Météo-France",
+      "title": "Guide de la vigilance météo",
+      "url": "https://vigilance.meteofrance.fr/fr/guide-vigilance-meteo",
+      "published": null,
+      "level": "A",
+      "verification": "lu_via_recherche",
+      "notes": "Les conseils de comportement des niveaux orange et rouge sont élaborés par les pouvoirs publics et figurent dans les bulletins."
+    },
+    {
+      "id": "cd06-pmi-min",
+      "publisher": "Département des Alpes-Maritimes (protection maternelle et infantile)",
+      "title": "Prévention de la mort inattendue du nourrisson",
+      "url": "https://departement06.fr/sites/default/files/media/downloads/prevention_mort_inattendue_du_nourrisson.pdf",
+      "published": null,
+      "level": "A",
+      "verification": "lu_via_recherche"
+    },
+    {
+      "id": "has-contention-presse",
+      "publisher": "Haute Autorité de santé, citée par Pourquoi Docteur",
+      "title": "Morts subites du nourrisson : oreillers, peluches, tours de lit en accusation",
+      "url": "https://www.pourquoidocteur.fr/Articles/Question-d-actu/36176-Morts-subites-nourrisson-oreillers-peluches-tours-lit-accusation",
+      "published": null,
+      "level": "A",
+      "verification": "a_verifier",
+      "notes": "Position HAS rapportée par la presse : retrouver le texte HAS d'origine avant publication."
+    },
+    {
+      "id": "oms-indice-uv",
+      "publisher": "Organisation mondiale de la santé",
+      "title": "Global Solar UV Index: A Practical Guide (2002)",
+      "url": "https://www.who.int/publications/i/item/9241590076",
+      "published": "2002",
+      "level": "A-etranger",
+      "verification": "a_verifier",
+      "notes": "Sert uniquement à justifier le seuil technique UV ≥ 3 (catégorie « modéré », protection nécessaire). Vérifier dans le PDF."
+    },
+    {
+      "id": "awsr-siege-auto",
+      "publisher": "Agence wallonne pour la sécurité routière (Belgique)",
+      "title": "Communiqué siège auto, janvier 2026",
+      "url": "https://www.awsr.be/wp-content/uploads/2026/01/cp-siege-auto-def.pdf",
+      "published": "2026-01",
+      "level": "A-etranger",
+      "verification": "lu_via_recherche",
+      "notes": "Aucune page française officielle trouvée sur le manteau dans le siège auto : chercher une source Sécurité routière avant publication."
+    },
+    {
+      "id": "notices-sieges-auto",
+      "publisher": "Fabricants de sièges auto",
+      "title": "Notices d'utilisation des sièges auto",
+      "url": null,
+      "published": null,
+      "level": "C",
+      "verification": "lu_via_recherche"
+    },
+    {
+      "id": "fabricants-tog",
+      "publisher": "Fabricants de gigoteuses",
+      "title": "Tableaux TOG indicatifs (plages variables selon les marques)",
+      "url": null,
+      "published": null,
+      "level": "C",
+      "verification": "a_verifier",
+      "notes": "L'étiquette du produit fait foi. Comparer 3 marques vendues en France avant publication."
+    },
+    {
+      "id": "norme-nf-en-16781",
+      "publisher": "AFNOR",
+      "title": "NF EN 16781 : articles textiles de puériculture, gigoteuses (exigences de sécurité)",
+      "url": "https://www.boutique.afnor.org/fr-fr/norme/nf-en-16781/articles-textiles-de-puericulture-exigences-de-securite-et-methodes-dessai-/fa206855/605260",
+      "published": "2018",
+      "level": "C",
+      "verification": "lu_via_recherche"
+    },
+    {
+      "id": "service-public-urgences",
+      "publisher": "Service-Public.fr",
+      "title": "Numéros d'urgence",
+      "url": "https://www.service-public.gouv.fr/particuliers/actualites/A17758?lang=fr",
+      "published": null,
+      "level": "A",
+      "verification": "lu_via_recherche"
+    }
+  ]
+}
