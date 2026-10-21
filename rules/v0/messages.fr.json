@@ -149,7 +149,7 @@
     "night.room": { "kind": "meteo", "text": "Nuit : chambre à {room} °C (repère officiel : 18-20 °C).", "short": "Nuit : chambre {room} °C · repère 18-20 °C" },
     "night.room_unknown": { "kind": "meteo", "text": "Nuit : repère officiel, chambre entre 18 et 20 °C.", "short": "Nuit : chambre entre 18 et 20 °C" },
     "purchase.suggestion": {
-      "kind": "pratique", "text": "À prévoir avant le {order_by} : {label} ({size}), utile à partir du {needed_from}.", "short": "À prévoir : {label}, {size}"
+      "kind": "pratique", "text": "À prévoir avant le {order_by} : {label}{size}, utile à partir du {needed_from}.", "short": "À prévoir : {label}{size}"
     }
   },
   "labels": {

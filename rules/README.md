@@ -10,7 +10,7 @@ Ce dossier contient les règles qui produisent la phrase du widget : le créneau
 4. Les indications des fabricants (TOG, norme NF EN 16781) sont présentées comme telles. L'étiquette du produit fait foi.
 5. Aucun produit contraire aux repères officiels n'est proposé : tour de lit, couverture, couette, oreiller, cale-bébé, réducteur de lit, crème solaire avant 1 an.
 6. Un message qui cite une source marquée `a_verifier` ne peut pas être publié.
-7. `node tools/run-vectors.mjs` contrôle les points 2 et 4 avant de lancer les tests : un message officiel sans source publique fait échouer la commande.
+7. `npm test` contrôle les points 2 et 4 avant de lancer les tests : un message officiel sans source publique fait échouer la commande.
 
 ## Fichiers
 
@@ -20,13 +20,13 @@ Ce dossier contient les règles qui produisent la phrase du widget : le créneau
 | `v0/messages.fr.json` | Textes, avec leur type (`officiel`, `pratique`, `fabricant`, `meteo`) et leurs sources |
 | `v0/sources.json` | Registre des sources : organisme, lien, niveau, statut de vérification |
 | `v0/test-vectors.json` | Cas de test : une journée en entrée, la sortie attendue |
-| `../tools/engine.mjs` | Moteur de référence (Node 18+, sans dépendance), à porter en Swift et en Kotlin |
+| `../engine/engine.js` | Moteur partagé par l'app web, le widget iPhone et les tests (sans dépendance) |
 
 ## Lancer les tests
 
 ```sh
-node tools/run-vectors.mjs
-node tools/run-vectors.mjs --show creneau-fortes-chaleurs   # résultat complet d'un cas, en JSON
+npm test
+node tools/run-vectors.js --show creneau-fortes-chaleurs   # résultat complet d'un cas, en JSON
 ```
 
 ## Entrée du moteur
@@ -34,7 +34,7 @@ node tools/run-vectors.mjs --show creneau-fortes-chaleurs   # résultat complet 
 | Champ | Contenu |
 |---|---|
 | `date`, `now` | Jour (`AAAA-MM-JJ`) et heure locale (`HH:MM`) |
-| `profile` | `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (-1, 0 ou +1 selon les retours « trop chaud / trop froid »), `room_temp_c`, `inventory` (`{ catégorie: [tailles possédées] }`) |
+| `profile` | `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2 selon les retours « trop chaud / trop froid »), `room_temp_c`, `inventory` (`{ catégorie: [tailles possédées] }`) |
 | `forecast` | `daylight` (`sunrise`, `sunset`), `hourly` (`time`, `temp_c`, `feels_c`, `precip_prob`, `precip_mm`, `gust_kmh`, `uv`), `daily.tmax_c` facultatif |
 | `alerts` | `vigilance` (`[{ phenomenon, color }]`, couleurs Météo-France), `air` (`{ episode, pollutant }`) |
 | `outlook` | Semaines à venir : `week_start`, `tmax_mean`, `tmean`, `rainy_days`, `uv_max_mean` |

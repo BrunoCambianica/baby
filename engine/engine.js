@@ -1,28 +1,22 @@
-// Moteur de référence des règles v0 : fonctions pures, sans dépendance.
-// Il valide les vecteurs de test et sert de spécification aux portages Swift et Kotlin.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
-export function loadRules(dir) {
-  const read = (file) => JSON.parse(readFileSync(join(dir, file), 'utf8'));
-  return { rules: read('rules.json'), messages: read('messages.fr.json'), sources: read('sources.json') };
-}
+// Moteur des règles v0 : fonctions pures, sans dépendance.
+// Le même fichier tourne dans l'app web, dans le widget iPhone (Scriptable) et dans les tests Node.
+// Il sert de spécification aux futurs portages Swift et Kotlin.
 
 const VIGILANCE_COLORS = ['vert', 'jaune', 'orange', 'rouge'];
 const colorRank = (color) => VIGILANCE_COLORS.indexOf(color);
 
-const toMin = (hhmm) => {
+export const toMin = (hhmm) => {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
 };
-const fmtMin = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+export const fmtMin = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 const DAY_MS = 86_400_000;
 const parseDay = (day) => Date.parse(`${day.length === 7 ? `${day}-15` : day.slice(0, 10)}T00:00:00Z`);
-const addDays = (day, n) => new Date(parseDay(day) + n * DAY_MS).toISOString().slice(0, 10);
+export const addDays = (day, n) => new Date(parseDay(day) + n * DAY_MS).toISOString().slice(0, 10);
 const laterDay = (a, b) => (a > b ? a : b);
-const round1 = (x) => Math.round(x * 10) / 10;
-const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
-const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+export const round1 = (x) => Math.round(x * 10) / 10;
+export const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+export const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 export const ageMonths = (birth, day) => (parseDay(day) - parseDay(birth)) / DAY_MS / 30.4375;
 
@@ -42,7 +36,8 @@ function heatActive(input, R) {
   const canicule = (input.alerts?.vigilance ?? []).some(
     (v) => v.phenomenon === 'canicule' && colorRank(v.color) >= colorRank(cfg.trigger_vigilance_canicule_from),
   );
-  const tmax = input.forecast.daily?.tmax_c ?? Math.max(...input.forecast.hourly.map((h) => h.temp_c ?? h.feels_c));
+  const hourlyMax = Math.max(...input.forecast.hourly.map((h) => h.temp_c ?? h.feels_c));
+  const tmax = input.forecast.daily?.tmax_c ?? hourlyMax;
   return canicule || tmax >= cfg.trigger_tmax_c_at_least;
 }
 
@@ -125,7 +120,7 @@ function planOuting(input, R, age) {
   };
   const inPlage = slots.filter((sl) => !sl.reasons.includes('hors_plage'));
   const refSlots = best ? best.run : inPlage.slice(0, 1);
-  return { window, reason, blocking, heat, ozone, slots, daySlots, refSlots, plage };
+  return { window, reason, blocking, heat, ozone, slots, inPlage, daySlots, refSlots, plage };
 }
 
 function chooseOutfit(feels, profile, R) {
@@ -142,9 +137,8 @@ function chooseOutfit(feels, profile, R) {
   };
 }
 
-function addOverlays(outfit, plan, R, params) {
+function addOverlays(outfit, plan, ref, R, params) {
   const ov = R.outfit.overlays;
-  const ref = plan.refSlots;
   if (ref.some((sl) => sl.precip_prob >= ov.rain_cover_prob_at_least)) {
     outfit.notes.push('practical.rain.cover');
   } else if (ref.length) {
@@ -186,7 +180,7 @@ function dayRelays(input, R, age, plan, outfit, params) {
   if (outfit && input.profile.transport === 'voiture' && rt.car_coat_bands.includes(outfit.base_band)) relays.push('relay.car.coat');
   const uvDay = plan.daySlots.length ? Math.max(...plan.daySlots.map((sl) => sl.uv)) : 0;
   if (uvDay >= rt.uv_at_least) {
-    params.uv = uvDay;
+    params.uv = round1(uvDay);
     if (age < rt.under_1y_months) relays.push('relay.sun.under_1y', 'relay.sun.hours');
     else relays.push('relay.sun.hours', 'relay.sun.protect');
   }
@@ -272,12 +266,13 @@ export function render(M, id, variant, params = {}) {
   return (msg[variant] ?? msg.text).replace(/\{(\w+)\}/g, (all, key) => (params[key] ?? all).toString());
 }
 
-const frNumber = (x) => String(x).replace('.', ',');
+export const frNumber = (x) => String(x).replace('.', ',');
 
-function composeWidget(result, input, M) {
+// Les trois lignes du widget pour le moment voulu : « jour » (créneau) ou « soir » (nuit et achats).
+export function widgetLines(result, moment, M) {
   const labels = M.labels;
   const lines = [];
-  if (toMin(input.now ?? '08:00') < toMin('18:00')) {
+  if (moment === 'jour') {
     const w = result.outing.window;
     lines.push(
       w
@@ -298,12 +293,17 @@ function composeWidget(result, input, M) {
     const p = result.purchases[0];
     lines.push(
       p
-        ? render(M, 'purchase.suggestion', 'short', { label: labels.categories[p.category], size: p.size_label })
+        ? render(M, 'purchase.suggestion', 'short', {
+          label: labels.categories[p.category],
+          size: p.size === 'unique' ? '' : `, ${p.size_label}`,
+        })
         : render(M, 'relay.sleep.basics', 'short'),
     );
   }
-  return { lines: lines.filter(Boolean).slice(0, 3) };
+  return lines.filter(Boolean).slice(0, 3);
 }
+
+export const momentOf = (now) => (toMin(now ?? '08:00') < toMin('18:00') ? 'jour' : 'soir');
 
 export function evaluate(input, bundle) {
   const R = bundle.rules;
@@ -314,19 +314,43 @@ export function evaluate(input, bundle) {
   const outfit = plan.reason === 'vigilance' || !ref.length
     ? null
     : chooseOutfit(round1(mean(ref.map((sl) => sl.feels_c))), input.profile, R);
-  if (outfit) addOverlays(outfit, plan, R, params);
+  if (outfit) addOverlays(outfit, plan, ref, R, params);
   const result = {
     age_months: round1(age),
-    outing: { window: plan.window, reason: plan.reason },
+    outing: {
+      window: plan.window,
+      reason: plan.reason,
+      slots: plan.inPlage.map((sl) => ({
+        time: fmtMin(sl.start),
+        feels_c: sl.feels_c,
+        precip_prob: sl.precip_prob,
+        uv: sl.uv,
+        gust_kmh: sl.gust_kmh,
+        reasons: sl.reasons.filter((r) => r !== 'hors_plage'),
+        score: sl.score,
+      })),
+    },
     outfit,
     relays: dayRelays(input, R, age, plan, outfit, params),
     params,
     night: planNight(input, R, plan.heat),
     purchases: planPurchases(input, R),
   };
-  result.widget = composeWidget(result, input, bundle.messages);
+  result.widget = { lines: widgetLines(result, momentOf(input.now), bundle.messages) };
   if (input.check_product) result.product = checkProduct(input.check_product, age, R);
   return result;
+}
+
+// Tenue pour une heure précise (« et si on sort à 16 h ? »), avec les rappels pratiques de cette heure.
+export function outfitAt(input, bundle, hhmm) {
+  const R = bundle.rules;
+  const plan = planOuting(input, R, ageMonths(input.profile.birth, input.date));
+  const slot = plan.slots.find((sl) => sl.start === toMin(hhmm));
+  if (!slot) return null;
+  const outfit = chooseOutfit(slot.feels_c, input.profile, R);
+  const params = {};
+  addOverlays(outfit, plan, [slot], R, params);
+  return { ...outfit, params, reasons: slot.reasons.filter((r) => r !== 'hors_plage') };
 }
 
 // Contrôles de la charte : tout message officiel cite une source publique, toute référence existe.

@@ -1,13 +1,11 @@
 // Exécute les vecteurs de test des règles v0.
-// Usage : node tools/run-vectors.mjs            (tous les vecteurs)
-//         node tools/run-vectors.mjs --show ID  (affiche le résultat complet d'un vecteur)
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { evaluate, lint, loadRules } from './engine.mjs';
+// Usage : node tools/run-vectors.js            (tous les vecteurs)
+//         node tools/run-vectors.js --show ID  (affiche le résultat complet d'un vecteur)
+import { join } from 'node:path';
+import { evaluate, fmtMin, lint, toMin } from '../engine/engine.js';
+import { loadRules, readJSON, RULES_DIR } from './load-rules.js';
 
-const rulesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'rules', 'v0');
-const bundle = loadRules(rulesDir);
+const bundle = loadRules();
 const showId = process.argv[2] === '--show' ? process.argv[3] : null;
 
 const { errors, toVerify } = lint(bundle);
@@ -22,7 +20,7 @@ if (!showId) {
   console.log('');
 }
 
-const { defaults, vectors } = JSON.parse(readFileSync(join(rulesDir, 'test-vectors.json'), 'utf8'));
+const { defaults, vectors } = readJSON(join(RULES_DIR, 'test-vectors.json'));
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 function merge(base, over) {
@@ -32,12 +30,6 @@ function merge(base, over) {
   for (const [k, v] of Object.entries(over)) out[k] = merge(base[k], v);
   return out;
 }
-
-const toMin = (hhmm) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-};
-const fmtMin = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
 // Les vecteurs décrivent la journée en abrégé : une base et des surcharges par heure ("13:00") ou plage ("13:00-16:00").
 function expandHourly(spec, date) {
