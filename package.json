@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Superbébé : quand sortir avec bébé, comment l'habiller, ce qu'il lui faudra bientôt.",
+  "homepage": "https://brunocambianica.github.io/baby/",
   "type": "module",
   "engines": {
     "node": ">=18"

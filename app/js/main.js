@@ -111,7 +111,11 @@ function paint() {
   else if (view === 'reglages') {
     state.report = report();
     html = V.viewSettings(state);
-  } else if (view === 'widget') html = V.viewWidget(state);
+  } else if (view === 'widget') {
+    state.platform = platform;
+    state.androidLink = androidLink();
+    html = V.viewWidget(state);
+  }
   else if (view === 'apropos') html = V.viewAbout(state);
   else html = V.viewToday(state, compute());
   app.innerHTML = html;
@@ -165,6 +169,16 @@ async function copy(text) {
 
 const configText = () => encodeConfig(profileToConfig(state.profile), (s) => btoa(s));
 
+// Lien qui ouvre l'app Android du widget avec la configuration ; sans l'app, Chrome propose de la télécharger.
+function androidLink() {
+  const base = new URL('../', location.href).href;
+  const apk = new URL('../dist/superbebe-android.apk', location.href).href;
+  return `intent://config/${configText()}?base=${encodeURIComponent(base)}`
+    + `#Intent;scheme=superbebe;package=fr.superbebe.widget;S.browser_fallback_url=${encodeURIComponent(apk)};end`;
+}
+
+const platform = /Android/i.test(navigator.userAgent) ? 'android' : /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : 'autre';
+
 function shareText(ctx) {
   const M = state.bundle.messages;
   const { result, date } = ctx;
@@ -207,7 +221,8 @@ function preloadLoader() {
   if (state.loader) return;
   loadText('../widget/chargeur.js')
     .then((text) => {
-      state.loader = text;
+      // Le widget téléchargera son code depuis le site qui l'a servi, quel que soit l'hébergeur.
+      state.loader = text.replaceAll('__SB_BASE_URL__', new URL('../', location.href).href);
       if (currentView() === 'widget') paint();
     })
     .catch(() => {});

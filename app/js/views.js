@@ -379,11 +379,10 @@ export function viewSettings(state) {
   ${footer()}`;
 }
 
-// Widget et installation.
+// Widget et installation : la plateforme du téléphone passe en premier.
 export function viewWidget(state) {
-  const { loader, installPrompt } = state;
-  return `${topbar({ back: 'Widget et installation' })}
-  <section class="page">
+  const { loader, installPrompt, platform, androidLink } = state;
+  const iphone = `
     <section class="card">
       <h2>iPhone : le widget</h2>
       <p>Il s'affiche sur l'écran d'accueil ou l'écran verrouillé, sans ouvrir l'app. Il passe par Scriptable, une app gratuite.</p>
@@ -400,15 +399,25 @@ export function viewWidget(state) {
     <section class="card">
       <h2>iPhone : l'app sur l'écran d'accueil</h2>
       <p>Dans Safari : bouton Partager, puis « Sur l'écran d'accueil ».</p>
+    </section>`;
+  const android = `
+    <section class="card">
+      <h2>Android : le widget</h2>
+      <ol class="steps">
+        <li><a class="btn-ghost" href="../dist/superbebe-android.apk" download>Télécharger l'app du widget (6 Mo)</a><br>Ouvrez le fichier téléchargé. Si Android le demande, autorisez Chrome à installer des applications.</li>
+        <li><a class="btn-ghost" href="${esc(androidLink)}">Envoyer ma configuration au widget</a></li>
+        <li>Appui long sur l'écran d'accueil, Widgets, puis Superbébé.</li>
+      </ol>
+      <p class="hint">Toucher le widget ouvre l'app : température de la chambre, retour sur la tenue. Version de test installée hors Play Store, à remplacer plus tard par la version du Play Store.</p>
     </section>
     <section class="card">
-      <h2>Android</h2>
+      <h2>Android : l'app sur l'écran d'accueil</h2>
       ${installPrompt
         ? '<button class="btn" data-action="install">Installer sur l\'écran d\'accueil</button>'
         : '<p>Dans Chrome : menu ⋮, puis « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».</p>'}
-      <p class="hint">Le widget Android natif arrive dans une prochaine version ; en attendant, l'icône ouvre directement la journée.</p>
-    </section>
-  </section>
+    </section>`;
+  return `${topbar({ back: 'Widget et installation' })}
+  <section class="page">${platform === 'android' ? android + iphone : iphone + android}</section>
   ${footer()}`;
 }
 

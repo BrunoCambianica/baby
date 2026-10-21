@@ -192,5 +192,75 @@ await test('La configuration est mémorisée pour les lancements depuis l\'app',
   assert(out.texts[0] === 'SUPERBÉBÉ · LYON', JSON.stringify(out.texts));
 });
 
-console.log(`\n${failed ? `${failed} test(s) en échec` : 'Widget iPhone : tous les tests OK'}`);
+await test('Chargeur : télécharge le code et transmet l\'adresse du site', async () => {
+  const base = 'https://exemple.test/superbebe/';
+  const loader = readFileSync(join(ROOT, 'widget', 'chargeur.js'), 'utf8').replaceAll('__SB_BASE_URL__', base);
+  const files = new Map();
+  let requested = null;
+  let opened = null;
+  class Request {
+    constructor(url) {
+      this.url = url;
+    }
+    async loadString() {
+      requested = this.url;
+      return code;
+    }
+    async loadJSON() {
+      return JSON.parse(JSON.stringify(forecast));
+    }
+  }
+  class ListWidget {
+    addText() {
+      return {};
+    }
+    addSpacer() {}
+    setPadding() {}
+    async presentMedium() {}
+  }
+  class Alert {
+    addAction() {}
+    addCancelAction() {}
+    async presentSheet() {
+      return 4;
+    }
+  }
+  const fm = {
+    documentsDirectory: () => '/doc',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => p === '/doc/superbebe' || files.has(p),
+    createDirectory() {},
+    readString: (p) => files.get(p),
+    writeString: (p, s) => files.set(p, s),
+    modificationDate: () => new Date(0),
+  };
+  const context = vm.createContext({
+    ListWidget, Alert, Request,
+    Color: class { static dynamic(a) { return a; } },
+    Font: { systemFont: () => ({}), boldSystemFont: () => ({}) },
+    FileManager: { local: () => fm },
+    Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
+    Script: { setWidget() {}, complete() {} },
+    Safari: { open: (url) => { opened = url; } },
+    config: { widgetFamily: 'medium', runsInWidget: false, runsInAccessoryWidget: false },
+    args: { widgetParameter: CONFIG },
+    Date: fixedDate('2026-10-21T07:30:00+02:00'),
+  });
+  await vm.runInContext(`(async () => {\n${loader}\n})()`, context);
+  assert(requested === `${base}widget/superbebe.js`, `code demandé à ${requested}`);
+  assert(opened === `${base}app/`, `app ouverte sur ${opened}`);
+  assert(files.has('/doc/superbebe-widget.js'), 'code non gardé pour le hors-ligne');
+});
+
+await test('Android : le moteur embarqué renvoie le lieu et trois lignes', async () => {
+  const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
+  const call = `${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {"offset": 0, "room": 19}, "2026-10-21", "20:30");`;
+  const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
+  assert(out.place === 'Lyon' && out.moment === 'soir', JSON.stringify(out));
+  assert(out.lines.length === 3 && out.lines[0].includes('19') && out.lines[1].includes('2,5 TOG'), JSON.stringify(out.lines));
+  const bad = JSON.parse(vm.runInContext(`${android}\nsbAndroid({}, "SB1.@@", {}, "2026-10-21", "08:00");`, vm.createContext({})));
+  assert(bad.error === 'configuration', JSON.stringify(bad));
+});
+
+console.log(`\n${failed ? `${failed} test(s) en échec` : 'Widgets iPhone et Android : tous les tests OK'}`);
 process.exit(failed ? 1 : 0);

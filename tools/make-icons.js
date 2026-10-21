@@ -93,3 +93,12 @@ for (const [name, size, scale] of files) {
   writeFileSync(join(OUT, name), draw(size, scale));
   console.log(`icône ${name} (${size} px)`);
 }
+
+// Icônes de l'app Android (widget natif).
+const ANDROID_RES = join(ROOT, 'android', 'app', 'src', 'main', 'res');
+for (const [density, size] of [['mdpi', 48], ['hdpi', 72], ['xhdpi', 96], ['xxhdpi', 144], ['xxxhdpi', 192]]) {
+  const dir = join(ANDROID_RES, `mipmap-${density}`);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'ic_launcher.png'), draw(size, 0.86));
+}
+console.log('icônes Android (mipmap) générées');

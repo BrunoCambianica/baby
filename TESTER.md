@@ -24,6 +24,15 @@ C'est le cœur du test : la réponse s'affiche sans ouvrir l'app, même sur l'é
 
 Toucher ensuite le widget ouvre un petit menu pour noter la température de la chambre ou dire si la tenue allait.
 
+## 2 bis. Ajouter le widget sur Android (3 minutes)
+
+1. Dans Superbébé : « Widget et installation », puis **Télécharger l'app du widget**.
+2. Ouvrez le fichier téléchargé. Si Android le demande, autorisez Chrome à installer des applications : c'est une version de test, hors Play Store.
+3. Revenez dans Superbébé : **Envoyer ma configuration au widget**. L'app du widget s'ouvre et confirme votre commune.
+4. Appui long sur l'écran d'accueil, Widgets, puis Superbébé.
+
+Toucher le widget ouvre l'app : température de la chambre, retour sur la tenue.
+
 ## 3. Ce qu'on vous demande
 
 - Après une sortie, dites si la tenue allait : **trop chaud**, **bien** ou **trop froid**. Les tenues suivantes s'ajustent.
@@ -38,4 +47,4 @@ Toucher ensuite le widget ouvre un petit menu pour noter la température de la c
 
 - **Ce n'est pas un avis médical.** Les repères de santé viennent de sources publiques (Santé publique France, ministère de la Santé, Météo-France…), citées dans l'app. En cas de doute sur la santé de bébé, appelez votre médecin. Urgence : 15 ou 112.
 - **Vos données restent sur votre téléphone** : pas de compte, pas de publicité, pas de mesure d'audience.
-- **Version de test** : la vigilance Météo-France et les épisodes de pollution ne sont pas encore intégrés ; le widget Android natif arrive ensuite.
+- **Version de test** : la vigilance Météo-France et les épisodes de pollution ne sont pas encore intégrés.
