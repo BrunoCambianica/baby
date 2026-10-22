@@ -12,6 +12,8 @@ const CONFIG = encodeConfig(
   { v: 1, n: 'Lyon', la: 45.758, lo: 4.8351, b: '2026-05', t: 'poussette', f: '09:00', u: '18:00', d: 1, o: 0 },
   toB64,
 );
+const PARIS = encodeConfig({ v: 1, n: 'Paris', la: 48.8566, lo: 2.3522, b: '2026-05', t: 'porte_bebe' }, toB64);
+const APP = 'https://brunocambianica.github.io/baby/app/';
 
 // Heure figée : 21 octobre 2026 à 7 h 30 (Paris), sauf mention contraire.
 function fixedDate(iso) {
@@ -27,8 +29,12 @@ function fixedDate(iso) {
   };
 }
 
-async function run({ family = 'medium', inWidget = true, param = CONFIG, choices = [], textField = '', offline = false, files = new Map(), at = '2026-10-21T07:30:00+02:00' } = {}) {
-  const out = { widget: null, presented: null, completed: false, opened: null };
+// `navigations` : liens suivis par l'app pendant qu'elle est ouverte dans la vue web de Scriptable.
+async function run({
+  family = 'medium', inWidget = true, param = CONFIG, query = {}, loaderConfig, navigations = [], webView = true,
+  offline = false, files = new Map(), at = '2026-10-21T07:30:00+02:00',
+} = {}) {
+  const out = { widget: null, presented: null, completed: false, opened: [], view: null };
   class ListWidget {
     constructor() {
       this.texts = [];
@@ -82,34 +88,35 @@ async function run({ family = 'medium', inWidget = true, param = CONFIG, choices
     readString: (p) => files.get(p),
     writeString: (p, s) => files.set(p, s),
   };
-  class Alert {
-    addAction() {}
-    addCancelAction() {}
-    addTextField() {
-      return { setDecimalPadKeyboard() {} };
+  class WebView {
+    constructor() {
+      out.view = this;
+      this.answers = [];
     }
-    async presentSheet() {
-      return choices.length ? choices.shift() : -1;
+    async loadURL(url) {
+      this.url = url;
+      this.answers.push([url, this.shouldAllowRequest({ url })]);
     }
-    async presentAlert() {
-      return choices.length ? choices.shift() : -1;
-    }
-    textFieldValue() {
-      return textField;
+    async present(fullScreen) {
+      this.fullScreen = fullScreen;
+      for (const url of navigations) this.answers.push([url, this.shouldAllowRequest({ url })]);
     }
   }
   const accessory = family.startsWith('accessory');
-  const context = vm.createContext({
-    ListWidget, Color, Font, Request, Alert, LinearGradient, Point,
+  const globals = {
+    ListWidget, Color, Font, Request, LinearGradient, Point,
     FileManager: { local: () => fm },
     Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
-    Script: { setWidget: (w) => { out.widget = w; }, complete: () => { out.completed = true; } },
-    Safari: { open: (url) => { out.opened = url; } },
+    Script: { setWidget: (w) => { out.widget = w; }, complete: () => { out.completed = true; }, name: () => 'Superbébé' },
+    Safari: { open: (url) => { out.opened.push(url); } },
     config: { widgetFamily: family, runsInWidget: inWidget && !accessory, runsInAccessoryWidget: inWidget && accessory },
-    args: { widgetParameter: param },
+    args: { widgetParameter: param, queryParameters: query },
     Date: fixedDate(at),
     console,
-  });
+  };
+  if (webView) globals.WebView = WebView;
+  if (loaderConfig !== undefined) globals.SB_CONFIG_FROM_LOADER = loaderConfig;
+  const context = vm.createContext(globals);
   const runSuperbebe = vm.runInContext(`(function () {\n${code}\nreturn runSuperbebe;\n})()`, context);
   await runSuperbebe();
   out.files = files;
@@ -164,9 +171,29 @@ await test('Le soir : ligne nuit et TOG selon le relevé de la chambre', async (
   assert(out.texts[2].includes('TOG'), out.texts[2]);
 });
 
-await test('Sans configuration : message d\'aide', async () => {
+await test('Sans réglages : message d\'aide', async () => {
   const out = await run({ param: '' });
-  assert(out.texts.some((t) => t.includes('Configuration manquante')), JSON.stringify(out.texts));
+  assert(out.texts.some((t) => t.includes('Réglages manquants')), JSON.stringify(out.texts));
+});
+
+await test('Réglages copiés avec le script : plus besoin du champ Parameter', async () => {
+  const out = await run({ param: '', loaderConfig: CONFIG });
+  assert(out.texts[0] === 'SUPERBÉBÉ · LYON', JSON.stringify(out.texts));
+});
+
+await test('Le dernier changement de réglages l\'emporte sur ceux du script', async () => {
+  const files = new Map();
+  await run({ files, param: '', loaderConfig: CONFIG });
+  await run({ files, param: '', loaderConfig: CONFIG, inWidget: false, query: { config: PARIS } });
+  const kept = await run({ files, param: '', loaderConfig: CONFIG });
+  assert(kept.texts[0] === 'SUPERBÉBÉ · PARIS', `réglages de l'app perdus : ${kept.texts[0]}`);
+  const recopied = await run({ files, param: '', loaderConfig: encodeConfig({ v: 1, n: 'Nantes', la: 47.2184, lo: -1.5536, b: '2026-05' }, toB64) });
+  assert(recopied.texts[0] === 'SUPERBÉBÉ · NANTES', `script recopié ignoré : ${recopied.texts[0]}`);
+});
+
+await test('Toucher le widget relance le script pour ouvrir l\'app', async () => {
+  const out = await run();
+  assert(out.widget.url === 'scriptable:///run/Superb%C3%A9b%C3%A9?ouvrir=app', String(out.widget.url));
 });
 
 await test('Hors ligne avec météo en cache : widget affiché, mention hors ligne', async () => {
@@ -181,17 +208,37 @@ await test('Hors ligne sans cache : message clair', async () => {
   assert(out.texts.some((t) => t.includes('Météo indisponible')), JSON.stringify(out.texts));
 });
 
-await test('Menu : température de la chambre enregistrée', async () => {
+await test('Ouverture depuis le widget : app en plein écran avec les réglages, liens extérieurs dans Safari', async () => {
   const files = new Map();
-  await run({ inWidget: false, choices: [0, 0], textField: '20,5', files, at: '2026-10-21T20:30:00+02:00' });
+  const room = Date.parse('2026-10-21T20:00:00+02:00');
+  const out = await run({
+    files, inWidget: false, query: { ouvrir: 'app' }, at: '2026-10-21T20:30:00+02:00',
+    navigations: [
+      `superbebe-sync:?config=${PARIS}&room=21.5@${room}`,
+      'https://www.santepubliquefrance.fr/',
+      `${APP}#reglages`,
+    ],
+  });
+  assert(out.view?.url === `${APP}?hote=scriptable#import=${CONFIG}`, String(out.view?.url));
+  assert(out.view.fullScreen === false && out.completed && !out.presented, 'présentation inattendue');
+  const answers = Object.fromEntries(out.view.answers.map(([url, ok]) => [url.slice(0, 20), ok]));
+  assert(answers[`${APP}?hote=scr`.slice(0, 20)] === true, JSON.stringify(out.view.answers));
+  assert(answers['superbebe-sync:?conf'] === false && answers['https://www.santepub'] === false, JSON.stringify(out.view.answers));
+  assert(out.opened[0] === 'https://www.santepubliquefrance.fr/', JSON.stringify(out.opened));
   const state = JSON.parse(files.get('/doc/superbebe/etat.json'));
-  assert(state.room?.value === 20.5, JSON.stringify(state));
+  assert(state.config === PARIS && state.room?.value === 21.5, JSON.stringify(state));
+  const after = await run({ files, at: '2026-10-21T20:40:00+02:00' });
+  assert(after.texts[0] === 'SUPERBÉBÉ · PARIS' && after.texts[1].includes('21,5'), JSON.stringify(after.texts));
 });
 
-await test('Menu : « Ouvrir l\'app » ouvre le site, puis affiche le widget', async () => {
-  const out = await run({ inWidget: false, choices: [1] });
-  assert(out.opened === 'https://brunocambianica.github.io/baby/app/', String(out.opened));
-  assert(out.presented, 'aperçu non affiché');
+await test('Sans vue web : l\'app s\'ouvre dans Safari avec les réglages', async () => {
+  const out = await run({ inWidget: false, query: { ouvrir: 'app' }, webView: false });
+  assert(out.opened[0] === `${APP}?hote=scriptable#import=${CONFIG}`, JSON.stringify(out.opened));
+});
+
+await test('Lancé à la main dans Scriptable : aperçu du widget', async () => {
+  const out = await run({ inWidget: false });
+  assert(out.presented && out.texts[0] === 'SUPERBÉBÉ · LYON', JSON.stringify(out.texts));
 });
 
 await test('Fond en dégradé selon le moment : nuit le soir', async () => {
@@ -207,12 +254,14 @@ await test('La configuration est mémorisée pour les lancements depuis l\'app',
   assert(out.texts[0] === 'SUPERBÉBÉ · LYON', JSON.stringify(out.texts));
 });
 
-await test('Chargeur : télécharge le code et transmet l\'adresse du site', async () => {
+await test('Chargeur : télécharge le code, transmet l\'adresse du site et les réglages', async () => {
   const base = 'https://exemple.test/superbebe/';
-  const loader = readFileSync(join(ROOT, 'widget', 'chargeur.js'), 'utf8').replaceAll('__SB_BASE_URL__', base);
+  const loader = readFileSync(join(ROOT, 'widget', 'chargeur.js'), 'utf8')
+    .replaceAll('__SB_BASE_URL__', base)
+    .replace('__SB_CONFIG__', CONFIG);
   const files = new Map();
   let requested = null;
-  let opened = null;
+  let loaded = null;
   class Request {
     constructor(url) {
       this.url = url;
@@ -225,20 +274,11 @@ await test('Chargeur : télécharge le code et transmet l\'adresse du site', asy
       return JSON.parse(JSON.stringify(forecast));
     }
   }
-  class ListWidget {
-    addText() {
-      return {};
+  class WebView {
+    async loadURL(url) {
+      loaded = url;
     }
-    addSpacer() {}
-    setPadding() {}
-    async presentMedium() {}
-  }
-  class Alert {
-    addAction() {}
-    addCancelAction() {}
-    async presentSheet() {
-      return 1;
-    }
+    async present() {}
   }
   const fm = {
     documentsDirectory: () => '/doc',
@@ -250,23 +290,24 @@ await test('Chargeur : télécharge le code et transmet l\'adresse du site', asy
     modificationDate: () => new Date(0),
   };
   const context = vm.createContext({
-    ListWidget, Alert, Request,
-    LinearGradient: class {},
-    Point: class {},
-    Color: class { static dynamic(a) { return a; } static white() { return {}; } },
-    Font: { systemFont: () => ({}), boldSystemFont: () => ({}) },
+    Request, WebView,
     FileManager: { local: () => fm },
     Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
-    Script: { setWidget() {}, complete() {} },
-    Safari: { open: (url) => { opened = url; } },
+    Script: { setWidget() {}, complete() {}, name: () => 'Superbébé' },
+    Safari: { open() {} },
     config: { widgetFamily: 'medium', runsInWidget: false, runsInAccessoryWidget: false },
-    args: { widgetParameter: CONFIG },
+    args: { widgetParameter: '', queryParameters: { ouvrir: 'app' } },
     Date: fixedDate('2026-10-21T07:30:00+02:00'),
   });
   await vm.runInContext(`(async () => {\n${loader}\n})()`, context);
   assert(requested === `${base}widget/superbebe.js`, `code demandé à ${requested}`);
-  assert(opened === `${base}app/`, `app ouverte sur ${opened}`);
+  assert(loaded === `${base}app/?hote=scriptable#import=${CONFIG}`, `app ouverte sur ${loaded}`);
   assert(files.has('/doc/superbebe-widget.js'), 'code non gardé pour le hors-ligne');
+});
+
+await test('Ancien chargeur (sans réglages) : le champ Parameter suffit toujours', async () => {
+  const out = await run({ param: CONFIG });
+  assert(out.texts[0] === 'SUPERBÉBÉ · LYON', JSON.stringify(out.texts));
 });
 
 await test('Android : le moteur embarqué renvoie le lieu et trois lignes', async () => {

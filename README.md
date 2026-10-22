@@ -14,8 +14,8 @@ App web installable et widgets iPhone et Android : quand sortir avec bébé, com
 | `engine/` | Moteur de règles et adaptateur Open-Meteo, partagés par l'app et le widget |
 | `rules/` | Règles v0 en JSON, textes, registre des sources, cas de test |
 | `widget/` | Widget iPhone pour Scriptable : chargeur, source, fichiers générés |
-| `android/` | Widget Android natif (Kotlin, Glance), même moteur exécuté dans le bac à sable JavaScript : voir [android/README.md](android/README.md) |
-| `dist/` | APK de test du widget Android, servi par le site |
+| `android/` | App Android : l'app web en plein écran et le widget natif (Kotlin, Glance), même moteur exécuté dans le bac à sable JavaScript : voir [android/README.md](android/README.md) |
+| `dist/` | APK de test de l'app Android, servi par le site |
 | `tools/` | Tests, génération des widgets et des icônes, serveur local |
 
 ## Commandes
@@ -54,7 +54,14 @@ Le site est statique : tous les chemins sont relatifs et les widgets récupèren
 |---|---|
 | App installée (iPhone et Android) | Automatique. À l'ouverture suivante, l'app télécharge la nouvelle version en arrière-plan et affiche « Nouvelle version prête · Recharger » ; elle s'applique d'office au retour suivant dans l'app. Réglages, « Rechercher une mise à jour » force la vérification. |
 | Widget iPhone (Scriptable) | Automatique : le chargeur récupère le nouveau code au plus tard six heures après la mise en ligne. |
-| Widget Android | L'app du widget affiche « Installer la version … » dès qu'un nouvel APK est publié (`dist/android-version.json`) ; on la télécharge et on l'installe par-dessus. Si l'APK a été compilé sur un autre ordinateur (clé de signature différente), il faut d'abord désinstaller l'ancienne version. |
+| App Android | L'app web qu'elle affiche se met à jour comme ci-dessus. Pour l'app elle-même, une fenêtre propose de télécharger le nouvel APK dès qu'il est publié (`dist/android-version.json`), au plus une fois par jour ; on l'installe par-dessus. Si l'APK a été compilé sur un autre ordinateur (clé de signature différente), il faut d'abord désinstaller l'ancienne version. |
+
+## Liens entre l'app et les widgets
+
+| Téléphone | Réglages vers le widget | Toucher le widget |
+|---|---|---|
+| iPhone | Le script copié contient les réglages. Ensuite, Réglages, « Envoyer mes réglages au widget » (lien `scriptable:///run/Superbébé?config=…`). | Relance le script, qui ouvre l'app en plein écran dans Scriptable (`app/?hote=scriptable#import=…`) ; l'app y renvoie réglages et relevé de la chambre par des liens `superbebe-sync:`. |
+| Android | L'app web appelle le pont `SuperbebeAndroid` à chaque changement. | Ouvre l'app Android, c'est-à-dire l'app web en plein écran. |
 
 ## Données et vie privée
 

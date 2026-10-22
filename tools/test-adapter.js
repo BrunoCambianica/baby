@@ -98,7 +98,7 @@ test('De bout en bout : une vraie journée donne un créneau, une tenue et trois
 
 test('Configuration du widget : aller-retour avec accents', () => {
   const profile = {
-    commune: { nom: 'Saint-Étienne', lat: 45.4339, lon: 4.3906 }, birth: '2026-05', transport: 'porte_bebe',
+    commune: { nom: 'Saint-Étienne', code: '42218', dep: '42', lat: 45.4339, lon: 4.3906 }, birth: '2026-05', transport: 'porte_bebe',
     outing_window: { from: '10:00', to: '17:00' }, outing_duration_h: 2, outfit_offset: 1,
   };
   const text = encodeConfig(profileToConfig(profile), toB64);
@@ -106,6 +106,9 @@ test('Configuration du widget : aller-retour avec accents', () => {
   const back = configToProfile(decodeConfig(text, fromB64));
   assert(back.commune.nom === 'Saint-Étienne' && back.transport === 'porte_bebe' && back.outfit_offset === 1, JSON.stringify(back));
   assert(back.outing_window.to === '17:00' && back.outing_duration_h === 2, JSON.stringify(back));
+  assert(back.commune.code === '42218' && back.commune.dep === '42', JSON.stringify(back.commune));
+  const old = configToProfile(decodeConfig(encodeConfig({ v: 1, n: 'Lyon', la: 45.758, lo: 4.8351, b: '2026-05' }, toB64), fromB64));
+  assert(old.commune.code === '' && old.transport === 'poussette', 'ancienne configuration refusée');
 });
 
 test('Configuration du widget : texte invalide refusé', () => {

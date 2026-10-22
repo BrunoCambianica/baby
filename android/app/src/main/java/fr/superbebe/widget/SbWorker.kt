@@ -29,7 +29,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val config = SbStore.config(c)
         val place = SbConfig.decode(config)
         if (config == null || place == null) {
-            SbStore.saveRender(c, "Superbébé", listOf("Ouvrez Superbébé pour envoyer votre configuration depuis l'app web."), "")
+            SbStore.saveRender(c, "Superbébé", listOf("Ouvrez Superbébé pour choisir votre commune."), "")
             SbWidget().updateAll(c)
             return Result.success()
         }

@@ -14,8 +14,8 @@ android {
         applicationId = "fr.superbebe.widget"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
 
     buildFeatures {
@@ -41,6 +41,7 @@ kotlin {
 }
 
 dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
     implementation("androidx.javascriptengine:javascriptengine:1.0.0")

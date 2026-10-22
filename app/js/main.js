@@ -1,6 +1,6 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
 import { addDays, clamp, evaluate, hourFr, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
-import { buildInput, encodeConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
+import { buildInput, decodeConfig, encodeConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { dayLong, dayShort } from './format.js';
 import { store } from './storage.js';
@@ -8,6 +8,18 @@ import * as V from './views.js';
 
 const ROOM_TTL_MS = 16 * 3600 * 1000;
 const app = document.getElementById('app');
+
+// Hôte natif éventuel : l'app Android Superbébé (pont JavaScript), ou Scriptable qui ouvre l'app depuis le widget iPhone.
+const android = window.SuperbebeAndroid ?? null;
+const host = android ? 'android' : new URLSearchParams(location.search).get('hote') === 'scriptable' ? 'scriptable' : null;
+const standalone = Boolean(window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone);
+const ask = (fn, fallback) => {
+  try {
+    return fn();
+  } catch (e) {
+    return fallback;
+  }
+};
 
 const state = {
   bundle: null,
@@ -28,9 +40,17 @@ const state = {
   open: new Set(),
   installPrompt: null,
   loader: null,
+  script: null,
+  // Téléphone utilisé ; `platform` est l'onglet choisi dans l'assistant du widget.
+  device: /Android/i.test(navigator.userAgent) ? 'android' : 'ios',
   platform: /Android/i.test(navigator.userAgent) ? 'android' : 'ios',
+  host,
+  // Onglet de navigateur sur téléphone : on propose d'ouvrir Superbébé comme une app, sans les barres du navigateur.
+  inBrowser: !host && !standalone && /Android|iPhone|iPod/i.test(navigator.userAgent),
+  widgets: host === 'android' ? ask(() => android.widgets(), 0) : 0,
   steps: new Set(),
   androidLink: '',
+  updateLink: '',
   promoHidden: store.promoHidden(),
   widgetReady: Boolean(store.widgetCopied()),
   confirmClear: false,
@@ -102,9 +122,14 @@ function paint() {
   let html;
   if (!state.bundle) html = state.error ? V.fatal(state.error) : V.loading();
   else if (view === 'onboarding') html = V.viewOnboarding(state);
-  else if (view === 'reglages') html = V.viewSettings(state);
+  else if (view === 'reglages') {
+    state.updateLink = scriptableLink();
+    html = V.viewSettings(state);
+  }
   else if (view === 'widget') {
     state.androidLink = androidLink();
+    // Le script à coller dans Scriptable, avec les réglages du moment.
+    state.script = state.loader?.replace('__SB_CONFIG__', configText()) ?? null;
     html = V.viewWidget(state, compute('aujourdhui'));
   } else if (view === 'apropos') html = V.viewAbout(state);
   else html = V.viewApp(state, compute(state.tab === 'sortir' ? state.day : 'aujourdhui'));
@@ -131,11 +156,65 @@ function setThemeColor(view) {
     color = state.tab === 'nuit' ? SKY.nuit : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
   }
   meta.setAttribute('content', color);
+  // Barres du système de l'app Android : ciel en haut, couleur de la barre d'onglets en bas.
+  const bottom = view === 'app' ? (dark ? '#14171e' : '#fcfcfd') : dark ? '#0b0d11' : '#f2f3f7';
+  if (host === 'android') ask(() => android.colors(color, bottom));
 }
 
 function updateProfile(patch) {
   state.profile = { ...state.profile, ...patch };
   store.saveProfile(state.profile);
+  syncHost();
+}
+
+// Le widget suit l'app : réglages et relevé de la chambre lui sont transmis à chaque changement.
+function syncHost() {
+  if (!host) return;
+  const config = state.profile ? configText() : '';
+  const room = state.profile?.room ?? null;
+  if (host === 'android') {
+    ask(() => android.sync(config, room ? JSON.stringify(room) : ''));
+    state.widgets = ask(() => android.widgets(), state.widgets);
+    return;
+  }
+  let frame = document.getElementById('sb-sync');
+  if (!frame) {
+    frame = document.createElement('iframe');
+    frame.id = 'sb-sync';
+    frame.hidden = true;
+    document.body.appendChild(frame);
+  }
+  frame.src = `superbebe-sync:?config=${encodeURIComponent(config)}${room ? `&room=${room.value}@${room.at}` : ''}`;
+}
+
+// Réglages reçus du widget ou de l'app Android (#import=SB1.…) : ils remplacent les réglages de bébé et des sorties ;
+// garde-robe et relevé de la chambre sont conservés.
+function takeImport() {
+  const match = location.hash.match(/^#import=(SB1\.[\w-]+)/);
+  if (!match) return false;
+  history.replaceState(null, '', location.pathname + location.search);
+  const cfg = decodeConfig(match[1], (b64) => atob(b64));
+  if (!cfg) return false;
+  const p = state.profile;
+  // Sans code Insee (anciennes configurations), la position sert de clé pour la météo en cache.
+  const commune = { nom: cfg.n ?? '', code: cfg.c ?? `${cfg.la},${cfg.lo}`, dep: cfg.dp ?? '', cp: '', lat: cfg.la, lon: cfg.lo };
+  const same = Boolean(p) && p.commune.lat === commune.lat && p.commune.lon === commune.lon;
+  const settings = {
+    commune: same ? p.commune : commune,
+    birth: cfg.b,
+    transport: cfg.t ?? 'poussette',
+    outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
+    outing_duration_h: cfg.d ?? 1,
+    outfit_offset: cfg.o ?? 0,
+  };
+  state.profile = p ? { ...p, ...settings } : { ...settings, inventory: {}, room: null, created: Date.now() };
+  store.saveProfile(state.profile);
+  if (!same) {
+    state.forecast = null;
+    state.climate = [];
+    state.climateReady = false;
+  }
+  return true;
 }
 
 let toastTimer = null;
@@ -181,6 +260,9 @@ async function copy(text) {
 
 const configText = () => encodeConfig(profileToConfig(state.profile), (s) => btoa(s));
 
+// iPhone : lien qui renvoie les réglages au widget (script Scriptable nommé « Superbébé »).
+const scriptableLink = () => (state.profile ? `scriptable:///run/${encodeURIComponent('Superbébé')}?config=${configText()}` : '');
+
 // Lien qui ouvre l'app Android du widget avec la configuration ; sans l'app, Chrome propose de la télécharger.
 function androidLink() {
   const base = new URL('../', location.href).href;
@@ -215,7 +297,8 @@ function reportText() {
     `Sorties : ${transport}, de ${hourFr(p.outing_window.from)} à ${hourFr(p.outing_window.to)}, ${p.outing_duration_h} h`,
     `Tendance de bébé : ${pref}`,
     `Garde-robe : ${owned} article(s) ; ${store.hidden().length} suggestion(s) masquée(s)`,
-    `Widget : ${state.widgetReady ? 'configuré' : 'pas encore'}`,
+    `Widget : ${(host === 'android' ? state.widgets > 0 : state.widgetReady) ? 'posé' : 'pas encore'}`,
+    host === 'android' ? `App Android : ${ask(() => android.version(), '?')}` : `Ouverture : ${host === 'scriptable' ? 'depuis le widget iPhone' : standalone ? 'app installée' : 'navigateur'}`,
   ].join('\n');
 }
 
@@ -341,6 +424,7 @@ const actions = {
     const ctx = compute(state.day);
     if (!ctx) return;
     const text = shareText(ctx);
+    if (host === 'android' && ask(() => android.share(text), false) !== false) return;
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Superbébé', text });
@@ -415,6 +499,7 @@ const actions = {
       created: Date.now(),
     };
     store.saveProfile(state.profile);
+    syncHost();
     store.markDay(parisNow().date);
     state.draft = null;
     state.results = [];
@@ -426,17 +511,17 @@ const actions = {
     state.platform = el.dataset.value;
     paint();
   },
+  // Le script copié contient les réglages : plus rien à coller dans le widget.
   async 'copy-loader'() {
-    if (state.loader && (await copy(state.loader))) toast('Script copié : collez-le dans Scriptable.');
-    paint();
-  },
-  async 'copy-config'() {
-    if (await copy(configText())) {
+    if (state.script && (await copy(state.script))) {
       store.markWidgetCopied();
       state.widgetReady = true;
-      toast('Configuration copiée : collez-la dans le champ Parameter du widget.');
+      toast('Script copié avec vos réglages : collez-le dans Scriptable.');
     }
     paint();
+  },
+  'add-widget'() {
+    if (!ask(() => android.addWidget(), false)) toast("Appui long sur l'écran d'accueil, Widgets, puis Superbébé.");
   },
   'hide-promo'() {
     store.hidePromo();
@@ -459,7 +544,8 @@ const actions = {
     }
     const registration = await navigator.serviceWorker?.getRegistration();
     if (!registration) {
-      toast('Mise à jour automatique indisponible ici.');
+      // Ouverte depuis le widget iPhone, l'app est rechargée du site à chaque fois.
+      toast(host ? `Vous avez la dernière version (${V.VERSION}).` : 'Mise à jour automatique indisponible ici.');
       return;
     }
     await registration.update().catch(() => {});
@@ -477,6 +563,8 @@ const actions = {
       return;
     }
     store.clear();
+    state.profile = null;
+    syncHost();
     location.hash = '';
     location.reload();
   },
@@ -530,7 +618,7 @@ document.addEventListener('click', (event) => {
   const step = event.target.closest('[data-step]');
   if (step) {
     state.steps.add(`${state.platform}-${step.dataset.step}`);
-    if (step.dataset.step === '3') {
+    if ('ready' in step.dataset) {
       store.markWidgetCopied();
       state.widgetReady = true;
     }
@@ -552,6 +640,10 @@ document.addEventListener('toggle', (event) => {
 }, true);
 
 window.addEventListener('hashchange', () => {
+  if (takeImport()) {
+    syncHost();
+    loadData({ force: true });
+  }
   state.draft = null;
   state.results = [];
   state.confirmClear = false;
@@ -584,6 +676,11 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
+  if (host === 'android') {
+    // Retour de la fenêtre « Ajouter le widget » ou de l'écran d'accueil.
+    state.widgets = ask(() => android.widgets(), state.widgets);
+    if (currentView() !== 'onboarding') paint();
+  }
   if (!state.profile) return;
   const today = parisNow().date;
   if (today !== state.today) {
@@ -601,6 +698,7 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 async function boot() {
+  takeImport();
   paint();
   try {
     state.bundle = await loadBundle();
@@ -619,6 +717,7 @@ async function boot() {
     const climate = store.climate();
     if (climate?.code === state.profile.commune.code) state.climate = climate.years;
     store.markDay(state.today);
+    syncHost();
   }
   paint();
   if (route() === 'widget') preloadLoader();

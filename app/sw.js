@@ -1,6 +1,6 @@
 // Service worker : l'app et les règles restent disponibles hors ligne.
 // Changer VERSION à chaque mise en ligne pour que les téléphones récupèrent la nouvelle version.
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 const CACHE = `superbebe-${VERSION}`;
 const ASSETS = [
   './',

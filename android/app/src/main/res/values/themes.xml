@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Barres du système transparentes : l'app colore elle-même le haut et le bas de l'écran. -->
     <style name="Theme.Superbebe" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:colorAccent">#1A6381</item>
-        <item name="android:statusBarColor">#F2F5F7</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:colorAccent">#2F7CF6</item>
+        <item name="android:windowBackground">@color/fond</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

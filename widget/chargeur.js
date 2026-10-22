@@ -2,8 +2,9 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: deep-blue; icon-glyph: baby;
 // Superbébé, widget iPhone. Ce chargeur récupère la dernière version du widget (au plus toutes les 6 heures)
-// et la garde sur le téléphone pour fonctionner hors ligne.
+// et la garde sur le téléphone pour fonctionner hors ligne. L'app y ajoute vos réglages au moment de la copie.
 const SB_BASE = "__SB_BASE_URL__";
+const SB_CONFIG = "__SB_CONFIG__";
 const sbFm = FileManager.local();
 const sbFile = sbFm.joinPath(sbFm.documentsDirectory(), "superbebe-widget.js");
 const sbFresh = sbFm.fileExists(sbFile) && Date.now() - sbFm.modificationDate(sbFile).getTime() < 6 * 3600 * 1000;
@@ -21,4 +22,4 @@ if (!sbFresh) {
 }
 if (!sbCode && sbFm.fileExists(sbFile)) sbCode = sbFm.readString(sbFile);
 if (!sbCode) throw new Error("Superbébé : connexion internet nécessaire au premier lancement.");
-await new Function("SB_BASE_FROM_LOADER", `${sbCode}\nreturn runSuperbebe;`)(SB_BASE)();
+await new Function("SB_BASE_FROM_LOADER", "SB_CONFIG_FROM_LOADER", `${sbCode}\nreturn runSuperbebe;`)(SB_BASE, SB_CONFIG)();

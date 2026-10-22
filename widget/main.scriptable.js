@@ -1,7 +1,7 @@
 // Partie propre au widget iPhone (Scriptable).
 // tools/build-widget.js la concatène après engine/engine.js et engine/adapter.js, avec les règles embarquées.
-/* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Alert, Script, Safari, config, args,
-   SB_BASE_URL, SB_RULES */
+/* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Script, Safari, WebView, config, args,
+   SB_BASE_URL, SB_CONFIG_LOADER, SB_RULES */
 
 const SB_APP_URL = `${SB_BASE_URL}app/`;
 const SB_ROOM_TTL_MS = 16 * 3600 * 1000;
@@ -35,30 +35,65 @@ function sbFiles() {
 }
 
 const sbDecode = (b64) => Data.fromBase64String(b64).toRawString();
+const sbValid = (text) => Boolean(text) && Boolean(decodeConfig(text, sbDecode));
 const sbFreshRoom = (state) => (state.room && Date.now() - state.room.at < SB_ROOM_TTL_MS ? state.room.value : null);
 
-// Toucher le widget ouvre ce menu dans Scriptable.
-async function sbMenu(state) {
-  const sheet = new Alert();
-  sheet.title = 'Superbébé';
-  sheet.addAction('Température de la chambre ce soir');
-  sheet.addAction("Ouvrir l'app");
-  sheet.addCancelAction('Voir le widget');
-  const choice = await sheet.presentSheet();
-  if (choice === 0) {
-    const ask = new Alert();
-    ask.title = 'Chambre de bébé';
-    ask.message = 'Température indiquée par votre thermomètre, en °C.';
-    const field = ask.addTextField('19,5', state.room ? frNumber(state.room.value) : '');
-    if (field && typeof field.setDecimalPadKeyboard === 'function') field.setDecimalPadKeyboard();
-    ask.addAction('Enregistrer');
-    ask.addCancelAction('Annuler');
-    if ((await ask.presentAlert()) === 0) {
-      const value = parseFloat(String(ask.textFieldValue(0)).replace(',', '.'));
-      if (value >= 5 && value <= 40) state.room = { value: Math.round(value * 2) / 2, at: Date.now() };
+// Réglages : le dernier changement l'emporte, qu'il vienne du script copié depuis l'app (chargeur),
+// du champ Parameter du widget, ou de l'app elle-même (voir sbApply).
+function sbResolveConfig(state, param) {
+  if (sbValid(SB_CONFIG_LOADER) && SB_CONFIG_LOADER !== state.loaderSeen) {
+    state.config = SB_CONFIG_LOADER;
+    state.loaderSeen = SB_CONFIG_LOADER;
+  }
+  if (sbValid(param) && param !== state.paramSeen) {
+    state.config = param;
+    state.paramSeen = param;
+  }
+}
+
+// Réglages et relevé de la chambre envoyés par l'app : config=SB1.… et room=valeur@horodatage.
+function sbApply(state, params) {
+  const config = String(params.config ?? '');
+  if (sbValid(config)) state.config = config;
+  const [value, at] = String(params.room ?? '').split('@').map(Number);
+  if (value >= 5 && value <= 40 && at > (state.room?.at ?? 0)) state.room = { value, at };
+}
+
+function sbQuery(url) {
+  const params = {};
+  for (const part of url.slice(url.indexOf('?') + 1).split('&')) {
+    const eq = part.indexOf('=');
+    if (eq > 0) params[part.slice(0, eq)] = decodeURIComponent(part.slice(eq + 1));
+  }
+  return params;
+}
+
+// Toucher le widget relance ce script dans Scriptable (le réglage « When Interacting » est ignoré)…
+const sbTapUrl = () => `scriptable:///run/${encodeURIComponent(Script.name())}?ouvrir=app`;
+
+// … qui ouvre l'app en plein écran. L'app y renvoie ses changements par des liens superbebe-sync:?…
+async function sbOpenApp(state, configText) {
+  const url = `${SB_APP_URL}?hote=scriptable#import=${configText}`;
+  if (typeof WebView === 'undefined') {
+    Safari.open(url);
+    return;
+  }
+  const view = new WebView();
+  view.shouldAllowRequest = (request) => {
+    const target = String(request.url ?? '');
+    if (target.startsWith('superbebe-sync:')) {
+      sbApply(state, sbQuery(target));
+      return false;
     }
-  } else if (choice === 1) {
-    Safari.open(SB_APP_URL);
+    if (target.startsWith(SB_APP_URL) || target.startsWith('about:')) return true;
+    if (/^https?:/.test(target)) Safari.open(target);
+    return false;
+  };
+  try {
+    await view.loadURL(url);
+    await view.present(false);
+  } catch (e) {
+    Safari.open(url);
   }
 }
 
@@ -140,17 +175,22 @@ async function runSuperbebe() {
   const inWidget = Boolean(config.runsInWidget || config.runsInAccessoryWidget);
   const files = sbFiles();
   const state = files.read('etat.json') ?? {};
-  const param = String(args.widgetParameter ?? '').trim();
-  if (param && decodeConfig(param, sbDecode)) state.config = param;
+  const query = args.queryParameters ?? {};
+  sbResolveConfig(state, String(args.widgetParameter ?? '').trim());
+  if (!inWidget) sbApply(state, query);
   const cfg = decodeConfig(state.config ?? '', sbDecode);
   if (!cfg) {
     files.write('etat.json', state);
     const message = family.startsWith('accessory')
-      ? 'Collez la configuration dans le paramètre du widget.'
-      : "Configuration manquante. Dans l'app, ouvrez Réglages puis « Ajouter le widget », copiez la configuration et collez-la dans le champ Parameter de ce widget.";
+      ? "Recopiez le script depuis l'app Superbébé."
+      : "Réglages manquants. Dans l'app Superbébé : Réglages, Ajouter le widget, puis copiez à nouveau le script dans Scriptable.";
     return sbFinish(sbMessageWidget(family, message), inWidget);
   }
-  if (!inWidget) await sbMenu(state);
+  if (!inWidget && query.ouvrir === 'app') {
+    await sbOpenApp(state, state.config);
+    files.write('etat.json', state);
+    return Script.complete();
+  }
   files.write('etat.json', state);
 
   let cache = files.read('meteo.json');
@@ -186,5 +226,7 @@ async function runSuperbebe() {
       ? window ? hourFr(window.start) : '—'
       : result.night.tog ? `${result.night.tog}` : '—',
   };
-  return sbFinish(sbDraw(family, lines, info), inWidget);
+  const widget = sbDraw(family, lines, info);
+  widget.url = sbTapUrl();
+  return sbFinish(widget, inWidget);
 }

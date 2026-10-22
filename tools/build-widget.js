@@ -17,6 +17,8 @@ const code = [
   `const SB_VERSION = ${JSON.stringify(version)};`,
   '// Le chargeur fournit l\'adresse réelle du site ; sinon, adresse par défaut (champ homepage de package.json).',
   `const SB_BASE_URL = (typeof SB_BASE_FROM_LOADER === 'string' && SB_BASE_FROM_LOADER) || ${JSON.stringify(homepage)};`,
+  '// Réglages ajoutés au chargeur par l\'app au moment de la copie (les anciens chargeurs n\'en ont pas).',
+  "const SB_CONFIG_LOADER = typeof SB_CONFIG_FROM_LOADER === 'string' ? SB_CONFIG_FROM_LOADER : '';",
   `const SB_RULES = ${JSON.stringify({ rules, messages })};`,
   strip(read('engine/engine.js')),
   strip(read('engine/adapter.js')),

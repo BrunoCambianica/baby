@@ -3,7 +3,7 @@ import { hourFr, render, skyTheme, widgetLines } from '../../engine/engine.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { icon, weatherIcon } from './icons.js';
 
-export const VERSION = '0.2.1';
+export const VERSION = '0.3.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -256,13 +256,24 @@ function officialCard(state, ids, params) {
   </details>`;
 }
 
-function promoCard(state) {
-  if (state.widgetReady || state.promoHidden) return '';
-  return `<section class="card promo">
+const promo = (title, text) => `<section class="card promo">
     <span class="promo-ico">${icon('phone')}</span>
-    <div><h3>Ajoutez le widget</h3><p>La réponse du jour sur l'écran d'accueil, sans ouvrir l'app. <a class="link" href="#widget">Comment faire</a></p></div>
+    <div><h3>${title}</h3><p>${text}</p></div>
     <button class="x" data-action="hide-promo" aria-label="Masquer">${icon('x', { size: 18 })}</button>
   </section>`;
+
+function promoCard(state) {
+  if (state.promoHidden || state.host === 'scriptable') return '';
+  // Dans un onglet du navigateur, d'abord l'app en plein écran ; le widget ensuite.
+  if (state.inBrowser) {
+    return state.device === 'android'
+      ? promo('Superbébé en plein écran', `L'app pour Android : sans barre de navigateur, avec le widget. <a class="link" href="#widget">L'installer</a>`)
+      : promo('Superbébé en plein écran', 'Sans les barres de Safari : bouton Partager, puis « Sur l\'écran d\'accueil ». Ouvrez ensuite Superbébé depuis son icône.');
+  }
+  if (state.host === 'android') {
+    return state.widgets ? '' : promo('Ajoutez le widget', `La réponse du jour sur l'écran d'accueil, sans ouvrir l'app. <button class="link" data-action="add-widget">Ajouter</button>`);
+  }
+  return state.widgetReady ? '' : promo('Ajoutez le widget', `La réponse du jour sur l'écran d'accueil, sans ouvrir l'app. <a class="link" href="#widget">Comment faire</a>`);
 }
 
 const foot = () => `<p class="foot"><span>Repères officiels relayés, pas d'avis médical. Urgence : 15 ou 112.</span>
@@ -442,12 +453,7 @@ export function viewSettings(state) {
         </div>
       </div>
     </section>
-    <section class="group"><h2 class="group-title">Écran d'accueil</h2>
-      <div class="group-body">
-        <a class="row" href="#widget"><span>Ajouter le widget</span>${chev()}</a>
-        ${state.installPrompt ? `<button class="row" data-action="install"><span>Installer l'app</span>${icon('download', { size: 20 })}</button>` : ''}
-      </div>
-    </section>
+    ${homeScreenGroup(state)}
     <section class="group"><h2 class="group-title">Application</h2>
       <div class="group-body">
         <button class="row" data-action="check-update"><span>${state.updateReady ? 'Installer la mise à jour' : 'Rechercher une mise à jour'}</span><span class="value">v${VERSION}</span></button>
@@ -457,6 +463,20 @@ export function viewSettings(state) {
     </section>
     <section class="group"><div class="group-body"><button class="row danger" data-action="clear">${state.confirmClear ? 'Toucher à nouveau pour tout effacer' : 'Effacer toutes mes données'}</button></div></section>
   </div>`;
+}
+
+// Réglages : le widget selon le téléphone. Dans l'app Android, un seul bouton ; ouverte depuis le widget iPhone, rien.
+function homeScreenGroup(state) {
+  if (state.host === 'scriptable') return '';
+  const rows = state.host === 'android'
+    ? `<button class="row" data-action="add-widget"><span>${state.widgets ? 'Ajouter un autre widget' : 'Ajouter le widget'}</span>${icon('plus', { size: 20 })}</button>`
+    : `<a class="row" href="#widget"><span>Ajouter le widget</span>${chev()}</a>
+        ${state.device === 'ios' && state.widgetReady && state.updateLink ? `<a class="row" href="${esc(state.updateLink)}"><span>Envoyer mes réglages au widget</span>${icon('refresh', { size: 20 })}</a>` : ''}
+        ${state.installPrompt ? `<button class="row" data-action="install"><span>Installer l'app</span>${icon('download', { size: 20 })}</button>` : ''}`;
+  const note = state.device === 'ios' && state.widgetReady && !state.host
+    ? '<p class="group-note">Après un changement de commune ou de réglage, touchez « Envoyer mes réglages au widget ».</p>'
+    : '';
+  return `<section class="group"><h2 class="group-title">Écran d'accueil</h2><div class="group-body">${rows}</div>${note}</section>`;
 }
 
 // Assistant du widget : la plateforme du téléphone d'abord, une action par étape.
@@ -469,34 +489,41 @@ export function viewWidget(state, ctx) {
     <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Installer Scriptable</h3><p>Une app gratuite qui affiche le widget.</p>
       <a class="btn small tint" href="${SCRIPTABLE_URL}" target="_blank" rel="noopener" data-step="1">Ouvrir l'App Store</a></div></li>
     <li class="step${done(2)}">${num(2)}<div class="step-body"><h3>Copier le script</h3>
-      <button class="btn small tint" data-action="copy-loader" data-step="2"${state.loader ? '' : ' disabled'}>Copier le script</button>
-      <p>Ouvrez Scriptable, touchez <strong>+</strong> en haut à droite, collez, puis touchez ▶ en bas à droite.</p></div></li>
-    <li class="step${done(3)}">${num(3)}<div class="step-body"><h3>Copier votre configuration</h3>
-      <button class="btn small tint" data-action="copy-config" data-step="3">Copier la configuration</button>
-      <p>Elle contient votre commune et vos réglages.</p></div></li>
-    <li class="step${done(4)}">${num(4)}<div class="step-body"><h3>Poser le widget</h3>
-      <p>Appui long sur l'écran d'accueil, puis <strong>+</strong> en haut à gauche. Cherchez Scriptable, taille moyenne, Ajouter.</p>
-      <p>Touchez ensuite le widget pendant que les icônes bougent : Script <strong>Superbébé</strong>, Parameter : collez la configuration.</p>
-      <p class="fine">Écran verrouillé : appui long dessus, Personnaliser, puis un widget Scriptable.</p></div></li>`;
+      <button class="btn small tint" data-action="copy-loader" data-step="2"${state.script ? '' : ' disabled'}>Copier le script</button>
+      <p>Il contient vos réglages. Dans Scriptable : <strong>+</strong> en haut à droite, collez, nommez-le <strong>Superbébé</strong> (touchez le titre), puis ▶ en bas à droite.</p></div></li>
+    <li class="step${done(3)}">${num(3)}<div class="step-body"><h3>Poser le widget</h3>
+      <p>Appui long sur l'écran d'accueil, <strong>Modifier</strong> en haut à gauche, puis <strong>Ajouter un widget</strong>. Choisissez Scriptable, taille moyenne.</p>
+      <p>Touchez le widget pendant que les icônes bougent, puis Script : <strong>Superbébé</strong>. C'est tout.</p>
+      <p class="fine">Toucher le widget ouvre ensuite Superbébé en plein écran. Écran verrouillé : appui long dessus, Personnaliser, puis un widget Scriptable.</p></div></li>`;
   const android = `
-    <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Télécharger l'app du widget</h3>
+    <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Télécharger l'app Superbébé</h3>
+      <p>L'app complète en plein écran, avec le widget.</p>
       <a class="btn small tint" href="../dist/superbebe-android.apk" download data-step="1">Télécharger (6 Mo)</a></div></li>
     <li class="step${done(2)}">${num(2)}<div class="step-body"><h3>L'installer</h3>
       <p>Ouvrez le fichier depuis la notification de téléchargement. Si Android le demande, autorisez Chrome à installer des applications.</p></div></li>
-    <li class="step${done(3)}">${num(3)}<div class="step-body"><h3>Envoyer votre configuration</h3>
-      <a class="btn small tint" href="${esc(state.androidLink)}" data-step="3">Envoyer à l'app</a>
-      <p>L'app Superbébé s'ouvre et confirme votre commune.</p></div></li>
+    <li class="step${done(3)}">${num(3)}<div class="step-body"><h3>L'ouvrir avec vos réglages</h3>
+      <a class="btn small tint" href="${esc(state.androidLink)}" data-step="3" data-ready>Ouvrir l'app Superbébé</a>
+      <p>Vos réglages y sont repris : rien à ressaisir.</p></div></li>
     <li class="step${done(4)}">${num(4)}<div class="step-body"><h3>Poser le widget</h3>
-      <p>Appui long sur l'écran d'accueil, Widgets, puis Superbébé. Faites-le glisser à sa place.</p></div></li>`;
+      <p>Dans l'app : <strong>Ajouter</strong> sur la carte « Ajoutez le widget », ou Réglages, Ajouter le widget.</p>
+      <p class="fine">Utilisez ensuite l'icône de l'app Superbébé ; celle installée depuis le navigateur peut être retirée.</p></div></li>`;
+  const inApp = `
+    <li class="step${state.widgets ? ' done' : ''}"><span class="step-num">${state.widgets ? icon('check', { size: 16 }) : 1}</span><div class="step-body">
+      <h3>${state.widgets ? 'Widget posé' : 'Poser le widget'}</h3>
+      <button class="btn small tint" data-action="add-widget">${state.widgets ? 'Ajouter un autre widget' : "Ajouter à l'écran d'accueil"}</button>
+      <p>Android demande de confirmer. Sinon : appui long sur l'écran d'accueil, Widgets, puis Superbébé.</p>
+      <p class="fine">Le widget suit vos réglages et le relevé de la chambre, sans rien copier. Le toucher ouvre l'app.</p></div></li>`;
+  const tabs = state.host === 'android' ? '' : `<div class="seg" role="tablist" aria-label="Téléphone">${[['ios', 'iPhone'], ['android', 'Android']].map(([v, l]) =>
+    `<button role="tab" aria-selected="${state.platform === v}" data-action="platform" data-value="${v}">${l}</button>`).join('')}</div>`;
+  const steps = state.host === 'android' ? inApp : state.platform === 'android' ? android : ios;
   return `<header class="page-head"><a class="back" href="#">${icon('chevronLeft')}Retour</a><h1>Le widget</h1>
     <p class="lead">La réponse du jour sur l'écran d'accueil, sans ouvrir l'app.</p></header>
   <div class="page">
     <div class="widget-demo hero--${theme}"><p class="w-head">Superbébé · ${esc(state.profile.commune.nom)}</p>${lines.map((l) => `<p class="w-line">${esc(l)}</p>`).join('')}</div>
-    <div class="seg" role="tablist" aria-label="Téléphone">${[['ios', 'iPhone'], ['android', 'Android']].map(([v, l]) =>
-      `<button role="tab" aria-selected="${state.platform === v}" data-action="platform" data-value="${v}">${l}</button>`).join('')}</div>
-    <ol class="steps">${state.platform === 'android' ? android : ios}</ol>
-    ${state.platform === 'ios' && state.loader ? `<details class="card"><summary class="hint">Voir le script</summary><pre class="code">${esc(state.loader)}</pre></details>` : ''}
-    <p class="fine">Pourquoi une app en plus ? Un site web ne peut pas poser de widget : sur iPhone on passe par Scriptable, sur Android par une petite app Superbébé, hors Play Store pendant le test.</p>
+    ${tabs}
+    <ol class="steps">${steps}</ol>
+    ${state.platform === 'ios' && !state.host && state.script ? `<details class="card"><summary class="hint">Voir le script</summary><pre class="code">${esc(state.script)}</pre></details>` : ''}
+    ${state.host ? '' : '<p class="fine">Pourquoi une app en plus ? Un site web ne peut pas poser de widget : sur iPhone on passe par Scriptable, sur Android par l\'app Superbébé, hors Play Store pendant le test.</p>'}
   </div>`;
 }
 

@@ -24,6 +24,30 @@ object SbStore {
         editor.apply()
     }
 
+    /** Oublie les réglages (« Effacer mes données » dans l'app) ; true s'il y en avait. */
+    fun clearConfig(context: Context): Boolean {
+        if (config(context) == null) return false
+        prefs(context).edit().remove("config").remove("room").remove("room_at").apply()
+        return true
+    }
+
+    /** Réglages du widget à reprendre une seule fois dans l'app, au premier lancement. */
+    fun takeFirstImport(context: Context): String? {
+        val p = prefs(context)
+        if (p.getBoolean("app_opened", false)) return null
+        p.edit().putBoolean("app_opened", true).apply()
+        return config(context)
+    }
+
+    /** Une nouvelle version se propose au plus une fois par jour. */
+    fun askUpdate(context: Context): Boolean {
+        val p = prefs(context)
+        val now = System.currentTimeMillis()
+        if (now - p.getLong("update_asked_at", 0) < 24 * 3600 * 1000L) return false
+        p.edit().putLong("update_asked_at", now).apply()
+        return true
+    }
+
     fun forecast(context: Context, key: String): String? {
         val p = prefs(context)
         return if (p.getString("forecast_key", null) == key) p.getString("forecast", null) else null
@@ -46,10 +70,10 @@ object SbStore {
         return if (fresh) p.getFloat("room", 19f).toDouble() else null
     }
 
-    fun lastRoom(context: Context): Double = prefs(context).getFloat("room", 19f).toDouble()
+    fun roomAt(context: Context): Long = prefs(context).getLong("room_at", 0)
 
-    fun saveRoom(context: Context, value: Double) {
-        prefs(context).edit().putFloat("room", value.toFloat()).putLong("room_at", System.currentTimeMillis()).apply()
+    fun saveRoom(context: Context, value: Double, at: Long) {
+        prefs(context).edit().putFloat("room", value.toFloat()).putLong("room_at", at).apply()
     }
 
     fun render(context: Context): Render {
@@ -58,7 +82,7 @@ object SbStore {
         val lines = (0 until array.length()).map { array.getString(it) }
         return Render(
             place = p.getString("place", null) ?: "Superbébé",
-            lines = lines.ifEmpty { listOf("Ouvrez Superbébé pour configurer le widget.") },
+            lines = lines.ifEmpty { listOf("Ouvrez Superbébé pour choisir votre commune.") },
             footer = p.getString("footer", null) ?: "",
             theme = p.getString("theme", null) ?: "nuageux",
         )

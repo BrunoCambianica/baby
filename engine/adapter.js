@@ -180,10 +180,13 @@ export function decodeConfig(text, fromBase64) {
   }
 }
 
+// Les clés c (code Insee) et dp (département) sont facultatives : les anciennes configurations restent valables.
 export function profileToConfig(profile) {
   return {
     v: 1,
     n: profile.commune.nom,
+    c: profile.commune.code,
+    dp: profile.commune.dep,
     la: profile.commune.lat,
     lo: profile.commune.lon,
     b: profile.birth,
@@ -197,7 +200,7 @@ export function profileToConfig(profile) {
 
 export function configToProfile(cfg) {
   return {
-    commune: { nom: cfg.n ?? '', lat: cfg.la, lon: cfg.lo },
+    commune: { nom: cfg.n ?? '', code: cfg.c ?? '', dep: cfg.dp ?? '', lat: cfg.la, lon: cfg.lo },
     birth: cfg.b,
     transport: cfg.t ?? 'poussette',
     outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
