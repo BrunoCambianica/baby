@@ -438,6 +438,25 @@ export function journeeAt(journee, hhmm) {
   return { items, next };
 }
 
+// À la maison, en journée : la tenue selon la température de la pièce (le même relevé que pour la nuit) ;
+// sans relevé, pour le milieu de la plage de 20 à 22 °C (Mieux vivre, Québec), en le disant.
+function planIndoor(input, R, age) {
+  const I = R.indoor;
+  const room = input.profile.room_temp_c ?? null;
+  const ref = room ?? (I.comfort_range_c.min + I.comfort_range_c.max) / 2;
+  const t = I.round_room_temp ? Math.round(ref) : ref;
+  const variant = (I.age_variants ?? []).filter((v) => age >= v.from_months).at(-1);
+  const bin = (variant?.bins ?? I.bins).find((b) => b.max_c === null || t <= b.max_c);
+  const hot = room !== null && room >= I.heat_room_c_at_least;
+  return {
+    room_temp_c: room,
+    room_assumed: room === null,
+    room_status: room === null ? 'unknown' : room < I.comfort_range_c.min ? 'below' : room > I.comfort_range_c.max ? 'above' : 'in_range',
+    wear: [...bin.wear],
+    relays: sortByPriority([...(hot ? I.when_hot : []), ...I.always], R.relay_priority),
+  };
+}
+
 // Gigoteuse (TOG) et tenue dessous selon la chambre ; sans relevé, pour le repère officiel (milieu de 18-20 °C), en le disant.
 // Les repères du couchage du nourrisson ne s'affichent plus à partir de 2 ans.
 function planNight(input, R, heat, age) {
@@ -718,6 +737,7 @@ export function evaluate(input, bundle) {
     relays: dayRelays(input, R, age, plan, outfit, params),
     params,
     journee: planJournee(input, R, age, plan),
+    indoor: planIndoor(input, R, age),
     night: planNight(input, R, plan.heat, age),
     purchases: planPurchases(input, R),
   };
@@ -762,6 +782,8 @@ export function lint(bundle) {
   }
   const referenced = [
     R.journee.check,
+    ...R.indoor.always,
+    ...R.indoor.when_hot,
     ...R.journee.widget_urgent_relays,
     ...R.relay_priority,
     ...R.night.always,
@@ -794,7 +816,7 @@ export function lint(bundle) {
     if (!M.labels.layers[M.labels.item_layers[item]]) errors.push(`couche inconnue pour : ${item}`);
     if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
   }
-  for (const item of R.night.tog_hint.bins.flatMap((b) => b.wear ?? [])) {
+  for (const item of [...R.night.tog_hint.bins, ...R.indoor.bins, ...R.indoor.age_variants.flatMap((v) => v.bins)].flatMap((b) => b.wear ?? [])) {
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
   }

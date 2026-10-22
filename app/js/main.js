@@ -214,7 +214,7 @@ function paint() {
 // Barre d'état d'Android assortie au ciel de l'écran (iOS garde sa barre standard).
 const SKY = {
   clair: '#3b8cf6', nuageux: '#5b7aa0', pluie: '#3f5d7c', chaleur: '#ec7f24', froid: '#4a72c0',
-  soir: '#5650c6', nuit: '#121a33', prevoir: '#6a5bdc',
+  soir: '#5650c6', nuit: '#121a33', prevoir: '#6a5bdc', maison: '#2f8f83',
 };
 function setThemeColor(view) {
   const meta = document.querySelector('meta[name="theme-color"]');
@@ -224,7 +224,8 @@ function setThemeColor(view) {
   if (view === 'onboarding') color = SKY.clair;
   if (view === 'app') {
     const ctx = state.tab === 'sortir' ? compute(state.day) : null;
-    color = state.tab === 'nuit' ? SKY.nuit : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
+    const house = state.tab === 'nuit' && compute('aujourdhui')?.moment !== 'soir' ? SKY.maison : SKY.nuit;
+    color = state.tab === 'nuit' ? house : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
   }
   meta.setAttribute('content', color);
   // Barres du système de l'app Android : ciel en haut, couleur de la barre d'onglets en bas.
@@ -809,7 +810,8 @@ const actions = {
   },
   room(el) {
     const p = state.profile;
-    const base = freshRoom(p) ?? p.room?.value ?? 19;
+    // Sans relevé récent, on part de la valeur affichée (21 °C le jour, 19 °C le soir).
+    const base = freshRoom(p) ?? (el.dataset.base ? Number(el.dataset.base) : p.room?.value ?? 19);
     const value = clamp(Math.round((base + Number(el.dataset.value)) * 2) / 2, 10, 35);
     updateChild({ room: { value, at: Date.now() } });
     paint();

@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.9.0';
+export const VERSION = '0.10.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -438,37 +438,65 @@ function sortirContent(state, ctx) {
   ].join('');
 }
 
+// Onglet Maison : la température chez vous, relevée une fois (elle sert le jour et la nuit, 16 heures).
+// Le jour, comparée au repère de 20 à 22 °C (Mieux vivre, Québec) ; le soir, à celui de la chambre, 18 à 20 °C.
 function heroNuit(state, ctx) {
+  const evening = ctx.moment === 'soir';
   const n = ctx.result.night;
   const known = n.room_temp_c !== null;
-  const value = n.room_temp_c ?? state.profile.room?.value ?? 19;
-  const range = state.bundle.rules.night.room_range_c;
-  const status = {
-    in_range: ['ok', 'Dans la plage recommandée'],
-    above: ['warn', `Un peu chaud : au-dessus de ${range.max} °C`],
-    below: ['warn', `Un peu frais : sous ${range.min} °C`],
-  }[n.room_status];
-  return `<header class="hero hero--nuit">${heroArt('moonStars')}${heroTop(state, ctx.date)}
-    <p class="hero-label">Ce soir · chambre ${state.profile.count > 1 ? `de ${esc(childName(state.profile, state.profile.index))}` : 'de bébé'}</p>
+  const fallback = evening ? 19 : 21;
+  const value = n.room_temp_c ?? state.profile.room?.value ?? fallback;
+  const night = state.bundle.rules.night.room_range_c;
+  const day = state.bundle.rules.indoor.comfort_range_c;
+  const status = evening
+    ? { in_range: ['ok', 'Dans la plage recommandée pour dormir'], above: ['warn', `Un peu chaud pour dormir : au-dessus de ${night.max} °C`], below: ['warn', `Un peu frais pour dormir : sous ${night.min} °C`] }[n.room_status]
+    : { in_range: ['ok', `Bien pour la journée (${day.min} à ${day.max} °C)`], above: ['warn', `Au-dessus de ${day.max} °C : habillez-le léger`], below: ['warn', `Sous ${day.min} °C : une couche de plus`] }[ctx.result.indoor.room_status];
+  const who = state.profile.count > 1 ? `de ${esc(childName(state.profile, state.profile.index))}` : 'de bébé';
+  return `<header class="hero hero--${evening ? 'nuit' : 'maison'}">${heroArt(evening ? 'moonStars' : 'home')}${heroTop(state, ctx.date)}
+    <p class="hero-label">${evening ? `Ce soir · chambre ${who}` : `Chez vous · ${state.profile.count > 1 ? esc(childName(state.profile, state.profile.index)) : 'maintenant'}`}</p>
     <div class="stepper">
-      <button class="glass glass-btn" data-action="room" data-value="-0.5" aria-label="Baisser d'un demi-degré">${icon('minus')}</button>
+      <button class="glass glass-btn" data-action="room" data-value="-0.5" data-base="${fallback}" aria-label="Baisser d'un demi-degré">${icon('minus')}</button>
       <p class="hero-big${known ? '' : ' pending'}" aria-live="polite">${decimal(value)}°</p>
-      <button class="glass glass-btn" data-action="room" data-value="0.5" aria-label="Monter d'un demi-degré">${icon('plus')}</button>
+      <button class="glass glass-btn" data-action="room" data-value="0.5" data-base="${fallback}" aria-label="Monter d'un demi-degré">${icon('plus')}</button>
     </div>
     ${known
       ? `<p class="status-pill glass"><span class="dot ${status[0]}"></span>${status[1]}</p>`
-      : `<button class="status-pill glass" data-action="room" data-value="0">${icon('check', { size: 18 })}C'est la température de ce soir</button>`}
+      : `<button class="status-pill glass" data-action="room" data-value="0" data-base="${fallback}">${icon('check', { size: 18 })}${evening ? "C'est la température de ce soir" : "C'est la température chez vous"}</button>`}
   </header>`;
 }
 
+// À la maison, en journée : la tenue pour la température de la pièce, et les repères de Mieux vivre (Québec)
+// et de Santé Manitoba ; ceux de Santé publique France quand il fait chaud dedans.
+function indoorCard(state, ctx) {
+  const M = state.bundle.messages;
+  const labels = M.labels;
+  const i = ctx.result.indoor;
+  const day = state.bundle.rules.indoor.comfort_range_c;
+  const room = i.room_assumed ? `Pour ${day.min} à ${day.max} °C, le repère de Mieux vivre (Québec)` : `Chez vous à ${decimal(i.room_temp_c)} °C`;
+  const wear = drawingsOn(state)
+    ? `<ul class="dress">${i.wear.map((item) => `<li><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span>
+        <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}</ul>`
+    : `<p>${esc(capitalize(i.wear.map((item) => labels.items[item]).join(', ')))}.</p>`;
+  const sources = [...new Set(i.relays.flatMap((id) => M.messages[id]?.sources ?? []))];
+  return `<section class="card">
+      <div class="card-head"><h2 class="card-title">${icon('home', { size: 18 })}En journée, à la maison</h2><span class="tag">pratique</span></div>
+      <p class="band"><strong>${esc(room)}</strong></p>
+      ${wear}
+      <ul class="facts">${i.relays.filter((id) => id !== 'relay.indoor.temperature').map((id) => `<li>${icon('check', { size: 18 })}<span>${esc(render(M, id, 'short'))}</span></li>`).join('')}</ul>
+      <p class="source">Sources : ${sourceLinks(state, sources)}</p>
+    </section>`;
+}
+
 function nuitContent(state, ctx) {
+  // Le jour, la tenue à la maison d'abord ; le soir, la nuit seulement.
+  const day = ctx.moment === 'soir' ? '' : indoorCard(state, ctx);
   const M = state.bundle.messages;
   const n = ctx.result.night;
   // Les repères du couchage du nourrisson (liste détaillée) ne concernent que les moins de 2 ans.
   const basics = n.relays.includes('relay.sleep.basics') ? M.messages['relay.sleep.basics'] : null;
   const facts = [...(basics ? basics.list ?? [basics.short] : []), ...n.relays.filter((id) => id !== 'relay.sleep.basics').map((id) => render(M, id, 'short'))];
   const sources = [...new Set(n.relays.flatMap((id) => M.messages[id]?.sources ?? []))];
-  return `${nightWearCard(state, n)}
+  return `${day}${nightWearCard(state, n)}
     <section class="card">
       <div class="card-head"><h2 class="card-title">${icon('shield', { size: 18 })}Pour bien dormir</h2><span class="tag green">officiel</span></div>
       <ul class="facts">${facts.map((f) => `<li>${icon('check', { size: 18 })}<span>${esc(capitalize(f))}</span></li>`).join('')}</ul>
@@ -551,7 +579,7 @@ function prevoirContent(state, ctx) {
 
 function tabbar(state, ctx) {
   const count = ctx?.result.purchases.length ?? 0;
-  const tabs = [['sortir', 'Journée', 'sun'], ['nuit', 'Nuit', 'moon'], ['prevoir', 'Prévoir', 'bag']];
+  const tabs = [['sortir', 'Journée', 'sun'], ['nuit', 'Maison', 'home'], ['prevoir', 'Prévoir', 'bag']];
   return `<nav class="tabbar" role="tablist" aria-label="Sections">${tabs.map(([v, l, i]) =>
     `<button role="tab" aria-selected="${state.tab === v}" data-action="tab" data-value="${v}">${icon(i)}<span>${l}</span>${v === 'prevoir' && count ? `<span class="badge">${count}</span>` : ''}</button>`).join('')}</nav>`;
 }

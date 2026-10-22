@@ -830,6 +830,41 @@
       "expect": { "widget.lines.2.contains": "Grand froid" }
     },
     {
+      "id": "maison-21",
+      "description": "À la maison à 21 °C : body manches longues et pyjama, comme un adulte en pantalon et haut léger",
+      "input": { "profile": { "room_temp_c": 21 } },
+      "expect": {
+        "indoor.wear": ["body_ml", "pyjama"],
+        "indoor.room_status": "in_range",
+        "indoor.relays.include": ["relay.indoor.dress_like_you", "relay.indoor.no_overwrap", "relay.check_neck"],
+        "indoor.relays.exclude": ["relay.heat.protect"]
+      }
+    },
+    {
+      "id": "maison-fraiche",
+      "description": "Maison à 17 °C : un gilet fin en plus, et la pièce est sous 20 °C",
+      "input": { "profile": { "room_temp_c": 17 } },
+      "expect": { "indoor.wear": ["body_ml", "pyjama", "gilet_fin"], "indoor.room_status": "below" }
+    },
+    {
+      "id": "maison-chaleur",
+      "description": "Appartement à 28 °C : un vêtement court et léger suffit, repères de Santé publique France sur la chaleur",
+      "input": { "profile": { "room_temp_c": 28 } },
+      "expect": { "indoor.wear": ["body_leger"], "indoor.relays.include": ["relay.heat.protect", "relay.heat.shutters"] }
+    },
+    {
+      "id": "maison-sans-releve",
+      "description": "Sans relevé : la tenue pour 21 °C, milieu du repère de 20 à 22 °C, en le disant",
+      "input": {},
+      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pyjama"] }
+    },
+    {
+      "id": "maison-enfant",
+      "description": "Enfant de 2 ans et demi à 21 °C : haut et pantalon",
+      "input": { "profile": { "birth": "2024-03-15", "room_temp_c": 21 } },
+      "expect": { "indoor.wear": ["haut_ml", "pantalon"] }
+    },
+    {
       "id": "produit-tour-de-lit",
       "description": "Un tour de lit n'est jamais proposé",
       "input": { "check_product": "tour_de_lit" },

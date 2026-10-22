@@ -81,6 +81,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .hero--froid { background: linear-gradient(165deg, #4a72c0 0%, #7ea7e3 60%, #b8d3f4 100%); }
 .hero--soir { background: linear-gradient(165deg, #5650c6 0%, #9369c0 55%, #e09db3 100%); }
 .hero--nuit { background: linear-gradient(165deg, #121a33 0%, #24305a 60%, #3a4a80 100%); }
+.hero--maison { background: linear-gradient(165deg, #2f8f83 0%, #58b3a3 60%, #9fd8c9 100%); }
 .hero--prevoir { background: linear-gradient(165deg, #6a5bdc 0%, #9a8cf1 60%, #c6bdfb 100%); }
 .hero-art { position: absolute; right: -18px; top: calc(env(safe-area-inset-top, 0px) + 28px); opacity: 0.2; pointer-events: none; }
 .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; position: relative; }

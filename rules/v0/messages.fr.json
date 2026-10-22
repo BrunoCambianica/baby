@@ -194,6 +194,33 @@
       "tiny": "Touchez sa nuque",
       "card": "Touchez sa nuque, pas ses mains : nuque moite, une couche de moins (Mieux vivre, Québec ; NHS)."
     },
+    "relay.indoor.temperature": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": [
+        "inspq-chaleur-froid"
+      ],
+      "text": "« Si la température de la pièce vous convient, elle convient aussi à votre bébé. Une température entre 20 et 22 °C est adéquate. »",
+      "short": "Pièce entre 20 et 22 °C"
+    },
+    "relay.indoor.dress_like_you": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": [
+        "manitoba-bebe-chaud"
+      ],
+      "text": "« Habillez votre bébé comme vous vous habillez. Si vous êtes à l'aise en portant un pantalon et un chandail léger, votre bébé le sera aussi. »",
+      "short": "Habillez-le comme vous"
+    },
+    "relay.indoor.no_overwrap": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": [
+        "inspq-chaleur-froid"
+      ],
+      "text": "« N'enveloppez pas trop votre bébé. » Au-delà de 25 °C, à l'intérieur comme à l'extérieur, « un vêtement court et léger et une couche suffisent ».",
+      "short": "Ne l'enveloppez pas trop"
+    },
     "relay.sleep.season_thickness": {
       "kind": "officiel",
       "verbatim": false,
@@ -373,6 +400,11 @@
       "kind": "pratique",
       "text": "{outfit}{bag} · {night}",
       "short": "Demain, à préparer ce soir"
+    },
+    "indoor.room": {
+      "kind": "meteo",
+      "text": "Chez vous, {room} °C.",
+      "short": "Chez vous {room}°"
     },
     "night.room": {
       "kind": "meteo",

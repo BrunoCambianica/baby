@@ -47,6 +47,17 @@
       "notes": "Lu le 22/10/2026 : « Pour vérifier si votre enfant a trop chaud, touchez sa nuque : elle ne doit pas être mouillée. » Conseil général, pas limité au sommeil. Source étrangère faute de source française lue sur ce geste."
     },
     {
+      "id": "manitoba-bebe-chaud",
+      "publisher": "Gouvernement du Manitoba, Santé (Canada)",
+      "short": "Santé Manitoba (Canada)",
+      "title": "Garder le bébé au chaud en hiver",
+      "url": "https://www.gov.mb.ca/health/documents/keepbabywarm.fr.pdf",
+      "published": "2016-01",
+      "level": "A-etranger",
+      "verification": "lu",
+      "notes": "Lu le 22/10/2026 : « Habillez votre bébé comme vous vous habillez. Si vous êtes à l'aise en portant un pantalon et un chandail léger, votre bébé le sera aussi. » ; 21 °C au moins le jour, 18 °C la nuit. Le même document admet une couverture bordée dans le lit, ce que les repères français excluent : ne jamais relayer ce passage."
+    },
+    {
       "id": "santefr-grand-froid",
       "publisher": "Santé.fr (RecoSanté, recommandations validées par le HCSP et Santé publique France)",
       "short": "Santé.fr",

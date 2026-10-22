@@ -13,7 +13,7 @@ Au premier lancement, trois questions : votre commune, le mois de naissance de v
 
 L'app a trois onglets :
 - **Journée** : habillez-le une fois le matin. La tenue du matin en petits dessins (ou en texte : Réglages, Affichage, Tenues), puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus) et le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. La journée suit la plage horaire des réglages ; la sortie idéale est rappelée en haut. **Envoyer la fiche du jour** partage une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse) ;
-- **Nuit** : quoi mettre sous la gigoteuse et quel TOG, selon la température de la chambre, et les repères pour dormir ;
+- **Maison** : la température chez vous (boutons − et +). En journée, la tenue pour rester à la maison ; le soir, quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir ;
 - **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
 
 **La veille au soir**, après la dernière sortie possible de la journée, l'onglet Journée et le widget montrent la tenue et le sac de demain, « à préparer ce soir », à côté de la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).
@@ -51,7 +51,7 @@ Réglages, **Envoyer les profils** : un lien part par la messagerie de votre cho
 ## 3. Ce qu'on vous demande
 
 - Regardez l'app ou le widget avant de sortir, et le soir avant le coucher.
-- Le soir, notez la température de la chambre (onglet Nuit, boutons − et +).
+- Le soir, notez la température de la chambre (onglet Maison, boutons − et +) ; en journée, celle de la pièce si vous restez à la maison.
 - Dans l'onglet Prévoir, indiquez ce que vous avez déjà dans « Ma garde-robe ».
 - Si bébé a souvent trop chaud ou trop froid avec les tenues proposées, réglez « Tendance de bébé » dans les Réglages.
 - À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à cinq questions :
