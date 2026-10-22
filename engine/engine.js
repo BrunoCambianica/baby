@@ -10,6 +10,9 @@ export const toMin = (hhmm) => {
   return h * 60 + m;
 };
 export const fmtMin = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+// « 10:00 » devient « 10 h », « 10:30 » devient « 10 h 30 ».
+export const hourFr = (hhmm) => (hhmm.endsWith(':00') ? `${Number(hhmm.slice(0, 2))} h` : `${Number(hhmm.slice(0, 2))} h ${hhmm.slice(3, 5)}`);
+const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const DAY_MS = 86_400_000;
 const parseDay = (day) => Date.parse(`${day.length === 7 ? `${day}-15` : day.slice(0, 10)}T00:00:00Z`);
 export const addDays = (day, n) => new Date(parseDay(day) + n * DAY_MS).toISOString().slice(0, 10);
@@ -45,8 +48,12 @@ function planOuting(input, R, age) {
   const cfg = R.outing;
   const s = cfg.scoring;
   const x = cfg.slot_exclusions;
-  const plage = input.profile.outing_window ?? cfg.default_window;
+  const window0 = input.profile.outing_window ?? cfg.default_window;
   const duration = input.profile.outing_duration_h ?? cfg.default_duration_h;
+  // On ne propose que des heures à venir : la plage commence au plus tôt à l'heure pleine suivante.
+  const nextHour = input.now ? Math.ceil(toMin(input.now) / 60) * 60 : 0;
+  const plage = { from: fmtMin(Math.max(toMin(window0.from), Math.min(nextHour, 24 * 60 - 60))), to: window0.to };
+  const dayOver = toMin(plage.from) + duration * 60 > toMin(plage.to);
   const vigilance = input.alerts?.vigilance ?? [];
   const blocking = vigilance.filter(
     (v) =>
@@ -100,6 +107,7 @@ function planOuting(input, R, age) {
   let reason = null;
   if (!best) {
     if (blocking.length) reason = 'vigilance';
+    else if (dayOver) reason = 'journee_terminee';
     else if (!daySlots.length) reason = 'hors_jour';
     else {
       const counts = {};
@@ -128,11 +136,13 @@ function chooseOutfit(feels, profile, R) {
   const t = transport[profile.transport] ?? transport.poussette;
   const base = bandIndex(bands, feels);
   const idx = clamp(base + (profile.outfit_offset ?? 0) + t.band_shift, 0, bands.length - 1);
+  // Certains modes de transport remplacent des vêtements (porte-bébé : pas de pyjama à pieds ni de combinaison).
+  const items = bands[idx].items.flatMap((item) => t.replace_items?.[item] ?? [item]);
   return {
     band: bands[idx].id,
     base_band: bands[base].id,
     feels_c: feels,
-    items: bands[idx].items.filter((item) => !t.remove_items.includes(item)),
+    items: [...new Set(items)].filter((item) => !t.remove_items.includes(item)),
     notes: [...t.notes],
   };
 }
@@ -276,10 +286,10 @@ export function widgetLines(result, moment, M) {
     const w = result.outing.window;
     lines.push(
       w
-        ? render(M, 'outing.window', 'short', { start: w.start, end: w.end, feels: Math.round(w.feels_c) })
+        ? render(M, 'outing.window', 'short', { start: hourFr(w.start), end: hourFr(w.end), feels: Math.round(w.feels_c) })
         : render(M, `outing.none.${result.outing.reason}`, 'short'),
     );
-    if (result.outfit) lines.push(`Tenue : ${labels.bands_short[result.outfit.band]}`);
+    if (result.outfit) lines.push(capitalize(result.outfit.items.map((i) => labels.items_short[i] ?? i).join(' · ')));
     const hint = result.relays[0] ?? result.outfit?.notes.find((n) => n.startsWith('practical.rain'));
     if (hint) lines.push(render(M, hint, 'short', result.params));
   } else {
@@ -305,6 +315,21 @@ export function widgetLines(result, moment, M) {
 
 export const momentOf = (now) => (toMin(now ?? '08:00') < toMin('18:00') ? 'jour' : 'soir');
 
+// Ambiance du ciel (app et widgets) : le soir, la nuit ; en journée, le temps qu'il fera au créneau conseillé.
+export function skyTheme(result, moment) {
+  if (moment === 'soir') return 'nuit';
+  const { window: w, reason, slots } = result.outing;
+  if (reason === 'journee_terminee') return 'nuageux';
+  if (reason === 'hors_jour') return 'nuit';
+  if (result.relays.includes('relay.heat.outing_hours')) return 'chaleur';
+  const s = (w && slots.find((x) => x.time === w.start)) ?? slots[0];
+  if (!s) return 'nuageux';
+  if ((s.weather_code ?? 0) >= 51 || s.precip_prob >= 50) return 'pluie';
+  if ([2, 3, 45, 48].includes(s.weather_code)) return 'nuageux';
+  if (s.feels_c <= 3) return 'froid';
+  return 'clair';
+}
+
 export function evaluate(input, bundle) {
   const R = bundle.rules;
   const age = ageMonths(input.profile.birth, input.date);
@@ -326,6 +351,7 @@ export function evaluate(input, bundle) {
         precip_prob: sl.precip_prob,
         uv: sl.uv,
         gust_kmh: sl.gust_kmh,
+        weather_code: sl.weather_code ?? null,
         reasons: sl.reasons.filter((r) => r !== 'hors_plage'),
         score: sl.score,
       })),
@@ -377,9 +403,14 @@ export function lint(bundle) {
     ]),
   ];
   for (const id of new Set(referenced)) if (!M.messages[id]) errors.push(`message manquant : ${id}`);
-  for (const band of R.outfit.bands) {
-    if (!M.labels.bands_short[band.id]) errors.push(`libellé manquant : bande ${band.id}`);
-    for (const item of band.items) if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);
+  const items = new Set(R.outfit.bands.flatMap((band) => band.items));
+  for (const t of Object.values(R.outfit.transport)) {
+    for (const replacement of Object.values(t.replace_items ?? {})) replacement.forEach((item) => items.add(item));
+  }
+  for (const item of items) {
+    if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);
+    if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
+    if (!M.labels.layers[M.labels.item_layers[item]]) errors.push(`couche inconnue pour : ${item}`);
   }
   for (const cat of R.purchases.categories) if (!M.labels.categories[cat.id]) errors.push(`libellé manquant : ${cat.id}`);
   const toVerify = S.sources.filter((src) => src.verification !== 'lu').map((src) => `${src.id} (${src.verification})`);

@@ -45,11 +45,22 @@ async function run({ family = 'medium', inWidget = true, param = CONFIG, choices
     }
   }
   class Color {
-    constructor(hex) {
+    constructor(hex, alpha = 1) {
       this.hex = hex;
+      this.alpha = alpha;
     }
     static dynamic(light, dark) {
       return { light, dark };
+    }
+    static white() {
+      return new Color('#ffffff');
+    }
+  }
+  class LinearGradient {}
+  class Point {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
     }
   }
   const Font = { systemFont: (size) => ({ size }), boldSystemFont: (size) => ({ size, bold: true }) };
@@ -89,7 +100,7 @@ async function run({ family = 'medium', inWidget = true, param = CONFIG, choices
   }
   const accessory = family.startsWith('accessory');
   const context = vm.createContext({
-    ListWidget, Color, Font, Request, Alert,
+    ListWidget, Color, Font, Request, Alert, LinearGradient, Point,
     FileManager: { local: () => fm },
     Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
     Script: { setWidget: (w) => { out.widget = w; }, complete: () => { out.completed = true; } },
@@ -124,8 +135,8 @@ await test('Widget moyen : en-tête, créneau du jour, tenue, pied de page', asy
   const out = await run();
   assert(out.completed, 'Script.complete() non appelé');
   assert(out.texts[0] === 'SUPERBÉBÉ · LYON', out.texts[0]);
-  assert(/^(Sortie : |Pas de )/.test(out.texts[1]), out.texts[1]);
-  assert(out.texts[2].startsWith('Tenue : '), out.texts[2]);
+  assert(/^(Sortie idéale \d+ h – \d+ h · -?\d+°|Pas de |Plus de )/.test(out.texts[1]), out.texts[1]);
+  assert(/^Body /.test(out.texts[2]), out.texts[2]);
   assert(out.texts.at(-1) === 'Mis à jour à 07 h 30 · Open-Meteo', out.texts.at(-1));
 });
 
@@ -177,12 +188,16 @@ await test('Menu : température de la chambre enregistrée', async () => {
   assert(state.room?.value === 20.5, JSON.stringify(state));
 });
 
-await test('Menu : « trop froid » réchauffe les tenues suivantes d\'un cran', async () => {
-  const files = new Map();
-  const out = await run({ inWidget: false, choices: [3], files });
-  const state = JSON.parse(files.get('/doc/superbebe/etat.json'));
-  assert(state.offset === 1 && state.feedback.length === 1, JSON.stringify(state));
+await test('Menu : « Ouvrir l\'app » ouvre le site, puis affiche le widget', async () => {
+  const out = await run({ inWidget: false, choices: [1] });
+  assert(out.opened === 'https://brunocambianica.github.io/baby/app/', String(out.opened));
   assert(out.presented, 'aperçu non affiché');
+});
+
+await test('Fond en dégradé selon le moment : nuit le soir', async () => {
+  const out = await run({ at: '2026-10-21T20:30:00+02:00' });
+  const colors = out.widget.backgroundGradient?.colors?.map((c) => c.hex);
+  assert(colors?.[0] === '#121a33', JSON.stringify(colors));
 });
 
 await test('La configuration est mémorisée pour les lancements depuis l\'app', async () => {
@@ -222,7 +237,7 @@ await test('Chargeur : télécharge le code et transmet l\'adresse du site', asy
     addAction() {}
     addCancelAction() {}
     async presentSheet() {
-      return 4;
+      return 1;
     }
   }
   const fm = {
@@ -236,7 +251,9 @@ await test('Chargeur : télécharge le code et transmet l\'adresse du site', asy
   };
   const context = vm.createContext({
     ListWidget, Alert, Request,
-    Color: class { static dynamic(a) { return a; } },
+    LinearGradient: class {},
+    Point: class {},
+    Color: class { static dynamic(a) { return a; } static white() { return {}; } },
     Font: { systemFont: () => ({}), boldSystemFont: () => ({}) },
     FileManager: { local: () => fm },
     Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
@@ -256,7 +273,7 @@ await test('Android : le moteur embarqué renvoie le lieu et trois lignes', asyn
   const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
   const call = `${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {"offset": 0, "room": 19}, "2026-10-21", "20:30");`;
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
-  assert(out.place === 'Lyon' && out.moment === 'soir', JSON.stringify(out));
+  assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit', JSON.stringify(out));
   assert(out.lines.length === 3 && out.lines[0].includes('19') && out.lines[1].includes('2,5 TOG'), JSON.stringify(out.lines));
   const bad = JSON.parse(vm.runInContext(`${android}\nsbAndroid({}, "SB1.@@", {}, "2026-10-21", "08:00");`, vm.createContext({})));
   assert(bad.error === 'configuration', JSON.stringify(bad));

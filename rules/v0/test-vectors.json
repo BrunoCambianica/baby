@@ -36,7 +36,7 @@
         "relays.include": ["relay.cold.layers"],
         "relays.exclude": ["relay.sun.under_1y"],
         "widget.lines.length": 3,
-        "widget.lines.0.contains": "13:00"
+        "widget.lines.0.contains": "13 h"
       }
     },
     {
@@ -265,6 +265,21 @@
       "expect": { "outing.window": null, "outing.reason": "hors_jour" }
     },
     {
+      "id": "creneau-heures-passees",
+      "description": "À 14 h 20, la meilleure heure du matin est passée : créneau parmi les heures à venir",
+      "input": {
+        "now": "14:20",
+        "forecast": { "hourly": { "base": { "feels_c": 6 }, "overrides": { "10:00": { "feels_c": 12 }, "15:00": { "feels_c": 9 } } } }
+      },
+      "expect": { "outing.window": { "start": "15:00", "end": "16:00" } }
+    },
+    {
+      "id": "creneau-journee-terminee",
+      "description": "À 18 h 30, la plage 9 h-18 h est terminée",
+      "input": { "now": "18:30" },
+      "expect": { "outing.window": null, "outing.reason": "journee_terminee" }
+    },
+    {
       "id": "tenue-poussette-12",
       "description": "12 °C ressentis en poussette",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 12 } } } },
@@ -280,7 +295,9 @@
       "expect": {
         "outfit.band": "frais",
         "outfit.base_band": "froid_modere",
-        "outfit.notes.include": ["practical.carrier.body_heat"]
+        "outfit.items.include": ["pantalon", "chaussettes"],
+        "outfit.items.exclude": ["pyjama"],
+        "outfit.notes.include": ["practical.carrier.body_heat", "practical.carrier.no_footed"]
       }
     },
     {
@@ -289,7 +306,8 @@
       "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": -2 } } } },
       "expect": {
         "outfit.band": "froid",
-        "outfit.items.exclude": ["chanceliere"],
+        "outfit.items.include": ["manteau_portage", "pantalon_chaud", "chaussettes_chaudes"],
+        "outfit.items.exclude": ["chanceliere", "combi_pilote", "pyjama_chaud"],
         "relays.include": ["relay.cold.stroller_rather_than_carrier", "relay.cold.layers"],
         "widget.lines.2.contains": "poussette plutôt que porte-bébé"
       }
@@ -378,7 +396,7 @@
         "night.relays.include": ["relay.sleep.basics", "relay.sleep.room_range"],
         "night.relays.exclude": ["relay.sleep.season_thickness"],
         "widget.lines.length": 2,
-        "widget.lines.0.contains": "18 et 20"
+        "widget.lines.0.contains": "18 à 20"
       }
     },
     {

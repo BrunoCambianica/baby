@@ -1,8 +1,8 @@
-// Point d'entrée de l'app web Superbébé : état, actions, chargement des données.
-import { addDays, clamp, evaluate, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
+// Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
+import { addDays, clamp, evaluate, hourFr, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
 import { buildInput, encodeConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
-import { dayLong, dayShort, hourLabel, signed } from './format.js';
+import { dayLong, dayShort } from './format.js';
 import { store } from './storage.js';
 import * as V from './views.js';
 
@@ -18,17 +18,23 @@ const state = {
   climateReady: false,
   loading: false,
   error: null,
+  updatedAt: '',
   today: parisNow().date,
+  tab: momentOf(parisNow().time) === 'soir' ? 'nuit' : 'sortir',
   day: 'aujourdhui',
-  momentOverride: null,
   pickedHour: null,
   draft: null,
   results: [],
   open: new Set(),
   installPrompt: null,
   loader: null,
+  platform: /Android/i.test(navigator.userAgent) ? 'android' : 'ios',
+  steps: new Set(),
+  androidLink: '',
+  promoHidden: store.promoHidden(),
+  widgetReady: Boolean(store.widgetCopied()),
   confirmClear: false,
-  report: null,
+  updateReady: false,
 };
 
 const route = () => location.hash.replace('#', '');
@@ -36,15 +42,18 @@ const route = () => location.hash.replace('#', '');
 function currentView() {
   if (!state.profile) return 'onboarding';
   const r = route();
-  return ['reglages', 'widget', 'apropos'].includes(r) ? r : 'today';
+  return ['reglages', 'widget', 'apropos'].includes(r) ? r : 'app';
 }
 
 const freshRoom = (profile) => (profile.room && Date.now() - profile.room.at < ROOM_TTL_MS ? profile.room.value : null);
+const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
+  .format(new Date(ms)).replace(':', ' h ');
 
-function compute() {
+// Les onglets Nuit et Prévoir parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Sortir.
+function compute(day) {
   if (!state.forecast || !state.bundle) return null;
   const now = parisNow();
-  const tomorrow = state.day === 'demain';
+  const tomorrow = day === 'demain';
   const date = tomorrow ? addDays(now.date, 1) : now.date;
   const time = tomorrow ? '07:00' : now.time;
   const p = state.profile;
@@ -68,57 +77,60 @@ function compute() {
   const hidden = store.hidden();
   result.purchases = result.purchases.filter((x) => !hidden.includes(x.key));
   const picked = state.pickedHour ? outfitAt(input, state.bundle, state.pickedHour) : null;
-  const moment = tomorrow ? 'jour' : state.momentOverride ?? momentOf(time);
-  return { input, result, date, moment, picked, tomorrow, forecast: state.forecast };
+  return { input, result, date, moment: tomorrow ? 'jour' : momentOf(time), picked, tomorrow, forecast: state.forecast };
 }
 
 function newDraft(profile) {
   const now = parisNow().date;
   return {
+    step: 1,
     commune: profile?.commune ?? null,
     query: profile?.commune?.nom ?? '',
     birthMonth: profile?.birth?.slice(5, 7) ?? now.slice(5, 7),
     birthYear: profile?.birth?.slice(0, 4) ?? now.slice(0, 4),
     transport: profile?.transport ?? 'poussette',
-    from: profile?.outing_window?.from ?? '09:00',
-    to: profile?.outing_window?.to ?? '18:00',
-    duration: profile?.outing_duration_h ?? 1,
   };
 }
 
-function report() {
-  const feedback = store.feedback();
-  const days = [...store.days()].sort();
-  return {
-    days: days.length,
-    first: days[0],
-    last: days.at(-1),
-    bien: feedback.filter((f) => f.v === 0).length,
-    chaud: feedback.filter((f) => f.v < 0).length,
-    froid: feedback.filter((f) => f.v > 0).length,
-    hidden: store.hidden().length,
-    owned: Object.values(state.profile?.inventory ?? {}).reduce((a, sizes) => a + sizes.length, 0),
-    widget: Boolean(store.widgetCopied()),
-  };
-}
-
+let lastKey = '';
 function paint() {
   const view = currentView();
-  if ((view === 'onboarding' || view === 'reglages') && !state.draft) state.draft = newDraft(state.profile);
+  if ((view === 'onboarding' || view === 'reglages') && !state.draft) state.draft = newDraft(view === 'reglages' ? state.profile : null);
+  const key = `${view}|${state.tab}|${state.day}|${state.draft?.step ?? ''}`;
+  app.classList.toggle('anim', key !== lastKey);
+  lastKey = key;
   let html;
   if (!state.bundle) html = state.error ? V.fatal(state.error) : V.loading();
   else if (view === 'onboarding') html = V.viewOnboarding(state);
-  else if (view === 'reglages') {
-    state.report = report();
-    html = V.viewSettings(state);
-  } else if (view === 'widget') {
-    state.platform = platform;
+  else if (view === 'reglages') html = V.viewSettings(state);
+  else if (view === 'widget') {
     state.androidLink = androidLink();
-    html = V.viewWidget(state);
+    html = V.viewWidget(state, compute('aujourdhui'));
+  } else if (view === 'apropos') html = V.viewAbout(state);
+  else html = V.viewApp(state, compute(state.tab === 'sortir' ? state.day : 'aujourdhui'));
+  if (state.updateReady) {
+    html += '<div class="update" role="status">Nouvelle version prête<button class="btn small" data-action="apply-update">Recharger</button></div>';
   }
-  else if (view === 'apropos') html = V.viewAbout(state);
-  else html = V.viewToday(state, compute());
   app.innerHTML = html;
+  setThemeColor(view);
+}
+
+// Barre d'état d'Android assortie au ciel de l'écran (iOS garde sa barre standard).
+const SKY = {
+  clair: '#3b8cf6', nuageux: '#5b7aa0', pluie: '#3f5d7c', chaleur: '#ec7f24', froid: '#4a72c0',
+  soir: '#5650c6', nuit: '#121a33', prevoir: '#6a5bdc',
+};
+function setThemeColor(view) {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  let color = dark ? '#0b0d11' : '#f2f3f7';
+  if (view === 'onboarding') color = SKY.clair;
+  if (view === 'app') {
+    const ctx = state.tab === 'sortir' ? compute(state.day) : null;
+    color = state.tab === 'nuit' ? SKY.nuit : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
+  }
+  meta.setAttribute('content', color);
 }
 
 function updateProfile(patch) {
@@ -140,7 +152,7 @@ function toast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     el.hidden = true;
-  }, 3200);
+  }, 3000);
 }
 
 // La copie doit partir directement du geste de l'utilisateur (exigence de Safari).
@@ -177,15 +189,13 @@ function androidLink() {
     + `#Intent;scheme=superbebe;package=fr.superbebe.widget;S.browser_fallback_url=${encodeURIComponent(apk)};end`;
 }
 
-const platform = /Android/i.test(navigator.userAgent) ? 'android' : /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : 'autre';
-
 function shareText(ctx) {
   const M = state.bundle.messages;
   const { result, date } = ctx;
   const w = result.outing.window;
   const lines = [`Superbébé · ${dayLong(date)} · ${state.profile.commune.nom}`];
   lines.push(w
-    ? `Sortie conseillée : ${hourLabel(w.start)} - ${hourLabel(w.end)}, ${Math.round(w.feels_c)} °C ressentis`
+    ? `Sortie idéale de ${hourFr(w.start)} à ${hourFr(w.end)}, ${Math.round(w.feels_c)} °C ressentis`
     : render(M, `outing.none.${result.outing.reason}`, 'text'));
   if (result.outfit) lines.push(`Tenue : ${result.outfit.items.map((i) => M.labels.items[i]).join(', ')}`);
   for (const note of result.outfit?.notes ?? []) lines.push(render(M, note, 'text', result.params));
@@ -194,27 +204,25 @@ function shareText(ctx) {
 }
 
 function reportText() {
-  const r = report();
   const p = state.profile;
+  const days = [...store.days()].sort();
   const transport = V.TRANSPORTS.find(([v]) => v === p.transport)?.[1] ?? p.transport;
+  const pref = { '-1': 'a chaud', 0: 'normal', 1: 'a froid' }[Math.sign(p.outfit_offset ?? 0)];
+  const owned = Object.values(p.inventory ?? {}).reduce((a, sizes) => a + sizes.length, 0);
   return [
     `Superbébé ${V.VERSION} · mes retours de test`,
-    `Jours d'utilisation : ${r.days}${r.first ? ` (du ${dayShort(r.first)} au ${dayShort(r.last)})` : ''}`,
-    `Tenue : ${r.bien} bien, ${r.chaud} trop chaud, ${r.froid} trop froid (réglage ${signed(p.outfit_offset ?? 0)})`,
-    `À prévoir : ${r.owned} article(s) déjà possédé(s), ${r.hidden} suggestion(s) pas utile(s)`,
-    `Widget iPhone configuré : ${r.widget ? 'oui' : 'non'}`,
-    `Sorties : ${transport}, de ${hourLabel(p.outing_window.from)} à ${hourLabel(p.outing_window.to)}`,
+    `Jours d'utilisation : ${days.length}${days.length ? ` (du ${dayShort(days[0])} au ${dayShort(days.at(-1))})` : ''}`,
+    `Sorties : ${transport}, de ${hourFr(p.outing_window.from)} à ${hourFr(p.outing_window.to)}, ${p.outing_duration_h} h`,
+    `Tendance de bébé : ${pref}`,
+    `Garde-robe : ${owned} article(s) ; ${store.hidden().length} suggestion(s) masquée(s)`,
+    `Widget : ${state.widgetReady ? 'configuré' : 'pas encore'}`,
   ].join('\n');
 }
 
-function birthFromDraft(draft) {
+function validBirth(draft) {
   const birth = `${draft.birthYear}-${draft.birthMonth}`;
-  if (birth > parisNow().date.slice(0, 7)) {
-    draft.birthError = 'Ce mois est dans le futur.';
-    return null;
-  }
-  draft.birthError = null;
-  return birth;
+  draft.birthError = birth > parisNow().date.slice(0, 7) ? 'Ce mois est dans le futur.' : null;
+  return draft.birthError ? null : birth;
 }
 
 function preloadLoader() {
@@ -232,36 +240,52 @@ async function loadData({ force = false } = {}) {
   if (!state.profile || state.loading) return;
   const commune = state.profile.commune;
   state.loading = true;
-  if (currentView() === 'today') paint();
   try {
     state.forecast = await getForecast(commune, { force });
+    state.updatedAt = clock(state.forecast.at);
     state.error = null;
   } catch (e) {
     state.error = 'Météo indisponible pour le moment. Vérifiez la connexion.';
   }
   state.loading = false;
-  if (currentView() === 'today') paint();
+  if (currentView() === 'app') paint();
+  if (force && !state.error && !state.forecast?.offline) toast(`Météo à jour (${state.updatedAt})`);
   try {
     state.climate = await getClimate(commune, parisNow().date);
   } catch (e) {
     // Sans normales, les achats se limitent aux 16 jours de prévision.
   }
   state.climateReady = true;
-  if (currentView() === 'today') paint();
+  if (currentView() === 'app') paint();
+}
+
+function changeCommune(commune) {
+  state.draft.commune = commune;
+  state.draft.query = commune.nom;
+  state.results = [];
+  if (currentView() !== 'reglages') return;
+  updateProfile({ commune });
+  state.forecast = null;
+  state.climate = [];
+  state.climateReady = false;
+  toast(`Commune : ${commune.nom}`);
+  loadData({ force: true });
 }
 
 const actions = {
   reload: () => location.reload(),
+  'apply-update': () => location.reload(),
   refresh: () => loadData({ force: true }),
+  tab(el) {
+    state.tab = el.dataset.value;
+    state.pickedHour = null;
+    paint();
+    window.scrollTo(0, 0);
+  },
   day(el) {
     state.day = el.dataset.value;
+    state.tab = 'sortir';
     state.pickedHour = null;
-    state.momentOverride = null;
-    paint();
-  },
-  'toggle-moment'() {
-    const current = state.momentOverride ?? momentOf(parisNow().time);
-    state.momentOverride = current === 'jour' ? 'soir' : 'jour';
     paint();
   },
   'pick-hour'(el) {
@@ -272,38 +296,18 @@ const actions = {
     updateProfile({ transport: el.dataset.value });
     paint();
   },
-  'draft-transport'(el) {
-    state.draft.transport = el.dataset.value;
+  pref(el) {
+    updateProfile({ outfit_offset: Number(el.dataset.value) });
     paint();
   },
-  feedback(el) {
-    const v = Number(el.dataset.value);
-    const ctx = compute();
-    store.addFeedback({ at: Date.now(), date: ctx?.date ?? null, band: ctx?.result.outfit?.band ?? null, v });
-    updateProfile({ outfit_offset: clamp((state.profile.outfit_offset ?? 0) + v, -2, 2) });
-    toast(v === 0
-      ? 'Merci, c\'est noté.'
-      : v < 0 ? 'Noté : les prochaines tenues seront un peu plus légères.' : 'Noté : les prochaines tenues seront un peu plus chaudes.');
-    paint();
-  },
-  'reset-offset'() {
-    updateProfile({ outfit_offset: 0 });
-    toast('Tenues revenues au réglage standard.');
-    paint();
-  },
-  async share() {
-    const ctx = compute();
-    if (!ctx) return;
-    const text = shareText(ctx);
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Superbébé', text });
-        return;
-      } catch (e) {
-        if (e.name === 'AbortError') return;
-      }
+  duration(el) {
+    const d = Number(el.dataset.value);
+    if (toMin(state.profile.outing_window.to) - toMin(state.profile.outing_window.from) < d * 60) {
+      toast('La plage horaire est plus courte que cette durée.');
+      return;
     }
-    if (await copy(text)) toast('Texte copié : collez-le dans votre messagerie.');
+    updateProfile({ outing_duration_h: d });
+    paint();
   },
   room(el) {
     const p = state.profile;
@@ -316,7 +320,7 @@ const actions = {
     const inventory = { ...(state.profile.inventory ?? {}) };
     inventory[el.dataset.cat] = [...new Set([...(inventory[el.dataset.cat] ?? []), el.dataset.size])];
     updateProfile({ inventory });
-    toast('Ajouté à ce que vous avez déjà.');
+    toast('Ajouté à votre garde-robe.');
     paint();
   },
   hide(el) {
@@ -333,22 +337,32 @@ const actions = {
     updateProfile({ inventory });
     paint();
   },
+  async share() {
+    const ctx = compute(state.day);
+    if (!ctx) return;
+    const text = shareText(ctx);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Superbébé', text });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+    if (await copy(text)) toast('Texte copié : collez-le dans votre messagerie.');
+  },
   locate(el) {
     if (!navigator.geolocation) {
       toast('Position indisponible sur cet appareil.');
       return;
     }
     el.disabled = true;
-    el.textContent = 'Recherche…';
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           const commune = await communeAt(pos.coords.latitude, pos.coords.longitude);
-          if (commune) {
-            state.draft.commune = commune;
-            state.draft.query = commune.nom;
-            state.results = [];
-          } else toast('Commune introuvable : saisissez-la.');
+          if (commune) changeCommune(commune);
+          else toast('Commune introuvable : saisissez-la.');
         } catch (e) {
           toast('Recherche impossible : saisissez la commune.');
         }
@@ -364,56 +378,31 @@ const actions = {
   'pick-commune'(el) {
     const commune = state.results[Number(el.dataset.index)];
     if (!commune) return;
-    state.draft.commune = commune;
-    state.draft.query = commune.nom;
-    state.results = [];
+    changeCommune(commune);
     paint();
   },
-  async 'copy-loader'() {
-    if (state.loader && (await copy(state.loader))) toast('Script copié : collez-le dans Scriptable.');
+  'draft-transport'(el) {
+    state.draft.transport = el.dataset.value;
+    paint();
   },
-  async 'copy-config'() {
-    if (await copy(configText())) {
-      store.markWidgetCopied();
-      toast('Configuration copiée : collez-la dans le champ Paramètre du widget.');
-    }
-  },
-  install() {
-    const prompt = state.installPrompt;
-    if (!prompt) return;
-    prompt.prompt();
-    prompt.userChoice.finally(() => {
-      state.installPrompt = null;
-      paint();
-    });
-  },
-  async 'copy-report'() {
-    if (await copy(reportText())) toast('Retours copiés.');
-  },
-  clear() {
-    if (!state.confirmClear) {
-      state.confirmClear = true;
-      paint();
-      return;
-    }
-    store.clear();
-    location.hash = '';
-    location.reload();
-  },
-};
-
-const forms = {
-  onboarding() {
+  'onboard-next'() {
     const d = state.draft;
-    const birth = birthFromDraft(d);
-    if (!d.commune) {
-      toast('Choisissez votre commune dans la liste.');
-      return;
-    }
-    if (!birth) {
+    if (d.step === 1 && !d.commune) return;
+    if (d.step === 2 && !validBirth(d)) {
       paint();
       return;
     }
+    d.step += 1;
+    paint();
+  },
+  'onboard-back'() {
+    state.draft.step = Math.max(1, state.draft.step - 1);
+    paint();
+  },
+  'onboard-finish'() {
+    const d = state.draft;
+    const birth = validBirth(d);
+    if (!d.commune || !birth) return;
     state.profile = {
       commune: d.commune,
       birth,
@@ -433,38 +422,63 @@ const forms = {
     paint();
     loadData();
   },
-  settings() {
-    const d = state.draft;
-    const birth = birthFromDraft(d);
-    if (!d.commune) {
-      toast('Choisissez votre commune dans la liste.');
-      return;
+  platform(el) {
+    state.platform = el.dataset.value;
+    paint();
+  },
+  async 'copy-loader'() {
+    if (state.loader && (await copy(state.loader))) toast('Script copié : collez-le dans Scriptable.');
+    paint();
+  },
+  async 'copy-config'() {
+    if (await copy(configText())) {
+      store.markWidgetCopied();
+      state.widgetReady = true;
+      toast('Configuration copiée : collez-la dans le champ Parameter du widget.');
     }
-    if (!birth) {
+    paint();
+  },
+  'hide-promo'() {
+    store.hidePromo();
+    state.promoHidden = true;
+    paint();
+  },
+  install() {
+    const prompt = state.installPrompt;
+    if (!prompt) return;
+    prompt.prompt();
+    prompt.userChoice.finally(() => {
+      state.installPrompt = null;
       paint();
-      return;
-    }
-    if (toMin(d.to) - toMin(d.from) < Number(d.duration) * 60) {
-      d.error = 'La plage horaire doit être au moins aussi longue que la sortie.';
-      paint();
-      return;
-    }
-    const communeChanged = d.commune.code !== state.profile.commune.code;
-    updateProfile({
-      commune: d.commune,
-      birth,
-      transport: d.transport,
-      outing_window: { from: d.from, to: d.to },
-      outing_duration_h: Number(d.duration),
     });
-    if (communeChanged) {
-      state.forecast = null;
-      state.climate = [];
-      state.climateReady = false;
+  },
+  async 'check-update'() {
+    if (state.updateReady) {
+      location.reload();
+      return;
     }
-    toast('Réglages enregistrés.');
+    const registration = await navigator.serviceWorker?.getRegistration();
+    if (!registration) {
+      toast('Mise à jour automatique indisponible ici.');
+      return;
+    }
+    await registration.update().catch(() => {});
+    setTimeout(() => {
+      if (!state.updateReady) toast(`Vous avez la dernière version (${V.VERSION}).`);
+    }, 1500);
+  },
+  async 'copy-report'() {
+    if (await copy(reportText())) toast('Retours copiés : collez-les dans la conversation du test.');
+  },
+  clear() {
+    if (!state.confirmClear) {
+      state.confirmClear = true;
+      paint();
+      return;
+    }
+    store.clear();
     location.hash = '';
-    if (communeChanged) loadData({ force: true });
+    location.reload();
   },
 };
 
@@ -491,25 +505,43 @@ document.addEventListener('input', (event) => {
 });
 
 document.addEventListener('change', (event) => {
-  const fields = { 'birth-month': 'birthMonth', 'birth-year': 'birthYear', from: 'from', to: 'to', duration: 'duration' };
-  const key = fields[event.target.id];
-  if (key && state.draft) state.draft[key] = event.target.value;
+  const { id, value } = event.target;
+  const d = state.draft;
+  if ((id === 'birth-month' || id === 'birth-year') && d) {
+    if (id === 'birth-month') d.birthMonth = value;
+    else d.birthYear = value;
+    const birth = validBirth(d);
+    if (birth && currentView() === 'reglages') updateProfile({ birth });
+    paint();
+  }
+  if ((id === 'from' || id === 'to') && currentView() === 'reglages') {
+    const next = { ...state.profile.outing_window, [id]: value };
+    if (toMin(next.to) - toMin(next.from) < state.profile.outing_duration_h * 60) {
+      d.error = 'La plage doit être au moins aussi longue que la sortie.';
+    } else {
+      d.error = null;
+      updateProfile({ outing_window: next });
+    }
+    paint();
+  }
 });
 
 document.addEventListener('click', (event) => {
+  const step = event.target.closest('[data-step]');
+  if (step) {
+    state.steps.add(`${state.platform}-${step.dataset.step}`);
+    if (step.dataset.step === '3') {
+      store.markWidgetCopied();
+      state.widgetReady = true;
+    }
+    if (!step.dataset.action) setTimeout(paint, 400);
+  }
   const el = event.target.closest('[data-action]');
   if (!el || el.disabled) return;
   const handler = actions[el.dataset.action];
   if (!handler) return;
   event.preventDefault();
   handler(el);
-});
-
-document.addEventListener('submit', (event) => {
-  const form = event.target.closest('[data-form]');
-  if (!form) return;
-  event.preventDefault();
-  forms[form.dataset.form]?.();
 });
 
 document.addEventListener('toggle', (event) => {
@@ -531,11 +563,28 @@ window.addEventListener('hashchange', () => {
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();
   state.installPrompt = event;
-  if (currentView() !== 'onboarding') paint();
 });
 
+// Mises à jour : le service worker installe la nouvelle version en arrière-plan ;
+// on la propose tout de suite, et on l'applique d'office au prochain retour dans l'app.
+const hadController = Boolean(navigator.serviceWorker?.controller);
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return;
+    state.updateReady = true;
+    paint();
+  });
+}
+
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !state.profile) return;
+  if (document.visibilityState !== 'visible') return;
+  if (state.updateReady) {
+    location.reload();
+    return;
+  }
+  navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
+  if (!state.profile) return;
   const today = parisNow().date;
   if (today !== state.today) {
     state.today = today;
@@ -546,9 +595,9 @@ document.addEventListener('visibilitychange', () => {
   loadData();
 });
 
-// Le moment (jour ou soir) et l'heure de fraîcheur changent avec le temps : on redessine régulièrement.
+// L'heure qui passe change le créneau restant et le moment (jour ou soir).
 setInterval(() => {
-  if (currentView() === 'today' && document.visibilityState === 'visible') paint();
+  if (currentView() === 'app' && document.visibilityState === 'visible') paint();
 }, 5 * 60 * 1000);
 
 async function boot() {
@@ -563,7 +612,10 @@ async function boot() {
   }
   if (state.profile) {
     const cached = store.forecast();
-    if (cached?.code === state.profile.commune.code) state.forecast = { ...cached, offline: false };
+    if (cached?.code === state.profile.commune.code) {
+      state.forecast = { ...cached, offline: false };
+      state.updatedAt = clock(cached.at);
+    }
     const climate = store.climate();
     if (climate?.code === state.profile.commune.code) state.climate = climate.years;
     store.markDay(state.today);
@@ -573,5 +625,4 @@ async function boot() {
   if (state.profile) loadData();
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 boot();

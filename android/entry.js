@@ -24,10 +24,15 @@ function sbAndroid(forecast, configText, state, date, time) {
   const cfg = decodeConfig(configText, sbBase64ToAscii);
   if (!cfg) return JSON.stringify({ error: 'configuration' });
   const profile = configToProfile(cfg);
-  profile.outfit_offset = clamp((cfg.o ?? 0) + (state.offset ?? 0), -2, 2);
+  profile.outfit_offset = clamp(cfg.o ?? 0, -2, 2);
   profile.room_temp_c = typeof state.room === 'number' ? state.room : null;
   const input = buildInput({ forecast, profile, date, now: time, lat: cfg.la });
   const result = evaluate(input, SB_RULES);
   const moment = momentOf(time);
-  return JSON.stringify({ place: cfg.n || 'Superbébé', lines: widgetLines(result, moment, SB_RULES.messages), moment });
+  return JSON.stringify({
+    place: cfg.n || 'Superbébé',
+    lines: widgetLines(result, moment, SB_RULES.messages),
+    moment,
+    theme: skyTheme(result, moment),
+  });
 }

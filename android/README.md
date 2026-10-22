@@ -18,10 +18,10 @@ cp app/build/outputs/apk/debug/app-debug.apk ../dist/superbebe-android.apk
 
 | Fichier | Rôle |
 |---|---|
-| `MainActivity.kt` | Reçoit la configuration de l'app web (lien `superbebe://config/SB1.…`) ou collée à la main ; relevé de la chambre et retours sur la tenue |
+| `MainActivity.kt` | Reçoit la configuration de l'app web (lien `superbebe://config/SB1.…`) ou collée à la main ; relevé de la chambre ; propose l'APK publié s'il est plus récent (`dist/android-version.json`) |
 | `SbWorker.kt` | Toutes les 30 minutes : météo Open-Meteo, appel du moteur, enregistrement des trois lignes |
 | `SbEngine.kt` | Exécute le moteur JavaScript dans le bac à sable |
-| `SbWidget.kt` | Widget Glance : affiche les lignes ; le toucher ouvre l'app |
+| `SbWidget.kt` | Widget Glance : affiche les lignes sur un ciel assorti à la météo (`res/drawable/widget_bg_*`) ; le toucher ouvre l'app |
 | `SbStore.kt` | État local (préférences) et lecture de la configuration |
 
 ## Limites de la version de test

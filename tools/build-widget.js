@@ -46,6 +46,11 @@ const android = [
 ].join('\n\n');
 new vm.Script(android, { filename: 'superbebe-android.js' });
 const assets = join(ROOT, 'android', 'app', 'src', 'main', 'assets');
+const gradle = read('android/app/build.gradle.kts');
+const versionCode = Number(gradle.match(/versionCode = (\d+)/)[1]);
+const versionName = gradle.match(/versionName = "([^"]+)"/)[1];
+mkdirSync(join(ROOT, 'dist'), { recursive: true });
+writeFileSync(join(ROOT, 'dist', 'android-version.json'), `${JSON.stringify({ versionCode, versionName, apk: 'superbebe-android.apk' }, null, 2)}\n`);
 mkdirSync(assets, { recursive: true });
 writeFileSync(join(assets, 'superbebe-android.js'), `${android}\n`);
 console.log('android/app/src/main/assets/superbebe-android.js généré');

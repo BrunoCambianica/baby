@@ -6,7 +6,7 @@ export const PARIS_TZ = 'Europe/Paris';
 export const FORECAST_DAYS = 16;
 const OUTLOOK_WEEKS = 6;
 const CLIMATE_YEARS = 3;
-const HOURLY = 'temperature_2m,apparent_temperature,precipitation_probability,precipitation,wind_gusts_10m,uv_index';
+const HOURLY = 'temperature_2m,apparent_temperature,precipitation_probability,precipitation,wind_gusts_10m,uv_index,weather_code';
 const DAILY = 'sunrise,sunset,temperature_2m_max,temperature_2m_mean,precipitation_sum,uv_index_max';
 const CLIMATE_DAILY = 'temperature_2m_max,temperature_2m_mean,precipitation_sum';
 
@@ -68,6 +68,7 @@ export function hourlyForDate(forecast, date) {
       precip_mm: mm,
       gust_kmh: h.wind_gusts_10m[i] ?? 0,
       uv: h.uv_index[i] ?? 0,
+      weather_code: h.weather_code?.[i] ?? null,
     });
   });
   return hours;

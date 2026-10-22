@@ -53,9 +53,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val updated = Instant.ofEpochMilli(SbStore.forecastAt(c)).atZone(PARIS)
         val footer = (if (offline) "Hors ligne · " else "") +
             String.format(Locale.FRANCE, "Mis à jour à %02d h %02d · Open-Meteo", updated.hour, updated.minute)
-        val state = JSONObject()
-            .put("offset", SbStore.offset(c))
-            .put("room", SbStore.room(c) ?: JSONObject.NULL)
+        val state = JSONObject().put("room", SbStore.room(c) ?: JSONObject.NULL)
         try {
             val out = SbEngine.compute(
                 c, forecast, config, state,
@@ -64,7 +62,10 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
             )
             if (out.has("error")) throw IllegalStateException("configuration invalide")
             val array = out.getJSONArray("lines")
-            SbStore.saveRender(c, out.optString("place", place.name), (0 until array.length()).map { array.getString(it) }, footer)
+            SbStore.saveRender(
+                c, out.optString("place", place.name),
+                (0 until array.length()).map { array.getString(it) }, footer, out.optString("theme", "nuageux"),
+            )
         } catch (e: SbEngine.Unsupported) {
             SbStore.saveRender(
                 c, place.name,
@@ -87,7 +88,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         fun forecastUrl(lat: Double, lon: Double): String =
             "https://api.open-meteo.com/v1/forecast" +
                 String.format(Locale.ROOT, "?latitude=%.4f&longitude=%.4f", lat, lon) +
-                "&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,wind_gusts_10m,uv_index" +
+                "&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,wind_gusts_10m,uv_index,weather_code" +
                 "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_mean,precipitation_sum,uv_index_max" +
                 "&timezone=Europe%2FParis&forecast_days=16"
 

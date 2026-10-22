@@ -1,10 +1,19 @@
 // Partie propre au widget iPhone (Scriptable).
 // tools/build-widget.js la concatène après engine/engine.js et engine/adapter.js, avec les règles embarquées.
-/* global ListWidget, Color, Font, Request, FileManager, Data, Alert, Script, Safari, config, args,
+/* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Alert, Script, Safari, config, args,
    SB_BASE_URL, SB_RULES */
 
 const SB_APP_URL = `${SB_BASE_URL}app/`;
 const SB_ROOM_TTL_MS = 16 * 3600 * 1000;
+// Même ciel que l'app : la couleur dit le temps qu'il fait au moment conseillé.
+const SB_SKY = {
+  clair: ['#3b8cf6', '#9dcdff'],
+  nuageux: ['#5b7aa0', '#aec3da'],
+  pluie: ['#3f5d7c', '#8ea7be'],
+  chaleur: ['#ec7f24', '#f9cd84'],
+  froid: ['#4a72c0', '#b8d3f4'],
+  nuit: ['#121a33', '#3a4a80'],
+};
 
 function sbFiles() {
   const fm = FileManager.local();
@@ -26,20 +35,14 @@ function sbFiles() {
 }
 
 const sbDecode = (b64) => Data.fromBase64String(b64).toRawString();
-const sbColor = (light, dark) =>
-  typeof Color.dynamic === 'function' ? Color.dynamic(new Color(light), new Color(dark)) : new Color(light);
 const sbFreshRoom = (state) => (state.room && Date.now() - state.room.at < SB_ROOM_TTL_MS ? state.room.value : null);
 
 // Toucher le widget ouvre ce menu dans Scriptable.
 async function sbMenu(state) {
   const sheet = new Alert();
   sheet.title = 'Superbébé';
-  sheet.message = 'Un retour sur la tenue, ou la température de la chambre ?';
-  sheet.addAction('Température de la chambre');
-  sheet.addAction('Tenue : trop chaud');
-  sheet.addAction('Tenue : bien');
-  sheet.addAction('Tenue : trop froid');
-  sheet.addAction("Ouvrir l'app complète");
+  sheet.addAction('Température de la chambre ce soir');
+  sheet.addAction("Ouvrir l'app");
   sheet.addCancelAction('Voir le widget');
   const choice = await sheet.presentSheet();
   if (choice === 0) {
@@ -54,11 +57,7 @@ async function sbMenu(state) {
       const value = parseFloat(String(ask.textFieldValue(0)).replace(',', '.'));
       if (value >= 5 && value <= 40) state.room = { value: Math.round(value * 2) / 2, at: Date.now() };
     }
-  } else if (choice >= 1 && choice <= 3) {
-    const delta = [-1, 0, 1][choice - 1];
-    state.offset = clamp((state.offset ?? 0) + delta, -2, 2);
-    state.feedback = [...(state.feedback ?? []), { at: Date.now(), v: delta }].slice(-60);
-  } else if (choice === 4) {
+  } else if (choice === 1) {
     Safari.open(SB_APP_URL);
   }
 }
@@ -72,6 +71,16 @@ function sbText(widget, text, size, options = {}) {
   return t;
 }
 
+function sbBackground(widget, theme) {
+  const [top, bottom] = SB_SKY[theme] ?? SB_SKY.clair;
+  const gradient = new LinearGradient();
+  gradient.colors = [new Color(top), new Color(bottom)];
+  gradient.locations = [0, 1];
+  gradient.startPoint = new Point(0, 0);
+  gradient.endPoint = new Point(1, 1);
+  widget.backgroundGradient = gradient;
+}
+
 function sbMessageWidget(family, message) {
   const w = new ListWidget();
   if (family.startsWith('accessory')) {
@@ -79,11 +88,10 @@ function sbMessageWidget(family, message) {
     sbText(w, message, 11, { lines: 2, scale: 0.6 });
     return w;
   }
-  w.backgroundColor = sbColor('#e8f1f5', '#16222c');
-  const ink = sbColor('#16212b', '#eef3f6');
-  sbText(w, 'SUPERBÉBÉ', 10, { bold: true, color: sbColor('#556472', '#9aa8b4') });
+  sbBackground(w, 'nuageux');
+  sbText(w, 'SUPERBÉBÉ', 10, { bold: true, color: new Color('#ffffff', 0.8) });
   w.addSpacer(6);
-  sbText(w, message, 13, { color: ink, lines: 5, scale: 0.7 });
+  sbText(w, message, 13, { color: Color.white(), lines: 5, scale: 0.7 });
   return w;
 }
 
@@ -103,19 +111,21 @@ function sbDraw(family, lines, info) {
     return w;
   }
   const small = family === 'small';
-  const ink = sbColor('#16212b', '#eef3f6');
-  const muted = sbColor('#556472', '#9aa8b4');
-  w.backgroundColor = sbColor('#e8f1f5', '#16222c');
-  w.setPadding(12, 14, 10, 14);
-  sbText(w, `SUPERBÉBÉ · ${info.place}`.toUpperCase(), 9, { bold: true, color: muted });
-  w.addSpacer(small ? 4 : 6);
+  const white = Color.white();
+  const soft = new Color('#ffffff', 0.82);
+  sbBackground(w, info.theme);
+  w.setPadding(14, 16, 12, 16);
+  sbText(w, `SUPERBÉBÉ · ${info.place}`.toUpperCase(), 9, { bold: true, color: soft });
+  w.addSpacer(small ? 5 : 8);
   const shown = small ? lines.slice(0, 2) : lines;
   shown.forEach((line, k) => {
-    sbText(w, line, k === 0 ? (small ? 13 : 15) : small ? 11 : 13, { bold: k === 0, color: ink, lines: small ? 3 : 2, scale: 0.7 });
-    if (k < shown.length - 1) w.addSpacer(small ? 3 : 4);
+    sbText(w, line, k === 0 ? (small ? 14 : 17) : small ? 11 : 13, {
+      bold: k === 0, color: k === 0 ? white : soft, lines: small ? 3 : 2, scale: 0.7,
+    });
+    if (k < shown.length - 1) w.addSpacer(small ? 3 : 5);
   });
   w.addSpacer();
-  sbText(w, info.footer, 9, { color: muted });
+  sbText(w, info.footer, 9, { color: new Color('#ffffff', 0.7) });
   return w;
 }
 
@@ -137,7 +147,7 @@ async function runSuperbebe() {
     files.write('etat.json', state);
     const message = family.startsWith('accessory')
       ? 'Collez la configuration dans le paramètre du widget.'
-      : "Configuration manquante. Dans l'app web, ouvrez « Widget et installation », copiez votre configuration, puis collez-la dans le champ Paramètre de ce widget.";
+      : "Configuration manquante. Dans l'app, ouvrez Réglages puis « Ajouter le widget », copiez la configuration et collez-la dans le champ Parameter de ce widget.";
     return sbFinish(sbMessageWidget(family, message), inWidget);
   }
   if (!inWidget) await sbMenu(state);
@@ -161,7 +171,6 @@ async function runSuperbebe() {
 
   const { date, time } = parisNow();
   const profile = configToProfile(cfg);
-  profile.outfit_offset = clamp((cfg.o ?? 0) + (state.offset ?? 0), -2, 2);
   profile.room_temp_c = sbFreshRoom(state);
   const input = buildInput({ forecast: cache.forecast, profile, date, now: time, lat: cfg.la });
   const result = evaluate(input, SB_RULES);
@@ -171,9 +180,10 @@ async function runSuperbebe() {
   const window = result.outing.window;
   const info = {
     place: cfg.n || 'Superbébé',
+    theme: skyTheme(result, moment),
     footer: `${offline ? 'Hors ligne · ' : ''}Mis à jour à ${updated} · Open-Meteo`,
     short: moment === 'jour'
-      ? window ? `${Number(window.start.slice(0, 2))} h` : '—'
+      ? window ? hourFr(window.start) : '—'
       : result.night.tog ? `${result.night.tog}` : '—',
   };
   return sbFinish(sbDraw(family, lines, info), inWidget);

@@ -10,7 +10,7 @@ object SbStore {
     const val DEFAULT_BASE_URL = "https://brunocambianica.github.io/baby/"
     private const val ROOM_TTL_MS = 16 * 3600 * 1000L
 
-    data class Render(val place: String, val lines: List<String>, val footer: String)
+    data class Render(val place: String, val lines: List<String>, val footer: String, val theme: String)
 
     private fun prefs(context: Context) = context.getSharedPreferences("superbebe", Context.MODE_PRIVATE)
 
@@ -39,16 +39,6 @@ object SbStore {
             .apply()
     }
 
-    fun offset(context: Context): Int = prefs(context).getInt("offset", 0)
-
-    fun addFeedback(context: Context, delta: Int) {
-        val p = prefs(context)
-        p.edit()
-            .putInt("offset", (p.getInt("offset", 0) + delta).coerceIn(-2, 2))
-            .putInt("feedback_count", p.getInt("feedback_count", 0) + 1)
-            .apply()
-    }
-
     /** Relevé de la chambre, valable 16 heures (une soirée et une nuit). */
     fun room(context: Context): Double? {
         val p = prefs(context)
@@ -70,14 +60,16 @@ object SbStore {
             place = p.getString("place", null) ?: "Superbébé",
             lines = lines.ifEmpty { listOf("Ouvrez Superbébé pour configurer le widget.") },
             footer = p.getString("footer", null) ?: "",
+            theme = p.getString("theme", null) ?: "nuageux",
         )
     }
 
-    fun saveRender(context: Context, place: String, lines: List<String>, footer: String) {
+    fun saveRender(context: Context, place: String, lines: List<String>, footer: String, theme: String = "nuageux") {
         prefs(context).edit()
             .putString("place", place)
             .putString("lines", JSONArray(lines).toString())
             .putString("footer", footer)
+            .putString("theme", theme)
             .apply()
     }
 }

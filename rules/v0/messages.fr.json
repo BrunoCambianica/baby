@@ -86,7 +86,13 @@
     "relay.sleep.basics": {
       "kind": "officiel", "verbatim": false, "sources": ["carnet-1000-jours"],
       "text": "Pour dormir : sur le dos, à plat, dans son lit, dans une turbulette ou gigoteuse adaptée à sa taille, sur un matelas ferme ; ni couverture, ni couette, ni oreiller, ni tour de lit.",
-      "short": "Sur le dos, turbulette, ni couette ni tour de lit"
+      "short": "Sur le dos, turbulette, ni couette ni tour de lit",
+      "list": [
+        "Sur le dos, à plat, dans son lit",
+        "Dans une turbulette ou gigoteuse adaptée à sa taille",
+        "Sur un matelas ferme",
+        "Ni couverture, ni couette, ni oreiller, ni tour de lit"
+      ]
     },
     "relay.sleep.room_range": {
       "kind": "officiel", "verbatim": false, "sources": ["carnet-1000-jours"],
@@ -125,6 +131,9 @@
     "practical.carrier.body_heat": {
       "kind": "pratique", "text": "En porte-bébé, la chaleur du porteur réchauffe bébé : en général une couche de moins qu'en poussette.", "short": "Porte-bébé : une couche de moins"
     },
+    "practical.carrier.no_footed": {
+      "kind": "pratique", "text": "En porte-bébé, préférez un pantalon sans pieds et des chaussettes : les pyjamas à pieds intégrés tirent sur les pieds quand les jambes sont repliées.", "short": "Porte-bébé : pas de pyjama à pieds"
+    },
     "fabricant.tog": {
       "kind": "fabricant", "sources": ["fabricants-tog"],
       "text": "Chambre à {room} °C : environ {tog} TOG selon les tableaux habituels des fabricants. L'étiquette de votre gigoteuse fait foi.",
@@ -136,8 +145,9 @@
       "short": "Norme NF EN 16781"
     },
     "outing.window": {
-      "kind": "meteo", "text": "Sortie conseillée : {start}–{end}, {feels} °C ressentis, pluie {rain} %.", "short": "Sortie : {start}–{end} · {feels} °C ressentis"
+      "kind": "meteo", "text": "Sortie idéale de {start} à {end}, {feels} °C ressentis.", "short": "Sortie idéale {start} – {end} · {feels}°"
     },
+    "outing.none.journee_terminee": { "kind": "meteo", "text": "Plus de créneau aujourd'hui dans votre plage horaire.", "short": "Plus de sortie prévue aujourd'hui" },
     "outing.none.vigilance": { "kind": "meteo", "text": "Pas de créneau conseillé : vigilance en cours.", "short": "Pas de sortie conseillée (vigilance)" },
     "outing.none.canicule_heures_chaudes": { "kind": "meteo", "text": "Pas de créneau dans votre plage horaire : fortes chaleurs entre 11 h et 21 h.", "short": "Pas de créneau : fortes chaleurs" },
     "outing.none.ozone_apres_midi": { "kind": "meteo", "text": "Pas de créneau dans votre plage horaire : épisode d'ozone l'après-midi.", "short": "Pas de créneau : ozone l'après-midi" },
@@ -146,8 +156,8 @@
     "outing.none.pluie": { "kind": "meteo", "text": "Pas de créneau sec dans votre plage horaire.", "short": "Pas de créneau sec aujourd'hui" },
     "outing.none.duree": { "kind": "meteo", "text": "Pas de créneau assez long dans votre plage horaire.", "short": "Pas de créneau assez long" },
     "outing.none.hors_jour": { "kind": "meteo", "text": "Pas de créneau de jour dans votre plage horaire.", "short": "Pas de créneau de jour" },
-    "night.room": { "kind": "meteo", "text": "Nuit : chambre à {room} °C (repère officiel : 18-20 °C).", "short": "Nuit : chambre {room} °C · repère 18-20 °C" },
-    "night.room_unknown": { "kind": "meteo", "text": "Nuit : repère officiel, chambre entre 18 et 20 °C.", "short": "Nuit : chambre entre 18 et 20 °C" },
+    "night.room": { "kind": "meteo", "text": "Chambre à {room} °C ce soir (repère officiel : 18 à 20 °C).", "short": "Chambre {room}° · repère 18 à 20°" },
+    "night.room_unknown": { "kind": "meteo", "text": "Repère officiel : chambre entre 18 et 20 °C.", "short": "Chambre : repère 18 à 20 °C" },
     "purchase.suggestion": {
       "kind": "pratique", "text": "À prévoir avant le {order_by} : {label}{size}, utile à partir du {needed_from}.", "short": "À prévoir : {label}{size}"
     }
@@ -175,17 +185,56 @@
       "chaussons": "chaussons chauds",
       "chapeau": "chapeau à larges bords",
       "chapeau_si_soleil": "chapeau à larges bords si soleil",
-      "chanceliere": "chancelière"
+      "chanceliere": "chancelière",
+      "pantalon_leger": "pantalon léger sans pieds",
+      "pantalon": "pantalon souple sans pieds",
+      "pantalon_chaud": "pantalon chaud sans pieds",
+      "chaussettes": "chaussettes",
+      "chaussettes_chaudes": "chaussettes chaudes",
+      "couverture_portage": "couverture de portage par-dessus",
+      "manteau_portage": "manteau ou couverture de portage par-dessus"
     },
-    "bands_short": {
-      "tres_chaud": "Body léger, vêtements amples et clairs, chapeau",
-      "chaud": "Body MC + tenue légère, chapeau si soleil",
-      "doux": "Body MC + ensemble léger, gilet fin",
-      "frais": "Body ML + pyjama + gilet",
-      "froid_modere": "Body ML + pyjama + gilet chaud + combi légère, bonnet fin",
-      "froid": "Body ML + pyjama chaud + pull + combi pilote, bonnet",
-      "tres_froid": "Body ML + pyjama chaud + pull + combi doublée, bonnet, moufles"
+    "items_short": {
+      "body_leger": "body léger",
+      "body_mc": "body MC",
+      "body_ml": "body ML",
+      "tenue_ample_claire": "habits amples et clairs",
+      "tenue_legere": "tenue légère",
+      "pyjama_leger": "ensemble léger",
+      "pyjama": "pyjama",
+      "pyjama_chaud": "pyjama chaud",
+      "gilet_fin": "gilet fin",
+      "gilet": "gilet",
+      "gilet_chaud": "gilet chaud",
+      "pull": "pull",
+      "combi_legere": "combi légère",
+      "combi_pilote": "combi pilote",
+      "combi_pilote_doublee": "combi doublée",
+      "bonnet_fin": "bonnet fin",
+      "bonnet": "bonnet",
+      "moufles": "moufles",
+      "chaussons": "chaussons",
+      "chapeau": "chapeau",
+      "chapeau_si_soleil": "chapeau si soleil",
+      "chanceliere": "chancelière",
+      "pantalon_leger": "pantalon léger",
+      "pantalon": "pantalon",
+      "pantalon_chaud": "pantalon chaud",
+      "chaussettes": "chaussettes",
+      "chaussettes_chaudes": "chaussettes chaudes",
+      "couverture_portage": "couverture de portage",
+      "manteau_portage": "manteau de portage"
     },
+    "item_layers": {
+      "body_leger": "peau", "body_mc": "peau", "body_ml": "peau",
+      "tenue_ample_claire": "milieu", "tenue_legere": "milieu", "pyjama_leger": "milieu", "pyjama": "milieu", "pyjama_chaud": "milieu",
+      "pantalon_leger": "milieu", "pantalon": "milieu", "pantalon_chaud": "milieu",
+      "gilet_fin": "milieu", "gilet": "milieu", "gilet_chaud": "milieu", "pull": "milieu",
+      "combi_legere": "dessus", "combi_pilote": "dessus", "combi_pilote_doublee": "dessus", "couverture_portage": "dessus", "manteau_portage": "dessus",
+      "bonnet_fin": "accessoire", "bonnet": "accessoire", "moufles": "accessoire", "chaussons": "accessoire", "chaussettes": "accessoire",
+      "chaussettes_chaudes": "accessoire", "chapeau": "accessoire", "chapeau_si_soleil": "accessoire", "chanceliere": "accessoire"
+    },
+    "layers": { "peau": "Contre la peau", "milieu": "Ensuite", "dessus": "Par-dessus", "accessoire": "Et aussi" },
     "categories": {
       "gigoteuse_hiver": "gigoteuse chaude (≈ 2,5 TOG)",
       "gigoteuse_ete": "gigoteuse légère (≈ 0,5-1 TOG)",

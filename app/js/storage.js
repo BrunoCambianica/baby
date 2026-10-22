@@ -3,10 +3,10 @@ const KEYS = {
   profile: 'sb.profil',
   forecast: 'sb.meteo',
   climate: 'sb.normales',
-  feedback: 'sb.retours',
   days: 'sb.jours',
   hidden: 'sb.masques',
   widget: 'sb.widget',
+  promo: 'sb.promo',
 };
 
 function read(key, fallback) {
@@ -34,8 +34,6 @@ export const store = {
   saveForecast: (entry) => write(KEYS.forecast, entry),
   climate: () => read(KEYS.climate, null),
   saveClimate: (entry) => write(KEYS.climate, entry),
-  feedback: () => read(KEYS.feedback, []),
-  addFeedback: (entry) => write(KEYS.feedback, [...read(KEYS.feedback, []), entry].slice(-200)),
   days: () => read(KEYS.days, []),
   markDay(date) {
     const days = read(KEYS.days, []);
@@ -45,8 +43,10 @@ export const store = {
   hide: (key) => write(KEYS.hidden, [...new Set([...read(KEYS.hidden, []), key])]),
   widgetCopied: () => read(KEYS.widget, null),
   markWidgetCopied: () => write(KEYS.widget, { at: Date.now() }),
+  promoHidden: () => read(KEYS.promo, false),
+  hidePromo: () => write(KEYS.promo, true),
   clear() {
-    for (const key of Object.values(KEYS)) {
+    for (const key of [...Object.values(KEYS), 'sb.retours']) {
       try {
         localStorage.removeItem(key);
       } catch (e) {

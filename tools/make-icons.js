@@ -1,4 +1,4 @@
-// Génère les icônes PNG de l'app (soleil et nuage sur fond bleu pétrole), sans dépendance.
+// Génère les icônes PNG de l'app (soleil et nuage sur un ciel bleu), sans dépendance.
 // Usage : node tools/make-icons.js
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -6,7 +6,8 @@ import { deflateSync } from 'node:zlib';
 import { ROOT } from './load-rules.js';
 
 const OUT = join(ROOT, 'app', 'icons');
-const BG = [26, 99, 129];
+const SKY_TOP = [59, 140, 246];
+const SKY_BOTTOM = [124, 188, 251];
 const SUN = [242, 184, 75];
 const CLOUD = [244, 248, 250];
 
@@ -33,11 +34,11 @@ function png(size, pixels) {
   header.writeUInt32BE(size, 0);
   header.writeUInt32BE(size, 4);
   header[8] = 8; // 8 bits par canal
-  header[9] = 2; // RGB
-  const raw = Buffer.alloc((size * 3 + 1) * size);
+  header[9] = 6; // RGBA
+  const raw = Buffer.alloc((size * 4 + 1) * size);
   for (let y = 0; y < size; y++) {
-    raw[y * (size * 3 + 1)] = 0;
-    pixels.copy(raw, y * (size * 3 + 1) + 1, y * size * 3, (y + 1) * size * 3);
+    raw[y * (size * 4 + 1)] = 0;
+    pixels.copy(raw, y * (size * 4 + 1) + 1, y * size * 4, (y + 1) * size * 4);
   }
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -61,22 +62,29 @@ function shapes(scale) {
   };
 }
 
-function draw(size, scale) {
+// `transparent` : fond vide, pour le premier plan des icônes adaptatives d'Android.
+function draw(size, scale, { transparent = false } = {}) {
   const { sun, cloud } = shapes(scale);
-  const pixels = Buffer.alloc(size * size * 3);
+  const pixels = Buffer.alloc(size * size * 4);
   const SS = 4; // suréchantillonnage pour adoucir les bords
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
-      const acc = [0, 0, 0];
+      const acc = [0, 0, 0, 0];
       for (let sy = 0; sy < SS; sy++) {
         for (let sx = 0; sx < SS; sx++) {
           const x = (px + (sx + 0.5) / SS) / size;
           const y = (py + (sy + 0.5) / SS) / size;
-          const color = cloud(x, y) ? CLOUD : sun(x, y) ? SUN : BG;
-          for (let k = 0; k < 3; k++) acc[k] += color[k];
+          const sky = SKY_TOP.map((c, k) => c + (SKY_BOTTOM[k] - c) * y);
+          const shape = cloud(x, y) ? CLOUD : sun(x, y) ? SUN : null;
+          const color = shape ?? sky;
+          const alpha = shape || !transparent ? 255 : 0;
+          for (let k = 0; k < 3; k++) acc[k] += color[k] * alpha;
+          acc[3] += alpha;
         }
       }
-      for (let k = 0; k < 3; k++) pixels[(py * size + px) * 3 + k] = Math.round(acc[k] / (SS * SS));
+      const i = (py * size + px) * 4;
+      for (let k = 0; k < 3; k++) pixels[i + k] = acc[3] ? Math.round(acc[k] / acc[3]) : 0;
+      pixels[i + 3] = Math.round(acc[3] / (SS * SS));
     }
   }
   return png(size, pixels);
@@ -94,11 +102,12 @@ for (const [name, size, scale] of files) {
   console.log(`icône ${name} (${size} px)`);
 }
 
-// Icônes de l'app Android (widget natif).
+// Icônes de l'app Android : carrée pour les anciens Android, adaptative (ciel + premier plan) depuis Android 8.
 const ANDROID_RES = join(ROOT, 'android', 'app', 'src', 'main', 'res');
 for (const [density, size] of [['mdpi', 48], ['hdpi', 72], ['xhdpi', 96], ['xxhdpi', 144], ['xxxhdpi', 192]]) {
   const dir = join(ANDROID_RES, `mipmap-${density}`);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'ic_launcher.png'), draw(size, 0.86));
+  writeFileSync(join(dir, 'ic_launcher_foreground.png'), draw(Math.round(size * 2.25), 0.6, { transparent: true }));
 }
 console.log('icônes Android (mipmap) générées');

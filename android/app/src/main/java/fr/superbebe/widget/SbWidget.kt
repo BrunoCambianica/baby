@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -15,7 +16,6 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Column
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -24,8 +24,9 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 
-/** Widget d'écran d'accueil : trois lignes calculées par SbWorker, toucher pour ouvrir l'app. */
+/** Widget d'écran d'accueil : trois lignes calculées par SbWorker sur un ciel assorti à la météo ; le toucher ouvre l'app. */
 class SbWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -35,39 +36,48 @@ class SbWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content(render: SbStore.Render) {
-        val ink = ColorProvider(day = Color(0xFF16212B), night = Color(0xFFEEF3F6))
-        val muted = ColorProvider(day = Color(0xFF556472), night = Color(0xFF9AA8B4))
-        val background = ColorProvider(day = Color(0xFFE8F1F5), night = Color(0xFF16222C))
+        val white = ColorProvider(Color.White)
+        val soft = ColorProvider(Color(0xD1FFFFFF))
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(background)
-                .cornerRadius(20.dp)
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .background(ImageProvider(background(render.theme)))
+                .cornerRadius(22.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
                 .clickable(actionStartActivity<MainActivity>()),
         ) {
             Text(
                 text = "SUPERBÉBÉ · ${render.place.uppercase()}",
-                style = TextStyle(color = muted, fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(color = soft, fontSize = 10.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
             )
-            Spacer(GlanceModifier.height(6.dp))
+            Spacer(GlanceModifier.height(8.dp))
             render.lines.forEachIndexed { index, line ->
                 Text(
                     text = line,
                     style = TextStyle(
-                        color = ink,
-                        fontSize = if (index == 0) 15.sp else 13.sp,
+                        color = if (index == 0) white else soft,
+                        fontSize = if (index == 0) 17.sp else 13.sp,
                         fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
                     ),
                     maxLines = 2,
                 )
-                Spacer(GlanceModifier.height(4.dp))
+                Spacer(GlanceModifier.height(5.dp))
             }
+            Spacer(GlanceModifier.defaultWeight())
             if (render.footer.isNotEmpty()) {
-                Text(text = render.footer, style = TextStyle(color = muted, fontSize = 10.sp), maxLines = 1)
+                Text(text = render.footer, style = TextStyle(color = soft, fontSize = 10.sp), maxLines = 1)
             }
         }
+    }
+
+    private fun background(theme: String): Int = when (theme) {
+        "clair" -> R.drawable.widget_bg_clair
+        "pluie" -> R.drawable.widget_bg_pluie
+        "chaleur" -> R.drawable.widget_bg_chaleur
+        "froid" -> R.drawable.widget_bg_froid
+        "nuit" -> R.drawable.widget_bg_nuit
+        else -> R.drawable.widget_bg_nuageux
     }
 }
 
