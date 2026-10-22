@@ -1,0 +1,37 @@
+# Superbébé sur un VPS : l'API (Node) derrière Caddy, qui obtient et renouvelle le certificat HTTPS.
+# Prérequis : un enregistrement DNS A (et AAAA si IPv6) du sous-domaine vers le VPS, ports 80 et 443 ouverts.
+# Usage : cp .env.exemple .env (puis le remplir), docker compose up -d --build
+services:
+  api:
+    build: ../api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DERRIERE_PROXY: "1"
+    volumes:
+      - donnees:/donnees
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  caddy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  donnees:
+  caddy_data:
+  caddy_config:

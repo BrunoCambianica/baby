@@ -4,6 +4,7 @@ import { drawingSvg, ITEM_DRAWINGS } from '../engine/drawings.js';
 import { hourFr, render } from '../engine/engine.js';
 import { dayLong, esc } from '../app/js/format.js';
 import { bagReason, decodeFiche, nightText } from '../app/js/fiche.js';
+import { readShortFiche } from '../app/js/famille.js';
 
 const root = document.getElementById('fiche');
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
@@ -13,10 +14,25 @@ function show(html) {
   root.innerHTML = html;
 }
 
+// Lien long : la fiche est dans le lien (#f=…). Lien court : ?r=identifiant, et la clé après le # (#k=…),
+// pour déchiffrer la fiche gardée 48 heures par le serveur.
+async function fiche() {
+  const short = new URLSearchParams(location.search).get('r');
+  const key = location.hash.match(/^#k=([\w-]+)$/)?.[1];
+  if (short && key) {
+    try {
+      return { data: await readShortFiche(short, key), expired: true };
+    } catch (e) {
+      return { data: null, expired: true };
+    }
+  }
+  return { data: decodeFiche(location.hash.replace(/^#f=/, ''), fromBase64), expired: false };
+}
+
 async function main() {
-  const data = decodeFiche(location.hash.replace(/^#f=/, ''), fromBase64);
+  const { data, expired } = await fiche();
   if (!data) {
-    show('<div class="page"><p class="boot">Cette fiche est incomplète : demandez aux parents de la renvoyer.</p></div>');
+    show(`<div class="page"><p class="boot">${expired ? 'Cette fiche a expiré (elle reste 48 heures) : demandez aux parents la nouvelle.' : 'Cette fiche est incomplète : demandez aux parents de la renvoyer.'}</p></div>`);
     return;
   }
   let M;

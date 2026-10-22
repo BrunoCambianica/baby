@@ -49,6 +49,22 @@ export function profileOf(household, id) {
 // (m : date du dernier changement, en millisecondes). Une configuration v1 ne sert qu'à un premier lancement.
 export const isNewer = (cfg, local) => !local || (cfg.v === 2 && (cfg.m ?? 0) > (local.updated ?? 0));
 
+// Foyer reçu de la famille (voir famille.js, sharedPart) : il remplace celui du téléphone, sauf l'affichage.
+export function fromShared(shared, local) {
+  return {
+    v: 2,
+    commune: shared.commune,
+    outing_window: shared.outing_window,
+    outing_duration_h: shared.outing_duration_h,
+    settings_at: shared.settings_at ?? 0,
+    children: shared.children,
+    removed: shared.removed ?? {},
+    outfit_view: local?.outfit_view ?? 'dessins',
+    created: local?.created ?? Date.now(),
+    updated: Date.now(),
+  };
+}
+
 // Foyer décrit par une configuration : commune, horaires et enfants. Garde-robe et relevés des chambres
 // des enfants déjà connus (même identifiant) sont gardés ; `keepView` garde l'affichage choisi sur ce téléphone.
 export function fromConfig(cfg, local, { keepView = false } = {}) {

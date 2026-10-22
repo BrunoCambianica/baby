@@ -57,5 +57,16 @@ mkdirSync(join(ROOT, 'dist'), { recursive: true });
 writeFileSync(join(ROOT, 'dist', 'android-version.json'), `${JSON.stringify({ versionCode, versionName, apk: 'superbebe-android.apk' }, null, 2)}\n`);
 mkdirSync(assets, { recursive: true });
 writeFileSync(join(assets, 'superbebe-android.js'), `${android}\n`);
+
+// Variante service worker de l'app : le rappel du soir (Web Push, sans contenu) est calculé sur le téléphone.
+const sw = [
+  `// Superbébé ${version}, moteur pour le service worker de l'app. Fichier généré par tools/build-widget.js.`,
+  `const SB_RULES = ${JSON.stringify({ rules, messages })};`,
+  strip(read('engine/drawings.js')),
+  strip(read('engine/engine.js')),
+  strip(read('engine/adapter.js')),
+].join('\n\n');
+new vm.Script(sw, { filename: 'sw-moteur.js' });
+writeFileSync(join(ROOT, 'app', 'sw-moteur.js'), `${sw}\n`);
 console.log('android/app/src/main/assets/superbebe-android.js généré');
 console.log(`widget/superbebe.js et widget/superbebe-autonome.js générés (${Math.round(code.length / 1024)} Ko)`);

@@ -1,0 +1,10 @@
+# Caddy : HTTPS automatique pour le sous-domaine de l'API, puis tout vers l'API.
+# Pas de directive « log » : aucune requête n'est journalisée, donc aucune adresse IP n'est gardée.
+{$DOMAINE} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy api:8080
+}

@@ -17,6 +17,8 @@ App web installable et widgets iPhone et Android : quand sortir avec bébé, com
 | `widget/` | Widget iPhone pour Scriptable : chargeur, source, fichiers générés |
 | `android/` | App Android : l'app web en plein écran et le widget natif (Kotlin, Glance), même moteur exécuté dans le bac à sable JavaScript : voir [android/README.md](android/README.md) |
 | `dist/` | APK de test de l'app Android, servi par le site |
+| `api/` | API pour le VPS (Node 24, sans dépendance) : familles chiffrées entre parents, rappel du soir par Web Push, fiches à lien court ; tests : `npm test` |
+| `deploy/` | Docker Compose et Caddy pour le VPS : voir [deploy/README.md](deploy/README.md) |
 | `tools/` | Tests, génération des widgets et des icônes, serveur local, parcours navigateur (`tools/e2e/`), installation de la chaîne Android |
 
 ## Commandes
@@ -74,6 +76,14 @@ Le site est statique : tous les chemins sont relatifs et les widgets récupèren
 | Android | L'app web appelle le pont `SuperbebeAndroid` à chaque changement. Un widget par enfant : choisi à la pose, ou « Le widget de Léo » dans l'app. | Ouvre l'app Android sur l'enfant du widget. |
 
 La configuration (`SB1.` suivi d'un JSON en base64url) existe en deux versions : v1, un seul enfant, lue pour les anciens widgets ; v2, la commune, les horaires, les enfants (`k`) et la date du dernier changement (`m`). L'app n'applique une configuration reçue d'un widget que si elle est plus récente que la sienne. Une app Android antérieure à la 0.6 reçoit encore une configuration v1, celle de l'enfant affiché.
+
+## L'API (facultative)
+
+Sans adresse d'API (`API_BASE` vide dans `app/js/famille.js`), l'app reste entièrement locale. Avec l'API, sur le VPS :
+
+- **Profils partagés entre parents, sans compte** : un secret de 32 octets, dans le lien de famille (après le `#`), donne l'identifiant, le jeton d'accès et la clé de chiffrement (HKDF). Le foyer est chiffré sur le téléphone (AES-GCM) ; le serveur ne garde qu'un bloc illisible et l'empreinte du jeton. Les deux téléphones fusionnent leurs versions (enfant le plus récent, relevé de chambre le plus récent, retraits gardés).
+- **Rappel du soir sur l'app de l'écran d'accueil** (iPhone 16.4 et plus) : notification Web Push vide à l'heure choisie ; le service worker calcule le rappel sur le téléphone (`app/sw-moteur.js`).
+- **Fiche du jour à lien court** : chiffrée avec une clé qui n'est que dans le lien, gardée 48 heures ; `/r/…` renvoie vers `fiche/?r=…`, le navigateur gardant la clé après le `#`.
 
 ## Données et vie privée
 

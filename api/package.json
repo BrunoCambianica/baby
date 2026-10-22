@@ -1,0 +1,15 @@
+{
+  "name": "superbebe-api",
+  "version": "0.9.0",
+  "private": true,
+  "description": "API Superbébé : familles chiffrées, rappel du soir (Web Push), fiches du jour à lien court. Sans dépendance.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js",
+    "cles": "node cles-vapid.js"
+  }
+}

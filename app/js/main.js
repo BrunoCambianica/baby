@@ -3,8 +3,11 @@ import { addDays, ageMonths, clamp, displayMoment, evaluate, hourFr, render, toM
 import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
+import {
+  api, apiBase, familyKeys, fromB64url, mergeHousehold, newSecret, seal, sharedPart, shortFicheLink, unseal,
+} from './famille.js';
 import { dayLong, dayShort } from './format.js';
-import { ageLabel, fromConfig, isNewer, migrate, newChild, profileOf } from './household.js';
+import { ageLabel, fromConfig, fromShared, isNewer, migrate, newChild, profileOf } from './household.js';
 import { store } from './storage.js';
 import * as V from './views.js';
 
@@ -28,8 +31,11 @@ function androidAtLeast(major, minor) {
   return Boolean(m) && (Number(m[1]) > major || (Number(m[1]) === major && Number(m[2]) >= minor));
 }
 const androidMulti = host === 'android' && androidAtLeast(0, 6);
-// Rappel du soir : app Android 0.8 et plus, ou widget iPhone (Scriptable) qui programme la notification.
+// Rappel du soir : app Android 0.8 et plus, ou widget iPhone (Scriptable) qui programme la notification ;
+// sinon, avec l'API, par notification Web Push (sur iPhone, seulement pour l'app de l'écran d'accueil).
 const reminderHost = host === 'scriptable' || (host === 'android' && androidAtLeast(0, 8));
+const webPush = !reminderHost && !host && 'PushManager' in window && 'serviceWorker' in navigator && Boolean(apiBase())
+  && (standalone || !/iPhone|iPad|iPod/i.test(navigator.userAgent));
 const widgetKids = () => (androidMulti ? ask(() => JSON.parse(android.widgetChildren()), {}) : {});
 
 // Foyer enregistré ; le profil à un seul enfant des versions précédentes devient le premier enfant.
@@ -77,6 +83,12 @@ const state = {
   reminder: store.reminder(),
   reminderHost,
   reminderState: reminderHost && host === 'android' ? ask(() => android.reminderState(), 'off') : null,
+  webPush,
+  // API Superbébé (VPS) : clé des notifications, famille partagée avec l'autre parent, famille à rejoindre (#famille=…).
+  api: Boolean(apiBase()),
+  apiInfo: null,
+  family: store.family(),
+  joining: null,
   steps: new Set(),
   androidLink: '',
   updateLink: '',
@@ -94,6 +106,7 @@ refreshProfile();
 const route = () => location.hash.replace('#', '');
 
 function currentView() {
+  if (state.joining) return 'recevoir';
   if (!state.household) return state.received || route() === 'recevoir' ? 'recevoir' : 'onboarding';
   const r = route();
   if (r.startsWith('enfant/')) return 'enfant';
@@ -219,10 +232,19 @@ function setThemeColor(view) {
   if (host === 'android') ask(() => android.colors(color, bottom));
 }
 
-// Rappel du soir : réglé sur ce téléphone, transmis à l'app Android ou au widget iPhone, qui le programment.
+// Rappel du soir : réglé sur ce téléphone, transmis à l'app Android ou au widget iPhone, qui le programment,
+// ou à l'API (notification Web Push sans contenu : le service worker calcule le rappel sur le téléphone).
 function setReminder(next) {
   state.reminder = next;
   store.saveReminder(next);
+  if (webPush) {
+    pushSubscription(next).then((status) => {
+      state.reminderState = status;
+      if (status === 'refuse') toast('Notifications refusées : autorisez-les dans les réglages du téléphone.');
+      paint();
+    });
+    writeSwData();
+  }
   if (host === 'android') {
     state.reminderState = ask(() => android.reminder(next.on, next.at), 'off');
     if (state.reminderState === 'demande') toast('Autorisez les notifications de Superbébé.');
@@ -238,18 +260,132 @@ function saveHousehold() {
   store.saveProfile(state.household);
   refreshProfile();
   syncHost();
+  writeSwData();
+  if (state.family) {
+    state.family = { ...state.family, dirty: true };
+    store.saveFamily(state.family);
+    clearTimeout(familyTimer);
+    familyTimer = setTimeout(syncFamily, 1500);
+  }
 }
 
-// Réglages du foyer : commune, horaires, affichage.
+// ——— Avec l'autre parent, par l'API ———
+// Le foyer est chiffré sur ce téléphone avant de partir ; on lit la version du serveur, on fusionne, et on renvoie
+// si ce téléphone a du nouveau. Sans réseau, rien ne bloque : on réessaiera à la prochaine ouverture.
+let familyTimer = null;
+let syncing = null;
+const familyLink = (secret) => `${new URL('./', location.href).href}#famille=${secret}`;
+
+function syncFamily() {
+  if (!state.family || !state.api || !state.household) return Promise.resolve();
+  syncing ??= (async () => {
+    const family = { ...state.family };
+    const keys = await familyKeys(family.secret);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await api.lireFamille(keys, family.version);
+      if (res.status === 404 || res.status === 403) {
+        state.family = null;
+        store.saveFamily(null);
+        toast('La famille a été effacée par l\'autre parent : vos réglages restent sur ce téléphone.');
+        paint();
+        return;
+      }
+      if (res.status === 200) {
+        const { bloc, version } = await res.json();
+        const remote = await unseal(keys.key, bloc);
+        const merged = mergeHousehold({ ...sharedPart(state.household), ...state.household }, remote);
+        if (JSON.stringify(sharedPart(merged)) !== JSON.stringify(sharedPart(state.household))) {
+          state.household = { ...merged, updated: Date.now() };
+          store.saveProfile(state.household);
+          refreshProfile();
+          syncHost();
+          writeSwData();
+          if (['app', 'reglages'].includes(currentView())) paint();
+        }
+        if (JSON.stringify(sharedPart(merged)) !== JSON.stringify({ ...remote, v: 1 })) family.dirty = true;
+        family.version = version;
+      } else if (res.status !== 304) throw new Error(`HTTP ${res.status}`);
+      if (!family.dirty) break;
+      const put = await api.ecrireFamille(keys, await seal(keys.key, sharedPart(state.household)), family.version);
+      if (put.status === 412) continue;
+      if (!put.ok) throw new Error(`HTTP ${put.status}`);
+      family.version = (await put.json()).version;
+      family.dirty = false;
+      break;
+    }
+    family.synced_at = Date.now();
+    state.family = family;
+    state.familyError = false;
+    store.saveFamily(family);
+  })().catch(() => {
+    state.familyError = true;
+  }).finally(() => {
+    syncing = null;
+  });
+  return syncing;
+}
+
+// Famille à rejoindre (lien #famille=…) : lue et déchiffrée, puis montrée avant tout remplacement.
+async function loadJoining(secret) {
+  state.joining = { secret, status: 'lecture' };
+  paint();
+  try {
+    const keys = await familyKeys(secret);
+    const res = await api.lireFamille(keys);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { bloc, version } = await res.json();
+    state.joining = { secret, status: 'pret', version, shared: await unseal(keys.key, bloc) };
+  } catch (e) {
+    state.joining = { secret, status: 'erreur' };
+  }
+  paint();
+}
+
+// Notifications Web Push : autorisation (au toucher), abonnement du téléphone, heure envoyée à l'API.
+async function pushSubscription(reminder) {
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!reminder.on) {
+      if (subscription) {
+        await api.desabonner(subscription.endpoint).catch(() => {});
+        await subscription.unsubscribe();
+      }
+      return 'off';
+    }
+    if ((await Notification.requestPermission()) !== 'granted') return 'refuse';
+    state.apiInfo ??= await api.etat();
+    if (!state.apiInfo?.push) return 'indisponible';
+    subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(state.apiInfo.push) });
+    const res = await api.abonner(subscription.endpoint, reminder.at);
+    return res.ok ? 'on' : 'indisponible';
+  } catch (e) {
+    return 'indisponible';
+  }
+}
+
+// Ce dont le service worker a besoin pour calculer le rappel sans l'app : le foyer et la dernière météo.
+function writeSwData() {
+  if (!webPush || !state.household || !('caches' in window)) return;
+  const data = { household: state.household, reminder: state.reminder, forecast: state.forecast?.data ?? null };
+  caches.open('superbebe-donnees').then((cache) => cache.put('donnees.json', new Response(JSON.stringify(data)))).catch(() => {});
+}
+
+// Réglages du foyer : commune, horaires, affichage. Les dates de changement servent à fusionner avec l'autre parent.
 function updateHousehold(patch) {
-  state.household = { ...state.household, ...patch, updated: Date.now() };
+  const now = Date.now();
+  const shared = ['commune', 'outing_window', 'outing_duration_h'].some((k) => k in patch);
+  state.household = { ...state.household, ...patch, updated: now, ...(shared ? { settings_at: now } : {}) };
   saveHousehold();
 }
 
 // Réglages d'un enfant (l'enfant affiché par défaut) : prénom, naissance, mode, tendance, garde-robe, chambre.
+// Le relevé de la chambre a sa propre date : il ne compte pas comme un changement des réglages de l'enfant.
 function updateChild(patch, id = state.profile.id) {
-  const children = state.household.children.map((c) => (c.id === id ? { ...c, ...patch } : c));
-  state.household = { ...state.household, children, updated: Date.now() };
+  const now = Date.now();
+  const touched = Object.keys(patch).some((k) => k !== 'room');
+  const children = state.household.children.map((c) => (c.id === id ? { ...c, ...patch, ...(touched ? { updated: now } : {}) } : c));
+  state.household = { ...state.household, children, updated: now };
   saveHousehold();
 }
 
@@ -316,6 +452,12 @@ function takeImport() {
     params.delete('enfant');
     const query = params.toString();
     history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${match ? '' : location.hash}`);
+  }
+  // Lien de famille (#famille=secret) : lu auprès de l'API, puis montré avant de remplacer quoi que ce soit.
+  const join = location.hash.match(/^#famille=([A-Za-z0-9_-]{43})$/);
+  if (join) {
+    history.replaceState(null, '', `${location.pathname}${location.search}`);
+    if (state.api) loadJoining(join[1]);
   }
   const cfg = match && decodeConfig(match[2], (b64) => atob(b64));
   let changed = false;
@@ -453,6 +595,7 @@ async function loadData({ force = false } = {}) {
     state.error = 'Météo indisponible pour le moment. Vérifiez la connexion.';
   }
   state.loading = false;
+  writeSwData();
   if (currentView() === 'app') paint();
   if (force && !state.error && !state.forecast?.offline) toast(`Météo à jour (${state.updatedAt})`);
   try {
@@ -523,7 +666,7 @@ const actions = {
       paint();
       return;
     }
-    const child = newChild({ name: d.name.trim().slice(0, 24), birth, transport: d.transport, outfit_offset: d.offset });
+    const child = { ...newChild({ name: d.name.trim().slice(0, 24), birth, transport: d.transport, outfit_offset: d.offset }), updated: Date.now() };
     updateHousehold({ children: [...state.household.children, child] });
     showChild(child.id);
     toast(`Profil de ${childName(child, state.household.children.length - 1)} ajouté.`);
@@ -538,7 +681,7 @@ const actions = {
       return;
     }
     const children = state.household.children.filter((c) => c.id !== d.child);
-    updateHousehold({ children });
+    updateHousehold({ children, removed: { ...(state.household.removed ?? {}), [d.child]: Date.now() } });
     if (store.currentChild() === d.child) showChild(children[0].id);
     location.hash = 'reglages';
   },
@@ -562,6 +705,11 @@ const actions = {
   },
   'read-profiles'() {
     const text = document.getElementById('profiles-link')?.value ?? '';
+    const secret = text.match(/#famille=([A-Za-z0-9_-]{43})/)?.[1];
+    if (secret && state.api) {
+      loadJoining(secret);
+      return;
+    }
     const code = text.match(/SB1\.[\w-]+/)?.[0];
     const cfg = code && decodeConfig(code, (b64) => atob(b64));
     if (!cfg) {
@@ -581,6 +729,69 @@ const actions = {
     toast(`Profils reçus : ${names}.`);
     store.markDay(parisNow().date);
     loadData({ force: true });
+  },
+  // Synchroniser avec l'autre parent : la famille est créée chiffrée, puis le lien part par la messagerie.
+  async 'family-create'(el) {
+    el.disabled = true;
+    const secret = newSecret();
+    try {
+      const keys = await familyKeys(secret);
+      const res = await api.creerFamille(keys, await seal(keys.key, sharedPart(state.household)));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      state.family = { secret, version: 1, dirty: false, synced_at: Date.now() };
+      store.saveFamily(state.family);
+      paint();
+      await actions['family-share']();
+    } catch (e) {
+      toast('Serveur injoignable : réessayez plus tard.');
+      el.disabled = false;
+    }
+  },
+  async 'family-share'() {
+    if (!state.family) return;
+    const names = state.household.children.map(childName).join(' et ');
+    const text = `Rejoignez la famille Superbébé (${names}) : ouvrez ce lien sur votre téléphone, ou collez-le dans Superbébé, Réglages, « Recevoir un lien ». Il donne accès aux profils : gardez-le pour vous deux.\n${familyLink(state.family.secret)}`;
+    if (host === 'android' && ask(() => android.share(text), false) !== false) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Superbébé', text });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+    if (await copy(text)) toast('Lien copié : envoyez-le à l\'autre parent.');
+  },
+  async 'family-sync'() {
+    await syncFamily();
+    toast(state.familyError ? 'Serveur injoignable : réessayez plus tard.' : 'Profils à jour.');
+    paint();
+  },
+  'family-leave'() {
+    state.family = null;
+    store.saveFamily(null);
+    toast('Ce téléphone ne suit plus la famille ; ses réglages restent.');
+    paint();
+  },
+  'family-join'() {
+    const j = state.joining;
+    if (j?.status !== 'pret') return;
+    replaceHousehold(fromShared(j.shared, state.household));
+    state.family = { secret: j.secret, version: j.version, dirty: false, synced_at: Date.now() };
+    store.saveFamily(state.family);
+    state.joining = null;
+    syncHost();
+    writeSwData();
+    if (location.hash) location.hash = '';
+    else paint();
+    toast(`Famille rejointe : ${state.household.children.map(childName).join(', ')}.`);
+    store.markDay(parisNow().date);
+    loadData({ force: true });
+  },
+  'family-refuse'() {
+    state.joining = null;
+    if (location.hash) location.hash = '';
+    else paint();
   },
   'refuse-profiles'() {
     state.received = null;
@@ -632,7 +843,10 @@ const actions = {
     if (!ctx?.result.journee) return;
     const M = state.bundle.messages;
     const data = ficheData(ctx, state.profile.name);
-    const link = `${new URL('../fiche/', location.href).href}#f=${encodeFiche(data, (x) => btoa(x))}`;
+    // Avec l'API, un lien court (fiche chiffrée, gardée 48 heures) ; sinon, la fiche entière dans le lien.
+    let link = `${new URL('../fiche/', location.href).href}#f=${encodeFiche(data, (x) => btoa(x))}`;
+    // Au plus 0,6 seconde d'attente : au-delà, Safari pourrait refuser d'ouvrir la fenêtre de partage.
+    if (state.api) link = await Promise.race([shortFicheLink(data), new Promise((resolve) => { setTimeout(() => resolve(link), 600); })]).catch(() => link);
     const text = `${ficheText(data, M, dayLong(ctx.date))}\n${link}`;
     // Dans Scriptable, le lien s'ouvre dans Safari, qui sait partager la fiche.
     if (host === 'scriptable') {
@@ -799,12 +1013,17 @@ const actions = {
   async 'copy-report'() {
     if (await copy(reportText())) toast('Retours copiés : collez-les dans la conversation du test.');
   },
-  clear() {
+  async clear() {
     if (!state.confirmClear) {
       state.confirmClear = true;
       paint();
       return;
     }
+    // La famille partagée est aussi effacée du serveur (pour l'autre parent aussi, prévenu par le message).
+    if (state.family && state.api) {
+      await familyKeys(state.family.secret).then((keys) => api.effacerFamille(keys)).catch(() => {});
+    }
+    if (webPush) await pushSubscription({ on: false });
     store.clear();
     state.household = null;
     state.profile = null;
@@ -935,6 +1154,7 @@ document.addEventListener('visibilitychange', () => {
     if (currentView() !== 'onboarding') paint();
   }
   if (!state.household) return;
+  syncFamily();
   const today = parisNow().date;
   if (today !== state.today) {
     state.today = today;
@@ -981,6 +1201,12 @@ async function boot() {
   paint();
   if (route() === 'widget') preloadLoader();
   if (state.household) loadData();
+  if (state.api) {
+    api.etat().then((info) => {
+      state.apiInfo = info;
+    });
+    syncFamily();
+  }
 }
 
 boot();

@@ -7,3 +7,4 @@ android/app/build/
 android/local.properties
 android/.kotlin/
 tools/e2e/captures/
+deploy/.env

@@ -11,6 +11,8 @@ const KEYS = {
   promo: 'sb.promo',
   // Rappel du soir, propre à ce téléphone : { on, at: 'HH:MM' }.
   reminder: 'sb.rappel',
+  // Famille partagée avec l'autre parent : { secret, version, dirty, synced_at } (voir famille.js).
+  family: 'sb.famille',
 };
 
 function read(key, fallback) {
@@ -53,6 +55,8 @@ export const store = {
   widgetCopied: () => read(KEYS.widget, null),
   markWidgetCopied: () => write(KEYS.widget, { at: Date.now() }),
   reminder: () => read(KEYS.reminder, { on: false, at: '20:00' }),
+  family: () => read(KEYS.family, null),
+  saveFamily: (value) => write(KEYS.family, value ?? null),
   saveReminder: (value) => write(KEYS.reminder, value),
   promoHidden: () => read(KEYS.promo, false),
   hidePromo: () => write(KEYS.promo, true),

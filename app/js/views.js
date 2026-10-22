@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.8.0';
+export const VERSION = '0.9.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -597,13 +597,7 @@ export function viewSettings(state) {
       </div>
       <p class="group-note">Mois de naissance, mode de sortie et tendance de chacun. Prénoms et réglages restent sur ce téléphone.</p>
     </section>
-    <section class="group"><h2 class="group-title">Avec l'autre parent</h2>
-      <div class="group-body">
-        <button class="row" data-action="share-profiles"><span>Envoyer les profils</span>${icon('share', { size: 20 })}</button>
-        <a class="row" href="#recevoir"><span>Recevoir des profils</span>${chev()}</a>
-      </div>
-      <p class="group-note">Un lien à envoyer par message : il contient les prénoms et les réglages, et ne passe par aucun serveur de Superbébé. Les changements faits ensuite ne se transmettent pas tout seuls.</p>
-    </section>
+    ${parentsGroup(state)}
     <section class="group"><h2 class="group-title">Sorties</h2>
       <div class="group-body">
         <div class="row column"><span>Commune</span>${communePicker(draft, results)}</div>
@@ -643,6 +637,38 @@ export function viewSettings(state) {
   </div>`;
 }
 
+// Avec l'autre parent. Avec l'API : une famille synchronisée, chiffrée sur les téléphones. Sans : un lien à usage unique.
+function parentsGroup(state) {
+  const title = '<h2 class="group-title">Avec l\'autre parent</h2>';
+  if (!state.api) {
+    return `<section class="group">${title}
+      <div class="group-body">
+        <button class="row" data-action="share-profiles"><span>Envoyer les profils</span>${icon('share', { size: 20 })}</button>
+        <a class="row" href="#recevoir"><span>Recevoir des profils</span>${chev()}</a>
+      </div>
+      <p class="group-note">Un lien à envoyer par message : il contient les prénoms et les réglages, et ne passe par aucun serveur de Superbébé. Les changements faits ensuite ne se transmettent pas tout seuls.</p>
+    </section>`;
+  }
+  if (!state.family) {
+    return `<section class="group">${title}
+      <div class="group-body">
+        <button class="row" data-action="family-create"><span>Partager les profils avec l'autre parent</span>${icon('share', { size: 20 })}</button>
+        <a class="row" href="#recevoir"><span>Recevoir un lien</span>${chev()}</a>
+      </div>
+      <p class="group-note">Les deux téléphones gardent les mêmes enfants, réglages, garde-robe et relevés de la chambre, sans compte. Tout est chiffré sur le téléphone avant de partir : le serveur ne peut pas lire les prénoms.</p>
+    </section>`;
+  }
+  const at = state.family.synced_at ? new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(state.family.synced_at)).replace(':', ' h ') : '';
+  return `<section class="group">${title}
+    <div class="group-body">
+      <button class="row" data-action="family-sync"><span>${state.familyError ? 'Serveur injoignable, réessayer' : `Profils partagés${at ? ` · à jour à ${at}` : ''}`}</span>${icon('refresh', { size: 20 })}</button>
+      <button class="row" data-action="family-share"><span>Renvoyer le lien à l'autre parent</span>${icon('share', { size: 20 })}</button>
+      <button class="row" data-action="family-leave"><span>Ne plus partager sur ce téléphone</span>${icon('x', { size: 20 })}</button>
+    </div>
+    <p class="group-note">Chiffré sur le téléphone : le serveur ne peut pas lire les prénoms. Le lien donne accès aux profils : gardez-le pour vous deux. L'affichage et le rappel du soir restent propres à chaque téléphone.</p>
+  </section>`;
+}
+
 // Fiche d'un enfant : enregistrée dès qu'on la change ; « Ajouter un enfant » ne l'enregistre qu'au bouton.
 export function viewChild(state) {
   const d = state.draft;
@@ -672,14 +698,39 @@ export function viewChild(state) {
   </div>`;
 }
 
+// Famille à rejoindre (lien de l'autre parent) : ce qu'elle contient, puis l'accord.
+function viewJoin(state) {
+  const j = state.joining;
+  const back = `<a class="back" href="#">${icon('chevronLeft')}Retour</a>`;
+  if (j.status !== 'pret') {
+    return `<header class="page-head">${back}<h1>Rejoindre la famille</h1></header>
+      <div class="page"><p class="boot">${j.status === 'erreur' ? 'Lien invalide, famille effacée ou serveur injoignable. Demandez un nouveau lien à l\'autre parent.' : 'Lecture de la famille…'}</p>
+      ${j.status === 'erreur' ? '<button class="btn soft" data-action="family-refuse">Retour</button>' : ''}</div>`;
+  }
+  const label = Object.fromEntries(TRANSPORTS.map(([v, l]) => [v, l]));
+  const kids = j.shared.children.map((c, i) => `<div class="row"><span>${esc(childName(c, i))}</span>
+      <span class="value">${esc(ageLabel(ageMonths(c.birth, state.today)))} · ${esc(label[c.transport] ?? '')}</span></div>`).join('');
+  const h = state.household;
+  return `<header class="page-head">${back}<h1>Rejoindre la famille</h1>
+      <p class="lead">Les profils de l'autre parent, pour ${esc(j.shared.commune?.nom || 'votre commune')}, partagés entre vos deux téléphones.</p></header>
+    <div class="page">
+      <section class="group"><div class="group-body">${kids}</div>
+        ${h ? `<p class="group-note">Ils remplacent les réglages de ce téléphone (${esc(h.commune.nom)} : ${esc(h.children.map(childName).join(', '))}).</p>` : ''}</section>
+      <button class="btn" data-action="family-join">Rejoindre</button>
+      <button class="link" data-action="family-refuse">Ne pas rejoindre</button>
+      ${state.host ? '' : `<p class="fine">Vous utilisez Superbébé depuis l'icône de l'écran d'accueil ? Elle garde ses propres réglages : copiez le lien reçu, puis dans l'app : Réglages, « Recevoir un lien ».</p>`}
+    </div>`;
+}
+
 // Profils reçus de l'autre parent : ce qu'ils contiennent, puis l'accord. Sans lien reçu, un champ pour le coller.
 export function viewReceive(state) {
+  if (state.joining) return viewJoin(state);
   const cfg = state.received;
   const back = state.household
     ? `<a class="back" href="#reglages">${icon('chevronLeft')}Réglages</a>`
     : `<a class="back" href="#">${icon('chevronLeft')}Retour</a>`;
   if (!cfg) {
-    return `<header class="page-head">${back}<h1>Recevoir des profils</h1>
+    return `<header class="page-head">${back}<h1>${state.api ? 'Recevoir un lien' : 'Recevoir des profils'}</h1>
       <p class="lead">Collez le lien envoyé par l'autre parent.</p></header>
     <div class="page">
       <section class="group"><div class="group-body"><div class="row column">
@@ -723,15 +774,15 @@ function homeScreenGroup(state) {
 // Il passe par l'app Android ou par le widget iPhone (Scriptable) ; ailleurs, on dit comment l'avoir.
 function reminderGroup(state) {
   const title = '<h2 class="group-title">Rappel du soir</h2>';
-  if (!state.reminderHost) {
+  if (!state.reminderHost && !state.webPush) {
     return `<section class="group">${title}<div class="group-body"><a class="row" href="#widget"><span>Avec le widget</span>${chev()}</a></div>
-      <p class="group-note">La veille au soir, une notification avec la tenue et le sac de demain, et la nuit. Elle passe par l'app Android ou par le widget iPhone (Scriptable).</p></section>`;
+      <p class="group-note">La veille au soir, une notification avec la tenue et le sac de demain, et la nuit. Elle passe par l'app Android ou par le widget iPhone (Scriptable)${state.api ? ', ou par l\'app de l\'écran d\'accueil' : ''}.</p></section>`;
   }
   const r = state.reminder;
   const times = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
-  const refused = state.host === 'android' && r.on && state.reminderState === 'refuse'
-    ? '<p class="error group-note">Notifications refusées : Réglages d\'Android, Applications, Superbébé, Notifications.</p>'
-    : '';
+  const refused = r.on && state.reminderState === 'refuse'
+    ? `<p class="error group-note">Notifications refusées : ${state.host === 'android' ? 'Réglages d\'Android, Applications, Superbébé, Notifications' : 'autorisez-les dans les réglages du téléphone'}.</p>`
+    : r.on && state.reminderState === 'indisponible' ? '<p class="error group-note">Serveur des notifications injoignable : réessayez plus tard.</p>' : '';
   return `<section class="group">${title}
     <div class="group-body">
       <div class="row column"><span>La veille, la tenue et le sac de demain</span>
@@ -741,7 +792,7 @@ function reminderGroup(state) {
       ${r.on ? `<div class="row column"><span>Vers</span><select id="reminder-at" aria-label="Heure du rappel">${times.map((t) => `<option value="${t}"${r.at === t ? ' selected' : ''}>${hourFr(t)}</option>`).join('')}</select></div>` : ''}
     </div>
     ${refused}
-    <p class="group-note">Une notification par jour au plus, calculée sur ce téléphone, sans serveur.${state.host === 'scriptable' ? ' Scriptable demande l\'autorisation la première fois.' : ''}</p>
+    <p class="group-note">Une notification par jour au plus, calculée sur ce téléphone${state.webPush ? ' : le serveur ne fait que le réveiller à l\'heure dite, sans rien lui envoyer d\'autre' : ', sans serveur'}.${state.host === 'scriptable' ? ' Scriptable demande l\'autorisation la première fois.' : ''}</p>
   </section>`;
 }
 
@@ -861,7 +912,7 @@ export function viewAbout(state) {
     </section>
     <section class="group"><h2 class="group-title">Confidentialité</h2>
       <div class="group-body"><div class="row column prose"><ul>
-        <li>Pas de compte : vos réglages et les prénoms restent sur ce téléphone.</li>
+        <li>Pas de compte : vos réglages et les prénoms restent sur ce téléphone${state.api ? ', sauf si vous les partagez avec l\'autre parent, chiffrés (voir plus bas)' : ''}.</li>
         <li>« Envoyer les profils » crée un lien qui contient les prénoms et les réglages : il passe par la messagerie que vous choisissez, jamais par un serveur de Superbébé.</li>
         <li>Widget iPhone : le script copié dans Scriptable contient les réglages et les prénoms ; selon vos réglages iCloud, Scriptable peut le ranger dans iCloud Drive.</li>
         <li>La météo est demandée à Open-Meteo avec les coordonnées du centre de la commune, rien d'autre.</li>
@@ -869,6 +920,15 @@ export function viewAbout(state) {
         <li>Ni publicité, ni mesure d'audience.</li>
       </ul></div></div>
     </section>
+    ${state.api ? `<section class="group"><h2 class="group-title">Serveur de Superbébé</h2>
+      <div class="group-body"><div class="row column prose"><ul>
+        <li>Seulement si vous partagez les profils avec l'autre parent, activez le rappel du soir sur l'app de l'écran d'accueil, ou envoyez une fiche du jour à lien court.</li>
+        <li>Profils partagés : chiffrés sur le téléphone avec une clé qui ne quitte que le lien de famille ; le serveur garde un bloc illisible et l'empreinte du jeton d'accès. Effacés après 12 mois sans ouverture, ou tout de suite avec « Effacer toutes mes données » (pour les deux téléphones).</li>
+        <li>Rappel du soir : l'adresse d'envoi fournie par le téléphone et l'heure choisie. Le serveur envoie une notification vide, par le service de notifications d'Apple ou de Google ; c'est le téléphone qui calcule le rappel. Effacé à la désactivation, ou après 6 mois.</li>
+        <li>Fiche du jour à lien court : chiffrée, la clé n'est que dans le lien ; effacée au bout de 48 heures.</li>
+        <li>Aucune adresse IP n'est enregistrée ; elle ne sert, en mémoire, qu'à limiter le nombre de requêtes.</li>
+      </ul></div></div>
+    </section>` : ''}
     <section class="group"><h2 class="group-title">Sources</h2><div class="group-body">${sources}</div></section>
     <section class="group"><h2 class="group-title">Crédits</h2>
       <div class="group-body"><div class="row column prose"><p>Météo : Open-Meteo (CC BY 4.0), modèles de Météo-France et du CEPMMT. Communes : geo.api.gouv.fr. Icônes : Tabler Icons (licence MIT).</p></div></div>

@@ -10,6 +10,10 @@ import { join } from 'node:path';
 import { chromium } from 'playwright';
 import { encodeConfig, householdToConfig } from '../../engine/adapter.js';
 import { readJSON, ROOT } from '../load-rules.js';
+import { openDb } from '../../api/db.js';
+import { newVapidKeys } from '../../api/push.js';
+import { createApi } from '../../api/server.js';
+import { familyKeys } from '../../app/js/famille.js';
 
 const PORT = 8000 + Math.floor(Math.random() * 900);
 const BASE = process.env.SB_SITE ?? `http://localhost:${PORT}/baby/`;
@@ -29,14 +33,25 @@ const env = existsSync(LIBS) ? { ...process.env, LD_LIBRARY_PATH: `${LIBS}:${pro
 mkdirSync(CAPTURES, { recursive: true });
 const server = process.env.SB_SITE ? null : spawn(process.execPath, [join(ROOT, 'tools', 'serve.js')], { env: { ...process.env, PORT: String(PORT) }, stdio: 'pipe' });
 if (server) await new Promise((resolve) => server.stdout.once('data', resolve));
-const browser = await chromium.launch({ env });
+// Chromium complet sans fenêtre (le « headless shell » refuse les notifications du service worker).
+const browser = await chromium.launch({ channel: 'chromium', env });
+
+// L'API (api/server.js) en local, avec une base en mémoire, pour les parcours de la famille et des fiches courtes.
+const vapid = { ...newVapidKeys(), contact: BASE };
+const apiServer = createApi({ db: openDb(':memory:'), origins: [new URL(BASE).origin], site: BASE, vapid, limits: { lecture: 1000, ecriture: 1000 } });
+await new Promise((resolve) => apiServer.server.listen(0, '127.0.0.1', resolve));
+const API = `http://127.0.0.1:${apiServer.server.address().port}/`;
+const withApi = `localStorage.setItem('sb.api', ${JSON.stringify(API)});`;
 
 // Un téléphone : 390 × 844, heure de Paris figée, météo et communes simulées, erreurs de la page relevées.
-async function phone({ at = '2026-10-21T07:30:00+02:00', init } = {}) {
+// `android` : navigateur Android (notifications Web Push possibles dans un onglet) ; `worker` : service worker actif.
+async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, worker = false } = {}) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'fr-FR', timezoneId: 'Europe/Paris',
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
-    serviceWorkers: 'block',
+    userAgent: android
+      ? 'Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36'
+      : 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    serviceWorkers: worker ? 'allow' : 'block',
   });
   await context.route('https://api.open-meteo.com/**', (route) => route.fulfill({ json: forecast }));
   let year = 0;
@@ -47,6 +62,21 @@ async function phone({ at = '2026-10-21T07:30:00+02:00', init } = {}) {
   page.on('pageerror', (e) => page.errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !m.text().includes('favicon') && page.errors.push(m.text()));
   await page.clock.setFixedTime(new Date(at));
+  // Liens superbebe-sync: (app ouverte dans Scriptable) : notés dans data-sync au lieu d'être suivis. Chromium
+  // ouvrirait sinon une demande d'app externe, invisible, qui avalerait les clics suivants.
+  await page.addInitScript(() => {
+    const native = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'src');
+    Object.defineProperty(HTMLIFrameElement.prototype, 'src', {
+      configurable: true,
+      get() {
+        return this.dataset.sync ?? native.get.call(this);
+      },
+      set(value) {
+        if (String(value).startsWith('superbebe-sync:')) this.dataset.sync = value;
+        else native.set.call(this, value);
+      },
+    });
+  });
   if (init) await page.addInitScript(init);
   return page;
 }
@@ -245,7 +275,7 @@ await test('Widget iPhone : l\'app s\'ouvre sur l\'enfant du widget ; une config
   // Les changements partent vers le widget : configuration v2 et relevés par enfant.
   await page.click('[data-value="nuit"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
-  const src = await page.getAttribute('#sb-sync', 'src');
+  const src = await page.getAttribute('#sb-sync', 'data-sync');
   assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+&rappel=0$/.test(src), src);
   const newer = encodeConfig(householdToConfig({ ...local, outing_duration_h: 2, updated: Date.now() + 60_000 }), toB64);
   await page.goto(`${APP}?hote=scriptable#import=${newer}`);
@@ -398,12 +428,106 @@ await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app An
   const iphone = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await iphone.goto(`${APP}?hote=scriptable#reglages`);
   await iphone.click('[data-action="reminder"][data-value="on"]');
-  const src = await iphone.getAttribute('#sb-sync', 'src');
+  const src = await iphone.getAttribute('#sb-sync', 'data-sync');
   assert(src.endsWith('&rappel=20:00'), src);
   await iphone.click('[data-action="reminder"][data-value="off"]');
-  assert((await iphone.getAttribute('#sb-sync', 'src')).endsWith('&rappel=0'), 'rappel non coupé');
+  assert((await iphone.getAttribute('#sb-sync', 'data-sync')).endsWith('&rappel=0'), 'rappel non coupé');
 });
 
+// Parcours avec l'API locale (pas sur le site en ligne : l'API du VPS n'y est pas encore branchée).
+const local = !process.env.SB_SITE;
+
+if (local) await test('API · famille : un parent partage, l\'autre rejoint, les changements passent dans les deux sens', async (use) => {
+  const a = use(await phone({ init: `${withApi} if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
+  await a.goto(`${APP}#reglages`);
+  await a.evaluate(() => {
+    navigator.share = undefined;
+    navigator.clipboard.writeText = async (text) => { window.copied = text; };
+  });
+  await a.click('text=Partager les profils avec l\'autre parent');
+  await a.waitForFunction(() => window.copied);
+  const link = (await a.evaluate(() => window.copied)).match(/https?:\S+#famille=[\w-]{43}/)?.[0];
+  assert(link, 'lien de famille absent');
+  const secret = link.split('#famille=')[1];
+  const keys = await familyKeys(secret);
+  const onServer = apiServer.db.famille(keys.id);
+  assert(onServer, 'famille absente du serveur');
+  assert(!Buffer.from(onServer.bloc, 'base64url').includes(Buffer.from('Zoé')) && !onServer.bloc.includes('Zo\\u00e9'), 'prénom lisible sur le serveur');
+  await shot(a, 'l4-famille-partagee');
+
+  const b = await phone({ init: withApi });
+  b.errors = a.errors;
+  await b.goto(link);
+  await b.waitForSelector('text=Rejoindre la famille');
+  const rows = await b.locator('.group-body .row').allTextContents();
+  assert(rows.length === 2 && rows[1].includes('Zoé'), rows.join(' / '));
+  await shot(b, 'l4-rejoindre');
+  await b.click('[data-action="family-join"]');
+  await b.waitForSelector('.kids');
+  assert((await stored(b)).children.map((c) => c.id).join() === 'leo111,zoe222', 'enfants différents');
+  // Zoé passe en poussette sur le téléphone B…
+  await b.goto(`${APP}#enfant/zoe222`);
+  await b.click('.modes [data-value="poussette"]');
+  await b.waitForFunction(() => JSON.parse(localStorage.getItem('sb.famille'))?.version === 2 && !JSON.parse(localStorage.getItem('sb.famille')).dirty, null, { timeout: 8000 });
+  // … et le téléphone A le voit à la réouverture.
+  await a.reload();
+  await a.waitForFunction(() => JSON.parse(localStorage.getItem('sb.profil')).children[1].transport === 'poussette', null, { timeout: 8000 });
+  await b.context().close();
+});
+
+if (local) await test('API · fiche du jour à lien court, ouverte par la nounou', async (use) => {
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `${withApi} if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  await page.evaluate(() => {
+    navigator.canShare = () => true;
+    navigator.share = async (data) => { window.shared = data.text; };
+  });
+  await page.click('.day .btn[data-action="share-fiche"]');
+  await page.waitForFunction(() => window.shared);
+  const text = await page.evaluate(() => window.shared);
+  const link = text.match(/http:\S+\/r\/[\w-]+#k=[\w-]+/)?.[0];
+  assert(link && link.startsWith(API) && link.length < 90, text.split('\n').at(-1));
+  const reader = await page.context().newPage();
+  await reader.goto(link);
+  await reader.waitForSelector('.dress');
+  const body = await reader.textContent('body');
+  assert(body.includes('Léo') && body.includes('Vers 11 h') && reader.url().includes('/fiche/?r='), `${reader.url()} ${body.slice(0, 120)}`);
+});
+
+if (local) await test('API · rappel du soir par notification Web Push : abonnement, puis rappel calculé par le service worker', async (use) => {
+  const fake = `PushManager.prototype.getSubscription = async () => window.fakeSub ?? null;
+    PushManager.prototype.subscribe = async () => (window.fakeSub = { endpoint: 'https://fcm.googleapis.com/fcm/send/essai', unsubscribe: async () => true });`;
+  const page = use(await phone({ android: true, worker: true, at: '2026-10-26T20:00:00+01:00', init: `${withApi} ${fake} if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.context().grantPermissions(['notifications'], { origin: new URL(BASE).origin });
+  await page.goto(`${APP}#reglages`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.click('[data-action="reminder"][data-value="on"]');
+  await page.waitForFunction(() => document.querySelector('#reminder-at'));
+  for (let k = 0; k < 20 && apiServer.db.compte().abonnements === 0; k++) await new Promise((r) => { setTimeout(r, 200); });
+  assert(apiServer.db.compte().abonnements === 1, 'abonnement non enregistré');
+  // Le serveur envoie une notification vide : le service worker calcule le rappel avec le foyer laissé par l'app.
+  for (let k = 0; k < 50 && !(await page.evaluate(async () => Boolean(await (await caches.open('superbebe-donnees')).match('donnees.json')))); k++) {
+    await new Promise((r) => { setTimeout(r, 200); });
+  }
+  const cdp = await page.context().newCDPSession(page);
+  const registration = new Promise((resolve) => cdp.on('ServiceWorker.workerRegistrationUpdated', ({ registrations }) => {
+    if (registrations[0]) resolve(registrations[0].registrationId);
+  }));
+  await cdp.send('ServiceWorker.enable');
+  await cdp.send('ServiceWorker.deliverPushMessage', { origin: new URL(BASE).origin, registrationId: await registration, data: '' });
+  let shown = [];
+  for (let k = 0; k < 50 && !shown.length; k++) {
+    await new Promise((r) => { setTimeout(r, 200); });
+    shown = await page.evaluate(async () => (await (await navigator.serviceWorker.ready).getNotifications()).map((n) => ({ title: n.title, body: n.body })));
+  }
+  assert(shown[0].title === 'Demain, à préparer ce soir' && shown[0].body.startsWith('Léo : ') && shown[0].body.includes('\nZoé : ') && shown[0].body.includes('nuit'), JSON.stringify(shown));
+  await page.click('[data-action="reminder"][data-value="off"]');
+  for (let k = 0; k < 20 && apiServer.db.compte().abonnements === 1; k++) await new Promise((r) => { setTimeout(r, 200); });
+  assert(apiServer.db.compte().abonnements === 0, 'désabonnement non transmis');
+});
+
+await new Promise((resolve) => apiServer.server.close(resolve));
 await browser.close();
 server?.kill();
 console.log(`\n${failed ? `${failed} parcours en échec` : 'Parcours : tous OK'} (captures : tools/e2e/captures/)`);
