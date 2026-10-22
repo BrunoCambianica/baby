@@ -158,8 +158,10 @@ export function buildInput({ forecast, climate = [], profile, date, now, lat }) 
   };
 }
 
-// Configuration partagée entre l'app web et le widget iPhone : JSON en ASCII, puis base64url.
+// Configuration partagée entre l'app web et les widgets : JSON en ASCII, puis base64url.
+// v1 : un seul enfant (b, t, o à la racine) ; v2 : la commune, les horaires et les enfants (k).
 export const CONFIG_PREFIX = 'SB1.';
+const validChild = (c) => Boolean(c) && /^\d{4}-\d{2}/.test(c.b ?? '');
 
 export function encodeConfig(cfg, toBase64) {
   const ascii = JSON.stringify(cfg).replace(/[\u007f-￿]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
@@ -173,8 +175,9 @@ export function decodeConfig(text, fromBase64) {
     let b64 = raw.slice(CONFIG_PREFIX.length).replace(/-/g, '+').replace(/_/g, '/');
     while (b64.length % 4) b64 += '=';
     const cfg = JSON.parse(fromBase64(b64));
-    const valid = cfg && cfg.v === 1 && Number.isFinite(cfg.la) && Number.isFinite(cfg.lo) && /^\d{4}-\d{2}/.test(cfg.b ?? '');
-    return valid ? cfg : null;
+    const place = Boolean(cfg) && Number.isFinite(cfg.la) && Number.isFinite(cfg.lo);
+    const children = cfg?.v === 2 ? Array.isArray(cfg.k) && cfg.k.length > 0 && cfg.k.every(validChild) : cfg?.v === 1 && validChild(cfg);
+    return place && children ? cfg : null;
   } catch (e) {
     return null;
   }
@@ -200,14 +203,62 @@ export function profileToConfig(profile) {
   };
 }
 
-export function configToProfile(cfg) {
+// Configuration v2 : commune et horaires communs, un enfant par entrée de k (identifiant, prénom, naissance, mode, tendance)
+// et m, date du dernier changement : la plus récente l'emporte entre l'app et les widgets.
+export function householdToConfig(household) {
+  return {
+    v: 2,
+    n: household.commune.nom,
+    c: household.commune.code,
+    dp: household.commune.dep,
+    la: household.commune.lat,
+    lo: household.commune.lon,
+    f: household.outing_window.from,
+    u: household.outing_window.to,
+    d: household.outing_duration_h,
+    i: household.outfit_view === 'texte' ? 0 : 1,
+    k: household.children.map((c) => ({ id: c.id, p: c.name ?? '', b: c.birth, t: c.transport, o: c.outfit_offset ?? 0 })),
+    m: household.updated ?? 0,
+  };
+}
+
+// Enfants d'une configuration, dans l'ordre de l'app ; une configuration v1 n'en a qu'un, sans prénom.
+export function configChildren(cfg) {
+  const list = cfg.v === 2 ? cfg.k : [{ id: '', p: '', b: cfg.b, t: cfg.t, o: cfg.o }];
+  return list.map((c) => ({
+    id: String(c.id ?? ''), name: String(c.p ?? ''), birth: c.b, transport: c.t ?? 'poussette', outfit_offset: c.o ?? 0,
+  }));
+}
+
+// Prénom comparé sans majuscules ni accents (sans Intl : le bac à sable d'Android n'en a pas).
+const ACCENTS = {
+  à: 'a', â: 'a', ä: 'a', á: 'a', ç: 'c', é: 'e', è: 'e', ê: 'e', ë: 'e', î: 'i', ï: 'i', í: 'i',
+  ñ: 'n', ô: 'o', ö: 'o', ó: 'o', ù: 'u', û: 'u', ü: 'u', ú: 'u', ÿ: 'y', œ: 'oe', æ: 'ae',
+};
+export const plainName = (s) => String(s ?? '').trim().toLowerCase().replace(/[^\x00-\x7f]/g, (c) => ACCENTS[c] ?? c);
+
+// Enfant demandé par un widget : numéro (1, 2…), identifiant ou prénom ; le premier sinon.
+export function pickChild(cfg, ref = '') {
+  const children = configChildren(cfg);
+  const key = String(ref ?? '').trim();
+  if (/^\d+$/.test(key) && children[Number(key) - 1]) return children[Number(key) - 1];
+  return children.find((c) => c.id && c.id === key)
+    ?? children.find((c) => key && c.name && plainName(c.name) === plainName(key))
+    ?? children[0];
+}
+
+// Profil du moteur pour un enfant de la configuration (le premier par défaut).
+export function configToProfile(cfg, ref = '') {
+  const child = pickChild(cfg, ref);
   return {
     commune: { nom: cfg.n ?? '', code: cfg.c ?? '', dep: cfg.dp ?? '', lat: cfg.la, lon: cfg.lo },
-    birth: cfg.b,
-    transport: cfg.t ?? 'poussette',
+    child_id: child.id,
+    name: child.name,
+    birth: child.birth,
+    transport: child.transport,
     outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
     outing_duration_h: cfg.d ?? 1,
-    outfit_offset: cfg.o ?? 0,
+    outfit_offset: child.outfit_offset,
     outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
     room_temp_c: null,
     inventory: {},

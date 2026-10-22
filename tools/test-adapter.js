@@ -2,8 +2,8 @@
 import { join } from 'node:path';
 import { evaluate } from '../engine/engine.js';
 import {
-  buildInput, climateUrls, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
-  hourlyForDate, parisNow, profileToConfig, weeklyOutlook,
+  buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
+  householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, weeklyOutlook,
 } from '../engine/adapter.js';
 import { loadRules, readJSON, ROOT } from './load-rules.js';
 
@@ -112,6 +112,28 @@ test('Configuration du widget : aller-retour avec accents', () => {
   assert(texte.outfit_view === 'texte', 'affichage en texte perdu');
   const old = configToProfile(decodeConfig(encodeConfig({ v: 1, n: 'Lyon', la: 45.758, lo: 4.8351, b: '2026-05' }, toB64), fromB64));
   assert(old.commune.code === '' && old.transport === 'poussette' && old.outfit_view === 'dessins', 'ancienne configuration refusée');
+});
+
+test('Configuration v2 : plusieurs enfants, choisis par numéro, prénom ou identifiant', () => {
+  const household = {
+    commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 },
+    outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_view: 'dessins',
+    children: [
+      { id: 'a1b2c3', name: 'Léo', birth: '2026-05', transport: 'poussette', outfit_offset: 0 },
+      { id: 'd4e5f6', name: 'Zoé', birth: '2024-03', transport: 'a_pied', outfit_offset: -1 },
+    ],
+  };
+  const cfg = decodeConfig(encodeConfig(householdToConfig(household), toB64), fromB64);
+  assert(cfg?.v === 2 && configChildren(cfg).length === 2, JSON.stringify(cfg));
+  assert(pickChild(cfg, '2').name === 'Zoé' && pickChild(cfg, 'zoe').id === 'd4e5f6' && pickChild(cfg, ' ZOÉ ').id === 'd4e5f6', 'choix par numéro ou prénom');
+  assert(pickChild(cfg, 'a1b2c3').name === 'Léo' && pickChild(cfg, '').name === 'Léo' && pickChild(cfg, 'Inconnu').name === 'Léo', 'choix par défaut');
+  const zoe = configToProfile(cfg, 'Zoé');
+  assert(zoe.birth === '2024-03' && zoe.transport === 'a_pied' && zoe.outfit_offset === -1 && zoe.outing_window.from === '08:00', JSON.stringify(zoe));
+  assert(zoe.name === 'Zoé' && zoe.child_id === 'd4e5f6' && zoe.commune.code === '69123', JSON.stringify(zoe));
+  const one = configChildren(decodeConfig(encodeConfig({ v: 1, n: 'Lyon', la: 45.758, lo: 4.8351, b: '2026-05', t: 'voiture' }, toB64), fromB64));
+  assert(one.length === 1 && one[0].transport === 'voiture' && one[0].name === '', 'configuration v1 relue comme un enfant');
+  assert(decodeConfig(encodeConfig({ v: 2, n: 'Lyon', la: 45.758, lo: 4.8351, k: [] }, toB64), fromB64) === null, 'v2 sans enfant acceptée');
+  assert(decodeConfig(encodeConfig({ v: 2, n: 'Lyon', la: 45.758, lo: 4.8351, k: [{ b: 'mai' }] }, toB64), fromB64) === null, 'naissance invalide acceptée');
 });
 
 test('Configuration du widget : texte invalide refusé', () => {

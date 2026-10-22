@@ -1,6 +1,6 @@
 {
   "name": "baby",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "description": "Superbébé : quand sortir avec bébé, comment l'habiller, ce qu'il lui faudra bientôt.",
   "homepage": "https://brunocambianica.github.io/baby/",
@@ -9,7 +9,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node tools/run-vectors.js && node tools/test-adapter.js && node tools/test-widget.js",
+    "test": "node tools/run-vectors.js && node tools/test-adapter.js && node tools/test-foyer.js && node tools/test-widget.js",
+    "e2e": "node tools/e2e/parcours.js",
     "build": "node tools/make-icons.js && node tools/make-drawings.js && node tools/build-widget.js && node tools/stamp-version.js",
     "serve": "node tools/serve.js",
     "deploy": "git push origin main && git push origin main:gh-pages"

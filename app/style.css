@@ -111,6 +111,10 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .glass-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #fff; }
 .glass-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; border-radius: 999px; color: #fff; font-weight: 600; font-size: 0.95rem; }
 .days { display: inline-flex; padding: 3px; border-radius: 999px; margin-top: 16px; position: relative; }
+/* Enfant affiché, à partir de deux enfants */
+.kids { display: flex; gap: 6px; margin-top: 12px; position: relative; overflow-x: auto; scrollbar-width: none; }
+.kids button { flex: none; min-height: 34px; padding: 6px 14px; border-radius: 999px; color: #fff; font-weight: 650; font-size: 0.92rem; max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kids button[aria-selected="true"] { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; border-color: transparent; }
 .days button { padding: 7px 16px; border-radius: 999px; color: #fff; font-weight: 600; font-size: 0.92rem; }
 .days button[aria-selected="true"] { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
@@ -139,7 +143,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tag.violet { background: var(--violet-soft); color: var(--violet); }
 
 /* Choix du mode de sortie */
-.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px; background: var(--fill); border-radius: 14px; }
+.modes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 4px; background: var(--fill); border-radius: 14px; }
 .modes button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-radius: 11px; font-size: 0.8rem; font-weight: 600; color: var(--ink-2); }
 .modes button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 
@@ -266,6 +270,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .btn.soft { background: var(--fill); color: var(--ink); }
 .btn.tint { background: var(--blue-soft); color: var(--blue); }
 .link { color: var(--blue); font-weight: 600; }
+.link.center { text-align: center; font-size: 0.92rem; }
 
 /* Barre d'onglets */
 .tabbar {
@@ -307,7 +312,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .seg { display: flex; padding: 3px; background: var(--fill); border-radius: 12px; gap: 2px; }
 .seg button { flex: 1; padding: 8px 6px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: var(--ink-2); }
 .seg button[aria-checked="true"], .seg button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
-select, input[type="search"] {
+select, input[type="search"], input[type="text"], textarea {
   font: inherit;
   color: var(--ink);
   background: var(--fill);
@@ -318,6 +323,11 @@ select, input[type="search"] {
   width: 100%;
   min-width: 0;
 }
+textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 0.92rem; color: var(--ink-2); }
+.field em { font-style: normal; color: var(--ink-3); font-size: 0.84rem; }
+.onboard .field { margin-top: 4px; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .results { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
 .results button { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 12px 14px; border-radius: 12px; background: var(--fill); text-align: left; font-weight: 600; }

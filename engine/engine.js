@@ -132,26 +132,47 @@ function planOuting(input, R, age) {
   return { window, reason, blocking, heat, ozone, slots, inPlage, daySlots, refSlots, plage };
 }
 
-function chooseOutfit(feels, profile, R) {
+// Mode de sortie retenu : un mode réservé aux plus grands (à pied) redevient la poussette avant l'âge prévu.
+export function transportFor(profile, age, R) {
+  const t = R.outfit.transport[profile.transport];
+  return t && !(t.min_age_m && age < t.min_age_m) ? profile.transport : 'poussette';
+}
+
+// Tenues propres à un âge (à partir de 2 ans : haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison).
+const ageVariant = (R, age) => (R.outfit.age_variants ?? []).filter((v) => age >= v.from_months).at(-1) ?? null;
+
+function chooseOutfit(feels, profile, R, age) {
   const { bands, transport } = R.outfit;
-  const t = transport[profile.transport] ?? transport.poussette;
+  const mode = transportFor(profile, age, R);
+  const t = transport[mode];
+  const variant = ageVariant(R, age);
   const base = bandIndex(bands, feels);
   const idx = clamp(base + (profile.outfit_offset ?? 0) + t.band_shift, 0, bands.length - 1);
   // Certains modes de transport remplacent des vêtements (porte-bébé : pas de pyjama à pieds ni de combinaison).
-  const items = bands[idx].items.flatMap((item) => t.replace_items?.[item] ?? [item]);
+  const items = (variant?.bands[bands[idx].id] ?? bands[idx].items).flatMap((item) => t.replace_items?.[item] ?? [item]);
   return {
     band: bands[idx].id,
     base_band: bands[base].id,
     feels_c: feels,
+    transport: mode,
     items: [...new Set(items)].filter((item) => !t.remove_items.includes(item)),
     notes: [...t.notes],
   };
 }
 
-function addOverlays(outfit, plan, ref, R, params) {
+// Rappels de pluie et de vent. La protection contre la pluie suit le mode de sortie (habillage, cape, imperméable) ;
+// l'habillage de la poussette retient la chaleur : par temps chaud, seulement le temps de l'averse.
+function addOverlays(outfit, plan, ref, R, params, labels) {
   const ov = R.outfit.overlays;
+  const gear = R.outfit.transport[outfit.transport].rain_gear;
+  const setGear = () => {
+    params.gear = labels.rain_gear[gear];
+    params.gear_short = labels.items_short[gear];
+  };
   if (ref.some((sl) => sl.precip_prob >= ov.rain_cover_prob_at_least)) {
-    outfit.notes.push('practical.rain.cover');
+    const warm = gear === 'habillage_pluie' && outfit.feels_c >= ov.rain_cover_warm_feels_c_at_least;
+    outfit.notes.push(warm ? 'practical.rain.cover_warm' : 'practical.rain.cover');
+    setGear();
   } else if (ref.length) {
     const after = ref.at(-1).end;
     const later = plan.slots.find(
@@ -160,6 +181,7 @@ function addOverlays(outfit, plan, ref, R, params) {
     if (later) {
       outfit.notes.push('practical.rain.later');
       params.hour = fmtMin(later.start);
+      setGear();
     }
   }
   if (ref.some((sl) => sl.gust_kmh >= ov.wind_gust_kmh_at_least)) outfit.notes.push('practical.wind');
@@ -167,6 +189,7 @@ function addOverlays(outfit, plan, ref, R, params) {
 
 function dayRelays(input, R, age, plan, outfit, params) {
   const rt = R.relay_triggers;
+  const mode = transportFor(input.profile, age, R);
   const vigilance = input.alerts?.vigilance ?? [];
   const relays = [];
   const active = vigilance.filter((v) => colorRank(v.color) >= colorRank('orange'));
@@ -185,10 +208,10 @@ function dayRelays(input, R, age, plan, outfit, params) {
   const extremeCold = plan.daySlots.some((sl) => sl.feels_c <= R.outing.slot_exclusions.feels_c_at_most);
   if (coldVigilance || extremeCold) relays.push('relay.cold.avoid_outings');
   if (outfit && (coldVigilance || rt.cold_layers_bands.includes(outfit.base_band))) relays.push('relay.cold.layers');
-  if (outfit && input.profile.transport === 'porte_bebe' && (coldVigilance || outfit.feels_c <= rt.carrier_cold_feels_c_at_most)) {
+  if (outfit && mode === 'porte_bebe' && (coldVigilance || outfit.feels_c <= rt.carrier_cold_feels_c_at_most)) {
     relays.push('relay.cold.stroller_rather_than_carrier');
   }
-  if (outfit && input.profile.transport === 'voiture' && rt.car_coat_bands.includes(outfit.base_band)) relays.push('relay.car.coat');
+  if (outfit && mode === 'voiture' && rt.car_coat_bands.includes(outfit.base_band)) relays.push('relay.car.coat');
   const uvDay = plan.daySlots.length ? Math.max(...plan.daySlots.map((sl) => sl.uv)) : 0;
   if (uvDay >= rt.uv_at_least) {
     params.uv = round1(uvDay);
@@ -200,10 +223,11 @@ function dayRelays(input, R, age, plan, outfit, params) {
 }
 
 // Gigoteuse (TOG) et tenue dessous selon la chambre ; sans relevé, pour le repère officiel (milieu de 18-20 °C), en le disant.
-function planNight(input, R, heat) {
+// Les repères du couchage du nourrisson ne s'affichent plus à partir de 2 ans.
+function planNight(input, R, heat, age) {
   const n = R.night;
   const room = input.profile.room_temp_c ?? null;
-  const relays = [...n.always];
+  const relays = n.always.filter((id) => age < n.baby_until_months || !n.baby_only.includes(id));
   let status = 'unknown';
   if (room !== null) {
     status = room < n.room_range_c.min ? 'below' : room > n.room_range_c.max ? 'above' : 'in_range';
@@ -244,7 +268,8 @@ function planPurchases(input, R) {
     for (const cat of P.categories) {
       if (found.has(cat.id)) continue;
       if (cat.min_age_m && ageWeek < cat.min_age_m) continue;
-      if (!needMet(cat.need_if, week, band, profile.transport)) continue;
+      if (cat.max_age_m && ageWeek >= cat.max_age_m) continue;
+      if (!needMet(cat.need_if, week, band, transportFor(profile, ageWeek, R))) continue;
       const system = P.size_systems[cat.size_system];
       const owned = profile.inventory?.[cat.id] ?? [];
       if (owned.includes(sizeFor(system, ageWeek).code)) continue;
@@ -325,7 +350,7 @@ export function widgetLines(result, moment, M, { drawings = false } = {}) {
           label: labels.categories[p.category],
           size: p.size === 'unique' ? '' : `, ${p.size_label}`,
         })
-        : render(M, 'relay.sleep.basics', 'short'),
+        : render(M, n.relays.includes('relay.sleep.basics') ? 'relay.sleep.basics' : 'relay.sleep.check_temp', 'short'),
     );
   }
   return lines.filter(Boolean).slice(0, 3);
@@ -358,10 +383,11 @@ export function evaluate(input, bundle) {
   const ref = plan.refSlots;
   const outfit = plan.reason === 'vigilance' || !ref.length
     ? null
-    : chooseOutfit(round1(mean(ref.map((sl) => sl.feels_c))), input.profile, R);
-  if (outfit) addOverlays(outfit, plan, ref, R, params);
+    : chooseOutfit(round1(mean(ref.map((sl) => sl.feels_c))), input.profile, R, age);
+  if (outfit) addOverlays(outfit, plan, ref, R, params, bundle.messages.labels);
   const result = {
     age_months: round1(age),
+    transport: transportFor(input.profile, age, R),
     outing: {
       window: plan.window,
       reason: plan.reason,
@@ -379,7 +405,7 @@ export function evaluate(input, bundle) {
     outfit,
     relays: dayRelays(input, R, age, plan, outfit, params),
     params,
-    night: planNight(input, R, plan.heat),
+    night: planNight(input, R, plan.heat, age),
     purchases: planPurchases(input, R),
   };
   result.widget = { lines: widgetLines(result, displayMoment(result, input.now), bundle.messages) };
@@ -390,12 +416,13 @@ export function evaluate(input, bundle) {
 // Tenue pour une heure précise (« et si on sort à 16 h ? »), avec les rappels pratiques de cette heure.
 export function outfitAt(input, bundle, hhmm) {
   const R = bundle.rules;
-  const plan = planOuting(input, R, ageMonths(input.profile.birth, input.date));
+  const age = ageMonths(input.profile.birth, input.date);
+  const plan = planOuting(input, R, age);
   const slot = plan.slots.find((sl) => sl.start === toMin(hhmm));
   if (!slot) return null;
-  const outfit = chooseOutfit(slot.feels_c, input.profile, R);
+  const outfit = chooseOutfit(slot.feels_c, input.profile, R, age);
   const params = {};
-  addOverlays(outfit, plan, [slot], R, params);
+  addOverlays(outfit, plan, [slot], R, params, bundle.messages.labels);
   return { ...outfit, params, reasons: slot.reasons.filter((r) => r !== 'hors_plage') };
 }
 
@@ -424,8 +451,16 @@ export function lint(bundle) {
   ];
   for (const id of new Set(referenced)) if (!M.messages[id]) errors.push(`message manquant : ${id}`);
   const items = new Set(R.outfit.bands.flatMap((band) => band.items));
+  for (const variant of R.outfit.age_variants ?? []) {
+    for (const [band, list] of Object.entries(variant.bands)) {
+      if (!R.outfit.bands.some((b) => b.id === band)) errors.push(`tranche inconnue dans ${variant.id} : ${band}`);
+      list.forEach((item) => items.add(item));
+    }
+  }
   for (const t of Object.values(R.outfit.transport)) {
     for (const replacement of Object.values(t.replace_items ?? {})) replacement.forEach((item) => items.add(item));
+    items.add(t.rain_gear);
+    if (!M.labels.rain_gear[t.rain_gear]) errors.push(`protection de pluie sans libellé : ${t.rain_gear}`);
   }
   for (const item of items) {
     if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);

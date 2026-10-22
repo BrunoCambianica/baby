@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
@@ -37,8 +38,9 @@ import kotlin.math.max
 
 /**
  * L'app Superbébé sur Android : l'app web en plein écran, sans barre de navigateur, reliée au widget.
- * L'app web transmet ses réglages et le relevé de la chambre au widget par le pont « SuperbebeAndroid » ;
+ * L'app web transmet ses réglages et les relevés des chambres aux widgets par le pont « SuperbebeAndroid » ;
  * une configuration envoyée depuis Chrome (lien superbebe://config/…) est reprise dans l'app.
+ * Un widget touché ouvre l'app sur son enfant (superbebe://enfant/…).
  */
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -101,7 +103,8 @@ class MainActivity : Activity() {
         // Au premier lancement, l'app reprend les réglages déjà donnés au widget (ancienne app du widget).
         val first = SbStore.takeFirstImport(this)
         val config = received ?: first
-        web.loadUrl(if (config != null) "$appUrl#import=$config" else appUrl)
+        val child = childFrom(intent)?.let { "?enfant=${Uri.encode(it)}" } ?: ""
+        web.loadUrl(if (config != null) "$appUrl$child#import=$config" else "$appUrl$child")
         registerBack()
         checkForUpdate()
     }
@@ -109,7 +112,19 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        configFrom(intent)?.let { web.loadUrl("$appUrl#import=$it") }
+        val config = configFrom(intent)
+        if (config != null) {
+            web.loadUrl("$appUrl#import=$config")
+            return
+        }
+        childFrom(intent)?.let { web.evaluateJavascript("window.sbChoisirEnfant && window.sbChoisirEnfant(${JSONObject.quote(it)})", null) }
+    }
+
+    // Enfant du widget touché : superbebe://enfant/identifiant (vide pour un seul enfant sans identifiant).
+    private fun childFrom(intent: Intent?): String? {
+        val uri = intent?.data ?: return null
+        if (uri.scheme != "superbebe" || uri.host != "enfant") return null
+        return uri.lastPathSegment?.takeIf { it.isNotBlank() }
     }
 
     override fun onResume() {
@@ -248,9 +263,10 @@ class MainActivity : Activity() {
 
     /** Appelé par l'app web, sur le fil d'exécution du WebView (pas celui de l'interface). */
     private inner class Bridge {
-        // Réglages (texte SB1.…, vide après « Effacer mes données ») et relevé de la chambre ({"value":…,"at":…}).
+        // Réglages (texte SB1.…, vide après « Effacer mes données ») et relevés des chambres :
+        // {"identifiant": {"value":…,"at":…}, …}, ou {"value":…,"at":…} pour le premier enfant (versions à un seul enfant).
         @JavascriptInterface
-        fun sync(config: String, room: String) {
+        fun sync(config: String, rooms: String) {
             if (!onApp) return
             val context = this@MainActivity
             var changed = false
@@ -260,13 +276,19 @@ class MainActivity : Activity() {
                 SbStore.saveConfig(context, config, null)
                 changed = true
             }
-            val reading = runCatching { JSONObject(room) }.getOrNull()
-            val value = reading?.optDouble("value", Double.NaN) ?: Double.NaN
-            val at = reading?.optLong("at") ?: 0L
-            if (!value.isNaN() && at > SbStore.roomAt(context)) {
-                SbStore.saveRoom(context, value, at)
-                changed = true
+            val json = runCatching { JSONObject(rooms) }.getOrNull()
+            val readings = mutableMapOf<String, Pair<Double, Long>>()
+            if (json?.has("value") == true) {
+                SbConfig.decode(SbStore.config(context))?.children?.firstOrNull()?.let {
+                    readings[it.id] = json.optDouble("value", Double.NaN) to json.optLong("at")
+                }
+            } else if (json != null) {
+                for (id in json.keys()) {
+                    val reading = json.optJSONObject(id) ?: continue
+                    readings[id] = reading.optDouble("value", Double.NaN) to reading.optLong("at")
+                }
             }
+            if (SbStore.saveRooms(context, readings)) changed = true
             if (changed) {
                 SbWorker.schedule(context)
                 SbWorker.refreshNow(context, replace = true)
@@ -283,12 +305,39 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun widgets(): Int = AppWidgetManager.getInstance(this@MainActivity).getAppWidgetIds(widgetComponent()).size
 
+        // Widgets posés par enfant : {"identifiant": nombre} ; un widget sans enfant choisi compte pour le premier.
+        @JavascriptInterface
+        fun widgetChildren(): String {
+            val context = this@MainActivity
+            val first = SbConfig.decode(SbStore.config(context))?.children?.firstOrNull()?.id ?: ""
+            val counts = JSONObject()
+            for (id in AppWidgetManager.getInstance(context).getAppWidgetIds(widgetComponent())) {
+                val child = SbStore.widgetChild(context, id) ?: first
+                counts.put(child, counts.optInt(child) + 1)
+            }
+            return counts.toString()
+        }
+
         // Fenêtre d'Android « Ajouter à l'écran d'accueil » ; false si le lanceur ne la propose pas.
         @JavascriptInterface
         fun addWidget(): Boolean {
             if (!onApp) return false
             val manager = AppWidgetManager.getInstance(this@MainActivity)
             return manager.isRequestPinAppWidgetSupported && manager.requestPinAppWidget(widgetComponent(), null, null)
+        }
+
+        // Widget d'un enfant : Android renvoie le numéro du widget posé à SbPinReceiver, qui y attache l'enfant.
+        @JavascriptInterface
+        fun addChildWidget(childId: String): Boolean {
+            if (!onApp) return false
+            val context = this@MainActivity
+            val manager = AppWidgetManager.getInstance(context)
+            if (!manager.isRequestPinAppWidgetSupported) return false
+            val answer = Intent(context, SbPinReceiver::class.java).putExtra(SbPinReceiver.EXTRA_CHILD, childId)
+            val callback = PendingIntent.getBroadcast(
+                context, childId.hashCode(), answer, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+            )
+            return manager.requestPinAppWidget(widgetComponent(), null, callback)
         }
 
         @JavascriptInterface

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré par tools/make-drawings.js à partir de engine/drawings.js : ne pas modifier à la main. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M12 2.6 C14.6 2.6 16 4.2 16 7 L17.4 7.8 Q20 9.1 20.8 15.6 L19 16.1 L17.5 12.4 L18 21 L12 21 L6 21 L6.5 12.4 L5 16.1 L3.2 15.6 Q4 9.1 6.6 7.8 L8 7 C8 4.2 9.4 2.6 12 2.6 Z" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M9.6 7.6 C9.6 5.4 10.6 4.4 12 4.4 C13.4 4.4 14.4 5.4 14.4 7.6" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M12 7.6 L12 21" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M12.8,12.2 A0.6,0.6 0 1,0 14,12.2 A0.6,0.6 0 1,0 12.8,12.2 Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M12.8,16.2 A0.6,0.6 0 1,0 14,16.2 A0.6,0.6 0 1,0 12.8,16.2 Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M20.6 1.6 L20 3.2" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M22.6 4.6 L22 6.2" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

@@ -1,0 +1,10 @@
+{
+  "name": "superbebe-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Parcours de l'app dans Chromium (Playwright) : npm install ici, puis npm run e2e à la racine",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.64.1"
+  }
+}

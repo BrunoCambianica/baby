@@ -325,7 +325,12 @@
       "id": "tenue-voiture-5",
       "description": "5 °C en voiture : manteau enlevé dans le siège auto",
       "input": { "profile": { "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
-      "expect": { "outfit.band": "froid", "relays.include": ["relay.car.coat"] }
+      "expect": {
+        "outfit.band": "froid",
+        "relays.include": ["relay.car.coat"],
+        "outfit.items.include": ["couverture_harnais"],
+        "outfit.items.exclude": ["combi_pilote"]
+      }
     },
     {
       "id": "tenue-decalage-personnel",
@@ -561,6 +566,117 @@
         ]
       },
       "expect": { "purchases.*.key": [] }
+    },
+    {
+      "id": "enfant-3-ans-froid",
+      "description": "Enfant de 2 ans et demi à 5 °C : haut et pantalon, manteau chaud, ni body ni pyjama ni chancelière",
+      "input": { "profile": { "birth": "2024-03-15" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
+      "expect": {
+        "outfit.band": "froid",
+        "outfit.items": ["haut_ml", "pantalon_chaud", "pull", "manteau_chaud", "bonnet", "chaussettes_chaudes"]
+      }
+    },
+    {
+      "id": "enfant-tres-froid",
+      "description": "Enfant de 2 ans et demi à -2 °C : combinaison de ski et moufles, pas de chancelière",
+      "input": { "profile": { "birth": "2024-03-15" }, "forecast": { "hourly": { "base": { "feels_c": -2 } } } },
+      "expect": {
+        "outfit.band": "tres_froid",
+        "outfit.items.include": ["combi_ski", "moufles"],
+        "outfit.items.exclude": ["chanceliere", "body_ml", "pyjama_chaud"]
+      }
+    },
+    {
+      "id": "enfant-chaud",
+      "description": "Enfant de 2 ans et demi à 24 °C : une tenue légère suffit, sans body dessous",
+      "input": { "profile": { "birth": "2024-03-15" }, "forecast": { "hourly": { "base": { "feels_c": 24 } } } },
+      "expect": { "outfit.band": "chaud", "outfit.items": ["tenue_legere", "chapeau_si_soleil"] }
+    },
+    {
+      "id": "enfant-a-pied",
+      "description": "Enfant qui marche à 12 °C : une tranche plus légère qu'en poussette",
+      "input": { "profile": { "birth": "2024-03-15", "transport": "a_pied" }, "forecast": { "hourly": { "base": { "feels_c": 12 } } } },
+      "expect": {
+        "transport": "a_pied",
+        "outfit.base_band": "froid_modere",
+        "outfit.band": "frais",
+        "outfit.items": ["haut_ml", "pantalon", "gilet"],
+        "outfit.notes": ["practical.walk.body_heat"]
+      }
+    },
+    {
+      "id": "a-pied-avant-2-ans",
+      "description": "Mode à pied pour un bébé de 6 mois : la tenue reste celle de la poussette",
+      "input": { "profile": { "transport": "a_pied" } },
+      "expect": { "transport": "poussette", "outfit.band": "froid", "outfit.notes": [], "outfit.items.include": ["combi_pilote"] }
+    },
+    {
+      "id": "enfant-voiture",
+      "description": "Enfant de 2 ans et demi en voiture à 5 °C : manteau enlevé, couverture par-dessus le harnais",
+      "input": { "profile": { "birth": "2024-03-15", "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
+      "expect": {
+        "outfit.items.include": ["couverture_harnais", "haut_ml"],
+        "outfit.items.exclude": ["manteau_chaud"],
+        "relays.include": ["relay.car.coat"]
+      }
+    },
+    {
+      "id": "enfant-nuit-sans-reperes-nourrisson",
+      "description": "Le soir, enfant de 2 ans et demi : pas de repères de couchage du nourrisson, le geste de la nuque reste",
+      "input": { "now": "20:30", "profile": { "birth": "2024-03-15" } },
+      "expect": {
+        "night.relays.exclude": ["relay.sleep.basics"],
+        "night.relays.include": ["relay.sleep.check_temp"],
+        "widget.lines.2.contains": "nuque"
+      }
+    },
+    {
+      "id": "achats-enfant-tailles-en-annees",
+      "description": "Enfant de 2 ans et demi, froid qui arrive : manteau chaud en 3 ans, ni combinaison pilote ni chancelière",
+      "input": {
+        "date": "2026-10-26",
+        "profile": { "birth": "2024-03-15", "inventory": { "gigoteuse_hiver": ["18-36m"], "accessoires_hiver": ["24-36m"] } },
+        "outlook": [
+          { "week_start": "2026-10-26", "tmax_mean": 13, "tmean": 10, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-02", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-09", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 }
+        ]
+      },
+      "expect": { "purchases.*.key": ["manteau_hiver:36m"], "purchases.0.size_label": "3 ans" }
+    },
+    {
+      "id": "achats-enfant-4-ans-sans-gigoteuse",
+      "description": "Enfant de 4 ans, nuits fraîches : plus de gigoteuse proposée",
+      "input": {
+        "date": "2026-10-26",
+        "profile": { "birth": "2022-09-10", "inventory": { "manteau_hiver": ["5a"], "accessoires_hiver": ["3-6a"] } },
+        "outlook": [
+          { "week_start": "2026-10-26", "tmax_mean": 9, "tmean": 6, "rainy_days": 1, "uv_max_mean": 1 },
+          { "week_start": "2026-11-02", "tmax_mean": 7, "tmean": 4, "rainy_days": 1, "uv_max_mean": 1 }
+        ]
+      },
+      "expect": { "purchases.*.key": [] }
+    },
+    {
+      "id": "pluie-a-pied",
+      "description": "Enfant à pied, pluie l'après-midi : un imperméable, pas l'habillage de la poussette",
+      "input": {
+        "profile": { "birth": "2024-03-15", "transport": "a_pied" },
+        "forecast": { "hourly": { "base": { "feels_c": 10 }, "overrides": { "11:00": { "feels_c": 12 }, "13:00-19:00": { "precip_prob": 80, "precip_mm": 1.2 } } } }
+      },
+      "expect": { "outfit.notes.include": ["practical.rain.later"], "params.gear": "un imperméable à capuche", "widget.lines.2.contains": "imperméable" }
+    },
+    {
+      "id": "pluie-porte-bebe",
+      "description": "Porte-bébé, averses possibles : une cape de pluie",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 12, "precip_prob": 40 } } } },
+      "expect": { "outfit.notes.include": ["practical.rain.cover"], "params.gear_short": "cape de pluie" }
+    },
+    {
+      "id": "pluie-chaude-poussette",
+      "description": "24 °C et averses possibles en poussette : l'habillage pluie seulement pendant l'averse",
+      "input": { "date": "2026-06-10", "forecast": { "hourly": { "base": { "feels_c": 24, "precip_prob": 40 } } } },
+      "expect": { "outfit.notes.include": ["practical.rain.cover_warm"], "outfit.notes.exclude": ["practical.rain.cover"] }
     },
     {
       "id": "produit-tour-de-lit",

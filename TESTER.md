@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.5)
+# Tester Superbébé (version 0.6)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -7,7 +7,9 @@ Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir
 - **iPhone** : ouvrez <https://brunocambianica.github.io/baby/> dans **Safari**, bouton Partager, puis « Sur l'écran d'accueil ». Ouvrez ensuite Superbébé depuis son icône : plein écran, sans les barres de Safari.
 - **Android** : installez directement l'app Superbébé (voir 2 bis) : elle s'ouvre en plein écran et contient le widget.
 
-Au premier lancement, trois questions : votre commune, le mois de naissance de bébé, et comment vous sortez le plus souvent (poussette, porte-bébé ou voiture).
+Au premier lancement, trois questions : votre commune, le mois de naissance de votre enfant (et son prénom ou un surnom, si vous voulez), et comment vous sortez le plus souvent (poussette, porte-bébé, à pied à partir de 2 ans, ou voiture).
+
+**Plusieurs enfants ?** Réglages, **Ajouter un enfant**. Chacun a son mode de sortie, sa tendance, sa garde-robe et sa chambre ; des pastilles en haut de l'écran passent de l'un à l'autre. À partir de 2 ans, les tenues changent (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière) et les tailles passent en années.
 
 L'app a trois onglets :
 - **Sortir** : le meilleur moment pour sortir aujourd'hui ou demain, et comment habiller bébé, en petits dessins (ou en texte : Réglages, Affichage, Tenues) ;
@@ -27,6 +29,8 @@ Dans Superbébé : **Réglages**, puis **Ajouter le widget**. L'app vous guide e
 
 Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chambre du soir, réglages) part dans le widget. Après un changement fait dans l'app de l'écran d'accueil : Réglages, **Envoyer mes réglages au widget**.
 
+**Un widget par enfant** : posez un deuxième widget Scriptable, puis appui long dessus, **Modifier le widget**, et dans **Parameter**, écrivez le prénom de l'enfant (ou son numéro : 1, 2…). Sans rien dans Parameter, le widget montre le premier enfant.
+
 ## 2 bis. Installer l'app et le widget sur Android (3 minutes)
 
 1. Ouvrez <https://brunocambianica.github.io/baby/> dans Chrome, puis **Réglages**, **Ajouter le widget**, onglet **Android**, **Télécharger**.
@@ -35,6 +39,12 @@ Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chamb
 4. Dans l'app, carte « Ajoutez le widget », **Ajouter** : Android propose de le poser sur l'écran d'accueil.
 
 Ensuite, utilisez l'icône de l'app Superbébé ; celle installée depuis Chrome peut être retirée. Toucher le widget ouvre l'app ; vos réglages et le relevé de la chambre passent au widget tout seuls.
+
+**Un widget par enfant** : dans l'app, Réglages, un bouton **Le widget de…** par enfant. Posé depuis l'écran d'accueil, Android demande pour quel enfant ; appui long sur un widget, **Modifier le widget**, pour en changer. L'app Android 0.6 est nécessaire : l'ancienne propose elle-même la mise à jour.
+
+## 2 ter. Avec l'autre parent (1 minute)
+
+Réglages, **Envoyer les profils** : un lien part par la messagerie de votre choix. L'autre parent l'ouvre sur son téléphone et touche **Utiliser ces profils**. S'il utilise Superbébé depuis l'icône de l'écran d'accueil ou l'app Android, il copie le lien, puis dans l'app : Réglages, **Recevoir des profils**. Le lien contient les prénoms : ne l'envoyez qu'à lui. Pour l'instant, les changements faits ensuite ne se transmettent pas tout seuls.
 
 ## 3. Ce qu'on vous demande
 
@@ -51,6 +61,6 @@ Ensuite, utilisez l'icône de l'app Superbébé ; celle installée depuis Chrome
 ## Bon à savoir
 
 - **Ce n'est pas un avis médical.** Les repères de santé viennent de sources publiques (Santé publique France, ministère de la Santé, Météo-France…), citées dans l'app. En cas de doute sur la santé de bébé, appelez votre médecin. Urgence : 15 ou 112.
-- **Vos données restent sur votre téléphone** : pas de compte, pas de publicité, pas de mesure d'audience.
+- **Vos données restent sur votre téléphone** : pas de compte, pas de publicité, pas de mesure d'audience. Les prénoms ne quittent le téléphone que dans le lien que vous envoyez vous-même à l'autre parent.
 - **Mises à jour** : l'app se met à jour toute seule (un bandeau « Nouvelle version prête » peut apparaître). Le widget iPhone aussi. Sur Android, l'app propose elle-même de télécharger sa nouvelle version quand il y en a une.
 - **Version de test** : la vigilance Météo-France et les épisodes de pollution ne sont pas encore intégrés.

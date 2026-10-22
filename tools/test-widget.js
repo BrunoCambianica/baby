@@ -17,6 +17,11 @@ const TEXTE = encodeConfig(
   toB64,
 );
 const PARIS = encodeConfig({ v: 1, n: 'Paris', la: 48.8566, lo: 2.3522, b: '2026-05', t: 'porte_bebe' }, toB64);
+// Deux enfants : Léo (bébé, poussette) et Zoé (2 ans et demi, à pied).
+const FAMILLE = encodeConfig({
+  v: 2, n: 'Lyon', c: '69123', la: 45.758, lo: 4.8351, f: '09:00', u: '18:00', d: 1, i: 1,
+  k: [{ id: 'leo1', p: 'Léo', b: '2026-05', t: 'poussette', o: 0 }, { id: 'zoe2', p: 'Zoé', b: '2024-03', t: 'a_pied', o: 0 }],
+}, toB64);
 const APP = 'https://brunocambianica.github.io/baby/app/';
 
 // Heure figée : 21 octobre 2026 à 7 h 30 (Paris), sauf mention contraire.
@@ -359,7 +364,7 @@ await test('Ouverture depuis le widget : app en plein écran avec les réglages,
   assert(answers['superbebe-sync:?conf'] === false && answers['https://www.santepub'] === false, JSON.stringify(out.view.answers));
   assert(out.opened[0] === 'https://www.santepubliquefrance.fr/', JSON.stringify(out.opened));
   const state = JSON.parse(files.get('/doc/superbebe/etat.json'));
-  assert(state.config === PARIS && state.room?.value === 21.5, JSON.stringify(state));
+  assert(state.config === PARIS && state.rooms?.['']?.value === 21.5, JSON.stringify(state));
   const after = await run({ files, at: '2026-10-21T20:40:00+02:00' });
   assert(after.texts[0] === 'SUPERBÉBÉ · PARIS' && after.texts[1].includes('21,5'), JSON.stringify(after.texts));
 });
@@ -448,6 +453,34 @@ await test('Ancien chargeur (sans réglages) : le champ Parameter suffit toujour
   assert(out.texts[0] === 'SUPERBÉBÉ · LYON', JSON.stringify(out.texts));
 });
 
+await test('Plusieurs enfants : le champ Parameter choisit l\'enfant du widget, par prénom ou numéro', async () => {
+  const files = new Map();
+  const first = await run({ files, param: '', loaderConfig: FAMILLE });
+  assert(first.texts[0] === 'LÉO · LYON' && first.widget.url.endsWith('?ouvrir=app&enfant=leo1'), `${first.texts[0]} ${first.widget.url}`);
+  const zoe = await run({ files, param: 'zoé', loaderConfig: FAMILLE });
+  assert(zoe.texts[0] === 'ZOÉ · LYON' && zoe.widget.url.endsWith('&enfant=zoe2'), `${zoe.texts[0]} ${zoe.widget.url}`);
+  const second = await run({ files, param: '2', loaderConfig: FAMILLE });
+  assert(second.texts[0] === 'ZOÉ · LYON', second.texts[0]);
+  // Zoé (à pied, 2 ans et demi) n'a ni body ni pyjama dans ses dessins.
+  const leoRow = first.widget.rows[0].images.length;
+  assert(zoe.widget.rows[0] && leoRow > 0, 'dessins manquants');
+  const state = JSON.parse(files.get('/doc/superbebe/etat.json'));
+  assert(state.config === FAMILLE && !state.paramSeen, `le prénom ne doit pas remplacer les réglages : ${JSON.stringify(state)}`);
+});
+
+await test('Plusieurs enfants : chambre de chacun, ouverture de l\'app sur l\'enfant du widget', async () => {
+  const files = new Map();
+  const at = Date.parse('2026-10-21T20:00:00+02:00');
+  const open = await run({
+    files, param: 'Zoé', loaderConfig: FAMILLE, inWidget: false, query: { ouvrir: 'app', enfant: 'zoe2' }, at: '2026-10-21T20:30:00+02:00',
+    navigations: [`superbebe-sync:?config=${FAMILLE}&rooms=leo1:21.5@${at},zoe2:18@${at}`],
+  });
+  assert(open.view?.url === `${APP}?hote=scriptable&enfant=zoe2#import=${FAMILLE}`, String(open.view?.url));
+  const leo = await run({ files, param: 'Léo', loaderConfig: FAMILLE, at: '2026-10-21T20:40:00+02:00' });
+  const zoe = await run({ files, param: 'Zoé', loaderConfig: FAMILLE, at: '2026-10-21T20:40:00+02:00' });
+  assert(leo.texts[1].includes('21,5') && zoe.texts[1].includes('18'), `${leo.texts[1]} / ${zoe.texts[1]}`);
+});
+
 await test('Android : le moteur embarqué renvoie le lieu et trois lignes', async () => {
   const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
   const call = `${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {"offset": 0, "room": 19}, "2026-10-21", "20:30");`;
@@ -462,6 +495,16 @@ await test('Android : le moteur embarqué renvoie le lieu et trois lignes', asyn
   assert(texte.lines[1].includes('2,5 TOG'), JSON.stringify(texte.lines));
   const bad = JSON.parse(vm.runInContext(`${android}\nsbAndroid({}, "SB1.@@", {}, "2026-10-21", "08:00");`, vm.createContext({})));
   assert(bad.error === 'configuration', JSON.stringify(bad));
+});
+
+await test('Android : un rendu par enfant, avec la chambre de chacun', async () => {
+  const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
+  const call = `${android}\nsbAndroidAll(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {"rooms": {"leo1": 21.5, "zoe2": 18}}, "2026-10-21", "20:30");`;
+  const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
+  assert(out.children.map((c) => `${c.id}:${c.name}`).join() === 'leo1:Léo,zoe2:Zoé', JSON.stringify(out.children.map((c) => c.id)));
+  assert(out.children[0].lines[0].includes('21,5') && out.children[1].lines[0].includes('18'), JSON.stringify(out.children.map((c) => c.lines[0])));
+  const one = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {}, "2026-10-21", "07:30", "zoe2");`, vm.createContext({})));
+  assert(one.name === 'Zoé' && !one.lines[1].drawings.includes('body_ml'), JSON.stringify(one));
 });
 
 console.log(`\n${failed ? `${failed} test(s) en échec` : 'Widgets iPhone et Android : tous les tests OK'}`);

@@ -36,10 +36,15 @@ function sbFiles() {
 
 const sbDecode = (b64) => Data.fromBase64String(b64).toRawString();
 const sbValid = (text) => Boolean(text) && Boolean(decodeConfig(text, sbDecode));
-const sbFreshRoom = (state) => (state.room && Date.now() - state.room.at < SB_ROOM_TTL_MS ? state.room.value : null);
+// Relevé de la chambre de l'enfant, valable 16 heures ; `room` vient des versions à un seul enfant.
+function sbFreshRoom(state, childId, first) {
+  const room = state.rooms?.[childId] ?? (first ? state.room : null);
+  return room && Date.now() - room.at < SB_ROOM_TTL_MS ? room.value : null;
+}
 
 // Réglages : le dernier changement l'emporte, qu'il vienne du script copié depuis l'app (chargeur),
 // du champ Parameter du widget, ou de l'app elle-même (voir sbApply).
+// Le champ Parameter peut aussi désigner l'enfant de ce widget : son prénom ou son numéro (1, 2…).
 function sbResolveConfig(state, param) {
   if (sbValid(SB_CONFIG_LOADER) && SB_CONFIG_LOADER !== state.loaderSeen) {
     state.config = SB_CONFIG_LOADER;
@@ -51,12 +56,23 @@ function sbResolveConfig(state, param) {
   }
 }
 
-// Réglages et relevé de la chambre envoyés par l'app : config=SB1.… et room=valeur@horodatage.
+function sbRoom(state, childId, text) {
+  const [value, at] = String(text ?? '').split('@').map(Number);
+  if (!(value >= 5 && value <= 40 && at > (state.rooms?.[childId]?.at ?? 0))) return;
+  state.rooms = { ...state.rooms, [childId]: { value, at } };
+}
+
+// Réglages et relevés des chambres envoyés par l'app : config=SB1.… et rooms=enfant:valeur@horodatage,…
+// (room=valeur@horodatage pour le premier enfant, dans les versions à un seul enfant).
 function sbApply(state, params) {
   const config = String(params.config ?? '');
   if (sbValid(config)) state.config = config;
-  const [value, at] = String(params.room ?? '').split('@').map(Number);
-  if (value >= 5 && value <= 40 && at > (state.room?.at ?? 0)) state.room = { value, at };
+  const cfg = decodeConfig(state.config ?? '', sbDecode);
+  if (params.room && cfg) sbRoom(state, configChildren(cfg)[0].id, params.room);
+  for (const part of String(params.rooms ?? '').split(',')) {
+    const colon = part.indexOf(':');
+    if (colon > 0) sbRoom(state, part.slice(0, colon), part.slice(colon + 1));
+  }
 }
 
 function sbQuery(url) {
@@ -69,11 +85,11 @@ function sbQuery(url) {
 }
 
 // Toucher le widget relance ce script dans Scriptable (le réglage « When Interacting » est ignoré)…
-const sbTapUrl = () => `scriptable:///run/${encodeURIComponent(Script.name())}?ouvrir=app`;
+const sbTapUrl = (childId) => `scriptable:///run/${encodeURIComponent(Script.name())}?ouvrir=app${childId ? `&enfant=${childId}` : ''}`;
 
-// … qui ouvre l'app en plein écran. L'app y renvoie ses changements par des liens superbebe-sync:?…
-async function sbOpenApp(state, configText) {
-  const url = `${SB_APP_URL}?hote=scriptable#import=${configText}`;
+// … qui ouvre l'app en plein écran, sur l'enfant du widget. L'app y renvoie ses changements par des liens superbebe-sync:?…
+async function sbOpenApp(state, configText, childId) {
+  const url = `${SB_APP_URL}?hote=scriptable${childId ? `&enfant=${encodeURIComponent(childId)}` : ''}#import=${configText}`;
   if (typeof WebView === 'undefined') {
     Safari.open(url);
     return;
@@ -107,6 +123,7 @@ async function sbWelcome() {
     "1. Écran d'accueil : appui long sur un espace vide, Modifier, puis Ajouter un widget.",
     '2. Scriptable, taille moyenne, Ajouter le widget.',
     `3. Appui long sur le widget, Modifier le widget, Script : « ${name} ».`,
+    'Plusieurs enfants ? Un widget par enfant : dans Parameter, écrivez son prénom.',
     name === 'Superbébé' ? '' : "Astuce : renommez ce script « Superbébé » (touchez son nom en haut) pour que l'app puisse lui envoyer vos réglages.",
   ].filter(Boolean).join('\n\n');
   alert.addAction('Compris');
@@ -237,7 +254,7 @@ function sbDraw(family, lines, info) {
   const soft = new Color('#ffffff', 0.82);
   sbBackground(w, info.theme);
   w.setPadding(14, 16, 12, 16);
-  sbText(w, `SUPERBÉBÉ · ${info.place}`.toUpperCase(), 9, { bold: true, color: soft });
+  sbText(w, `${info.name || 'Superbébé'} · ${info.place}`.toUpperCase(), 9, { bold: true, color: soft });
   w.addSpacer(small ? 5 : 8);
   const shown = small ? lines.slice(0, 2) : lines;
   shown.forEach((line, k) => {
@@ -266,7 +283,8 @@ async function runSuperbebe() {
   const files = sbFiles();
   const state = files.read('etat.json') ?? {};
   const query = args.queryParameters ?? {};
-  sbResolveConfig(state, String(args.widgetParameter ?? '').trim());
+  const param = String(args.widgetParameter ?? '').trim();
+  sbResolveConfig(state, param);
   if (!inWidget) sbApply(state, query);
   const cfg = decodeConfig(state.config ?? '', sbDecode);
   if (!cfg) {
@@ -276,8 +294,9 @@ async function runSuperbebe() {
       : "Réglages manquants. Dans l'app Superbébé : Réglages, Ajouter le widget, puis copiez à nouveau le script dans Scriptable.";
     return sbFinish(sbMessageWidget(family, message), inWidget);
   }
+  const child = pickChild(cfg, query.enfant ?? (sbValid(param) ? '' : param));
   if (!inWidget && query.ouvrir === 'app') {
-    await sbOpenApp(state, state.config);
+    await sbOpenApp(state, state.config, child.id);
     files.write('etat.json', state);
     return Script.complete();
   }
@@ -304,8 +323,8 @@ async function runSuperbebe() {
   }
 
   const { date, time } = parisNow();
-  const profile = configToProfile(cfg);
-  profile.room_temp_c = sbFreshRoom(state);
+  const profile = configToProfile(cfg, child.id);
+  profile.room_temp_c = sbFreshRoom(state, child.id, child.id === configChildren(cfg)[0].id);
   const input = buildInput({ forecast: cache.forecast, profile, date, now: time, lat: cfg.la });
   const result = evaluate(input, SB_RULES);
   const moment = displayMoment(result, time);
@@ -313,6 +332,7 @@ async function runSuperbebe() {
   const updated = parisNow(new Date(cache.at)).time.replace(':', ' h ');
   const window = result.outing.window;
   const info = {
+    name: child.name,
     place: cfg.n || 'Superbébé',
     theme: skyTheme(result, moment),
     footer: `${offline ? 'Hors ligne · ' : ''}Mis à jour à ${updated} · Open-Meteo`,
@@ -321,6 +341,6 @@ async function runSuperbebe() {
       : result.night.tog ? `${result.night.tog}` : '—',
   };
   const widget = sbDraw(family, lines, info);
-  widget.url = sbTapUrl();
+  widget.url = sbTapUrl(child.id);
   return sbFinish(widget, inWidget);
 }

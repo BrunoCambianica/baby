@@ -34,12 +34,19 @@ node tools/run-vectors.js --show creneau-fortes-chaleurs   # résultat complet d
 | Champ | Contenu |
 |---|---|
 | `date`, `now` | Jour (`AAAA-MM-JJ`) et heure locale (`HH:MM`) |
-| `profile` | `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2 selon les retours « trop chaud / trop froid »), `room_temp_c`, `inventory` (`{ catégorie: [tailles possédées] }`) |
+| `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c`, `inventory` (`{ catégorie: [tailles possédées] }`). Plusieurs enfants : un appel par enfant |
 | `forecast` | `daylight` (`sunrise`, `sunset`), `hourly` (`time`, `temp_c`, `feels_c`, `precip_prob`, `precip_mm`, `gust_kmh`, `uv`), `daily.tmax_c` facultatif |
 | `alerts` | `vigilance` (`[{ phenomenon, color }]`, couleurs Météo-France), `air` (`{ episode, pollutant }`) |
 | `outlook` | Semaines à venir : `week_start`, `tmax_mean`, `tmean`, `rainy_days`, `uv_max_mean` |
 
-Le profil ne quitte jamais le téléphone. Le serveur ne fournit que `forecast`, `alerts` et `outlook` pour une zone de 5 km.
+Le profil ne quitte jamais le téléphone.
+
+## Âges et modes de sortie
+
+- `outfit.age_variants` : tenues propres aux enfants de 2 ans et plus (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière), tranche par tranche.
+- `outfit.transport` : chaque mode décale la tranche (`band_shift`), remplace ou retire des vêtements et choisit la protection contre la pluie (`rain_gear`). `a_pied` n'existe qu'à partir de `min_age_m` ; plus jeune, l'enfant est habillé comme en poussette. En voiture, combinaison et manteau deviennent une couverture par-dessus le harnais.
+- `night.baby_only` : repères du couchage du nourrisson, affichés jusqu'à `baby_until_months`.
+- Tailles : en mois jusqu'à 24 mois, puis en années ; plus de gigoteuse proposée après 36 mois.
 
 ## Avant toute diffusion publique
 

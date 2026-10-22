@@ -84,6 +84,7 @@ const PULL = [
 ];
 
 const HAUT_ML = [{ d: sym('M12 4.8 Q13.5 4.8 14.3 3.3 L16.9 4.2 Q19.6 5.6 20.6 12.6 L18.8 13.1 L17 8.8 L17 20.2 L12 20.2') }];
+const TSHIRT = [{ d: sym('M12 4.8 Q13.5 4.8 14.3 3.3 L16.9 4.2 L20.4 7.7 L18.8 9.7 L17 8.5 L17 20.2 L12 20.2') }];
 const TUNIQUE = [{ d: sym('M12 4.6 Q13.5 4.6 14.3 3.2 L17.2 4.2 L20.6 8.6 L18.7 10.3 L17 8.9 L19.2 20.2 L12 20.2') }];
 const TENUE_LEGERE = [
   { d: sym('M12 4.3 Q13.4 4.3 14.2 3 L16.8 3.9 L19.4 6.6 L17.9 8.2 L16.6 7.2 L16.6 11 L12 11') },
@@ -99,12 +100,21 @@ const COMBI_CHAUDE = [...COMBI, ...pair('M8.5 11.4 L10.6 11.4'), ...pair('M8.5 1
 const FLOCON = [{ d: 'M19.8 1.6 L19.8 5.6' }, { d: 'M18.07 2.6 L21.53 4.6' }, { d: 'M18.07 4.6 L21.53 2.6' }];
 const COMBI_DOUBLEE = [...COMBI_CHAUDE, ...FLOCON];
 
-const MANTEAU = [
+const MANTEAU_FORME = [
   { d: sym('M12 2.6 C14.6 2.6 16 4.2 16 7 L17.4 7.8 Q20 9.1 20.8 15.6 L19 16.1 L17.5 12.4 L18 21 L12 21') },
   { d: 'M9.6 7.6 C9.6 5.4 10.6 4.4 12 4.4 C13.4 4.4 14.4 5.4 14.4 7.6' },
   { d: 'M12 7.6 L12 21' },
-  dot(13.4, 12.2), dot(13.4, 16.2),
 ];
+const MANTEAU = [...MANTEAU_FORME, dot(13.4, 12.2), dot(13.4, 16.2)];
+// Gouttes de pluie, en haut à droite.
+const GOUTTES = [{ d: 'M20.6 1.6 L20 3.2' }, { d: 'M22.6 4.6 L22 6.2' }];
+const IMPERMEABLE = [...MANTEAU, ...GOUTTES];
+const CAPE_PLUIE = [
+  { d: sym('M12 2.6 C14.5 2.6 15.8 4.2 15.8 6.6 L20.2 18.4 Q20.6 20.4 18.6 20.4 L12 20.4') },
+  { d: 'M12 4.4 C13.3 4.4 14 5.3 14 6.6 C14 7.9 13.3 8.6 12 8.6 C10.7 8.6 10 7.9 10 6.6 C10 5.3 10.7 4.4 12 4.4 Z' },
+  ...GOUTTES,
+];
+const MANTEAU_CHAUD = [...MANTEAU_FORME, ...pair('M8.4 11.4 L10.6 11.4'), ...pair('M8.2 14.8 L10.6 14.8'), ...pair('M8 18.2 L10.6 18.2')];
 
 const COUVERTURE = [
   { d: 'M6 4 L18 4 Q20 4 20 6 L20 18 Q20 20 18 20 L6 20 Q4 20 4 18 L4 6 Q4 4 6 4 Z' },
@@ -173,6 +183,7 @@ export const DRAWINGS = {
   tunique: TUNIQUE,
   tenue_legere: TENUE_LEGERE,
   haut_ml: HAUT_ML,
+  tshirt: TSHIRT,
   pyjama: PYJAMA,
   pyjama_chaud: PYJAMA_CHAUD,
   pantalon: PANTALON,
@@ -186,6 +197,9 @@ export const DRAWINGS = {
   combi_chaude: COMBI_CHAUDE,
   combi_doublee: COMBI_DOUBLEE,
   manteau: MANTEAU,
+  manteau_chaud: MANTEAU_CHAUD,
+  impermeable: IMPERMEABLE,
+  cape_pluie: CAPE_PLUIE,
   couverture: COUVERTURE,
   bonnet_fin: BONNET_FIN,
   bonnet: BONNET,
@@ -225,6 +239,18 @@ export const ITEM_DRAWINGS = {
   combi_pilote_doublee: 'combi_doublee',
   couverture_portage: 'couverture',
   manteau_portage: 'manteau',
+  couverture_harnais: 'couverture',
+  // Enfants de 2 ans et plus.
+  tshirt: 'tshirt',
+  haut_ml: 'haut_ml',
+  veste: 'manteau',
+  manteau_chaud: 'manteau_chaud',
+  combi_ski: 'combi_doublee',
+  // Protection contre la pluie, selon le mode de sortie.
+  habillage_pluie: 'habillage_pluie',
+  cape_pluie: 'cape_pluie',
+  impermeable: 'impermeable',
+  capuche: 'impermeable',
   bonnet_fin: 'bonnet_fin',
   bonnet: 'bonnet',
   moufles: 'moufles',
@@ -239,6 +265,7 @@ export const CATEGORY_DRAWINGS = {
   gigoteuse_hiver: 'gigoteuse_chaude',
   gigoteuse_ete: 'gigoteuse',
   combi_pilote: 'combi_chaude',
+  manteau_hiver: 'manteau_chaud',
   accessoires_hiver: 'bonnet',
   chanceliere: 'chanceliere',
   habillage_pluie: 'habillage_pluie',

@@ -1,6 +1,8 @@
 // Stockage local : les réglages et l'historique restent sur le téléphone.
 const KEYS = {
+  // Le foyer (voir household.js) ; « sb.enfant » : l'enfant affiché sur ce téléphone.
   profile: 'sb.profil',
+  child: 'sb.enfant',
   forecast: 'sb.meteo',
   climate: 'sb.normales',
   days: 'sb.jours',
@@ -39,8 +41,13 @@ export const store = {
     const days = read(KEYS.days, []);
     if (!days.includes(date)) write(KEYS.days, [...days, date].slice(-180));
   },
+  currentChild: () => read(KEYS.child, null),
+  setCurrentChild: (id) => write(KEYS.child, id),
+  // Suggestions d'achat masquées, par enfant : « identifiant|catégorie:taille ».
   hidden: () => read(KEYS.hidden, []),
   hide: (key) => write(KEYS.hidden, [...new Set([...read(KEYS.hidden, []), key])]),
+  // Les suggestions masquées avant la 0.6 (un seul enfant) reviennent au premier enfant.
+  adoptHidden: (childId) => write(KEYS.hidden, read(KEYS.hidden, []).map((key) => (key.includes('|') ? key : `${childId}|${key}`))),
   widgetCopied: () => read(KEYS.widget, null),
   markWidgetCopied: () => write(KEYS.widget, { at: Date.now() }),
   promoHidden: () => read(KEYS.promo, false),

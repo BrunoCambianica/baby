@@ -32,6 +32,22 @@
             </intent-filter>
         </activity>
 
+        <!-- Choix de l'enfant d'un widget, à la pose ou par « Modifier le widget ». -->
+        <activity
+            android:name=".SbWidgetConfigure"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Réponse d'Android quand un widget est posé depuis l'app. -->
+        <receiver
+            android:name=".SbPinReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".SbWidgetReceiver"
             android:exported="true"

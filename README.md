@@ -16,17 +16,26 @@ App web installable et widgets iPhone et Android : quand sortir avec bébé, com
 | `widget/` | Widget iPhone pour Scriptable : chargeur, source, fichiers générés |
 | `android/` | App Android : l'app web en plein écran et le widget natif (Kotlin, Glance), même moteur exécuté dans le bac à sable JavaScript : voir [android/README.md](android/README.md) |
 | `dist/` | APK de test de l'app Android, servi par le site |
-| `tools/` | Tests, génération des widgets et des icônes, serveur local |
+| `tools/` | Tests, génération des widgets et des icônes, serveur local, parcours navigateur (`tools/e2e/`), installation de la chaîne Android |
 
 ## Commandes
 
-Node 18 ou plus, aucune dépendance à installer.
+Node 18 ou plus, aucune dépendance à installer pour l'app et les tests.
 
 ```sh
-npm test          # charte des sources, 38 cas de règles, adaptateur, widgets iPhone et Android
+npm test          # charte des sources, cas de règles, adaptateur, foyer, widgets iPhone et Android
 npm run build     # icônes, dessins Android, widgets iPhone et Android (moteur embarqué), version reportée dans l'app
 npm run serve     # http://localhost:8080/baby/app/
+npm run e2e       # parcours de l'app dans Chromium (Playwright), captures dans tools/e2e/captures/
 npm run deploy    # pousse main, puis publie la même version sur la branche gh-pages
+```
+
+Outils à installer une fois, hors du dépôt et sans droits administrateur :
+
+```sh
+tools/e2e/installer.sh        # Playwright, Chromium et ses bibliothèques système si elles manquent
+tools/installer-android.sh    # JDK 17 et SDK Android dans ~/.local/share/superbebe/android
+tools/compiler-apk.sh         # compile l'APK de test dans dist/
 ```
 
 ## Première mise en ligne
@@ -60,9 +69,11 @@ Le site est statique : tous les chemins sont relatifs et les widgets récupèren
 
 | Téléphone | Réglages vers le widget | Toucher le widget |
 |---|---|---|
-| iPhone | Le script copié contient les réglages. Ensuite, Réglages, « Envoyer mes réglages au widget » (lien `scriptable:///run/Superbébé?config=…`). | Relance le script, qui ouvre l'app en plein écran dans Scriptable (`app/?hote=scriptable#import=…`) ; l'app y renvoie réglages et relevé de la chambre par des liens `superbebe-sync:`. |
-| Android | L'app web appelle le pont `SuperbebeAndroid` à chaque changement. | Ouvre l'app Android, c'est-à-dire l'app web en plein écran. |
+| iPhone | Le script copié contient les réglages de tous les enfants. Ensuite, Réglages, « Envoyer mes réglages au widget » (lien `scriptable:///run/Superbébé?config=…`). Un widget par enfant : champ Parameter du widget = prénom ou numéro. | Relance le script, qui ouvre l'app en plein écran dans Scriptable, sur l'enfant du widget (`app/?hote=scriptable&enfant=…#import=…`) ; l'app y renvoie réglages et relevés des chambres par des liens `superbebe-sync:`. |
+| Android | L'app web appelle le pont `SuperbebeAndroid` à chaque changement. Un widget par enfant : choisi à la pose, ou « Le widget de Léo » dans l'app. | Ouvre l'app Android sur l'enfant du widget. |
+
+La configuration (`SB1.` suivi d'un JSON en base64url) existe en deux versions : v1, un seul enfant, lue pour les anciens widgets ; v2, la commune, les horaires, les enfants (`k`) et la date du dernier changement (`m`). L'app n'applique une configuration reçue d'un widget que si elle est plus récente que la sienne. Une app Android antérieure à la 0.6 reçoit encore une configuration v1, celle de l'enfant affiché.
 
 ## Données et vie privée
 
-Pas de compte ni de serveur : les réglages restent dans le téléphone. L'app interroge Open-Meteo avec les coordonnées du centre de la commune, et geo.api.gouv.fr pour trouver la commune.
+Pas de compte ni de serveur : les réglages et les prénoms restent dans le téléphone. L'app interroge Open-Meteo avec les coordonnées du centre de la commune, et geo.api.gouv.fr pour trouver la commune. « Envoyer les profils » à l'autre parent produit un lien qui contient les prénoms ; il passe par la messagerie choisie, jamais par un serveur de Superbébé.

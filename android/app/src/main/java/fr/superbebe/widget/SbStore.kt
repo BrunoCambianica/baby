@@ -5,7 +5,7 @@ import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** État local du widget : configuration, dernière météo, réglages personnels et dernier rendu. */
+/** État local des widgets : configuration, dernière météo, relevés des chambres, enfant de chaque widget et derniers rendus. */
 object SbStore {
     const val DEFAULT_BASE_URL = "https://brunocambianica.github.io/baby/"
     private const val ROOM_TTL_MS = 16 * 3600 * 1000L
@@ -13,7 +13,19 @@ object SbStore {
     /** Ligne du widget : un texte, ou une rangée de dessins (identifiants de engine/drawings.js) suivie d'un texte. */
     data class Line(val text: String, val drawings: List<String> = emptyList(), val label: String = text)
 
-    data class Render(val place: String, val lines: List<Line>, val footer: String, val theme: String)
+    /** Rendu d'un enfant (`id` vide : message sans enfant, par exemple avant tout réglage). */
+    data class Render(
+        val id: String,
+        val name: String,
+        val place: String,
+        val lines: List<Line>,
+        val footer: String,
+        val theme: String = "nuageux",
+    ) {
+        companion object {
+            fun message(place: String, text: String, footer: String = "") = Render("", "", place, listOf(Line(text)), footer)
+        }
+    }
 
     private fun prefs(context: Context) = context.getSharedPreferences("superbebe", Context.MODE_PRIVATE)
 
@@ -30,7 +42,7 @@ object SbStore {
     /** Oublie les réglages (« Effacer mes données » dans l'app) ; true s'il y en avait. */
     fun clearConfig(context: Context): Boolean {
         if (config(context) == null) return false
-        prefs(context).edit().remove("config").remove("room").remove("room_at").apply()
+        prefs(context).edit().remove("config").remove("room").remove("room_at").remove("rooms").apply()
         return true
     }
 
@@ -66,53 +78,97 @@ object SbStore {
             .apply()
     }
 
-    /** Relevé de la chambre, valable 16 heures (une soirée et une nuit). */
+    /** Relevé unique des versions à un seul enfant (valable 16 heures), repris pour le premier enfant. */
     fun room(context: Context): Double? {
         val p = prefs(context)
         val fresh = System.currentTimeMillis() - p.getLong("room_at", 0) < ROOM_TTL_MS
         return if (fresh) p.getFloat("room", 19f).toDouble() else null
     }
 
-    fun roomAt(context: Context): Long = prefs(context).getLong("room_at", 0)
+    private fun roomReadings(context: Context): JSONObject =
+        runCatching { JSONObject(prefs(context).getString("rooms", "{}") ?: "{}") }.getOrDefault(JSONObject())
 
-    fun saveRoom(context: Context, value: Double, at: Long) {
-        prefs(context).edit().putFloat("room", value.toFloat()).putLong("room_at", at).apply()
-    }
-
-    fun render(context: Context): Render {
-        val p = prefs(context)
-        val array = runCatching { JSONArray(p.getString("lines", "[]")) }.getOrDefault(JSONArray())
-        val lines = (0 until array.length()).map { i ->
-            val item = array.opt(i)
-            if (item is JSONObject) {
-                val ids = item.optJSONArray("drawings") ?: JSONArray()
-                Line(item.optString("text"), (0 until ids.length()).map { ids.getString(it) }, item.optString("label"))
-            } else {
-                Line(item?.toString() ?: "")
-            }
+    /** Relevés des chambres encore valables (16 heures : une soirée et une nuit), par enfant : { identifiant: degrés }. */
+    fun rooms(context: Context): JSONObject {
+        val all = roomReadings(context)
+        val fresh = JSONObject()
+        val now = System.currentTimeMillis()
+        for (id in all.keys()) {
+            val reading = all.optJSONObject(id) ?: continue
+            if (now - reading.optLong("at") < ROOM_TTL_MS) fresh.put(id, reading.optDouble("value"))
         }
-        return Render(
-            place = p.getString("place", null) ?: "Superbébé",
-            lines = lines.ifEmpty { listOf(Line("Ouvrez Superbébé pour choisir votre commune.")) },
-            footer = p.getString("footer", null) ?: "",
-            theme = p.getString("theme", null) ?: "nuageux",
-        )
+        return fresh
     }
 
-    /** `lines` : textes, ou objets { drawings, text, label } renvoyés par le moteur pour la tenue en dessins. */
-    fun saveRender(context: Context, place: String, lines: List<Any>, footer: String, theme: String = "nuageux") {
-        prefs(context).edit()
-            .putString("place", place)
-            .putString("lines", JSONArray(lines).toString())
-            .putString("footer", footer)
-            .putString("theme", theme)
-            .apply()
+    /** Garde, pour chaque enfant, le relevé le plus récent ; true si l'un d'eux a changé. */
+    fun saveRooms(context: Context, readings: Map<String, Pair<Double, Long>>): Boolean {
+        val all = roomReadings(context)
+        var changed = false
+        for ((id, reading) in readings) {
+            val (value, at) = reading
+            if (value.isNaN() || at <= (all.optJSONObject(id)?.optLong("at") ?: 0L)) continue
+            all.put(id, JSONObject().put("value", value).put("at", at))
+            changed = true
+        }
+        if (changed) prefs(context).edit().putString("rooms", all.toString()).apply()
+        return changed
+    }
+
+    /** Enfant affiché par un widget (le premier enfant si rien n'a été choisi). */
+    fun widgetChild(context: Context, widgetId: Int): String? = prefs(context).getString("widget_$widgetId", null)
+
+    fun setWidgetChild(context: Context, widgetId: Int, childId: String) {
+        prefs(context).edit().putString("widget_$widgetId", childId).apply()
+    }
+
+    fun forgetWidgets(context: Context, widgetIds: IntArray) {
+        val editor = prefs(context).edit()
+        for (id in widgetIds) editor.remove("widget_$id")
+        editor.apply()
+    }
+
+    private fun lines(array: JSONArray): List<Line> = (0 until array.length()).map { i ->
+        val item = array.opt(i)
+        if (item is JSONObject) {
+            val ids = item.optJSONArray("drawings") ?: JSONArray()
+            Line(item.optString("text"), (0 until ids.length()).map { ids.getString(it) }, item.optString("label"))
+        } else {
+            Line(item?.toString() ?: "")
+        }
+    }
+
+    /** Rendu de l'enfant demandé ; à défaut celui du premier enfant, ou le dernier message. */
+    fun render(context: Context, childId: String?): Render {
+        val array = runCatching { JSONArray(prefs(context).getString("renders", "[]")) }.getOrDefault(JSONArray())
+        val renders = (0 until array.length()).mapNotNull { array.optJSONObject(it) }.map { r ->
+            Render(
+                id = r.optString("id"),
+                name = r.optString("name"),
+                place = r.optString("place").ifEmpty { "Superbébé" },
+                lines = lines(r.optJSONArray("lines") ?: JSONArray()),
+                footer = r.optString("footer"),
+                theme = r.optString("theme").ifEmpty { "nuageux" },
+            )
+        }
+        return renders.firstOrNull { it.id == childId } ?: renders.firstOrNull()
+            ?: Render.message("Superbébé", "Ouvrez Superbébé pour choisir votre commune.")
+    }
+
+    /** `lines` de chaque rendu : textes, ou objets { drawings, text, label } renvoyés par le moteur pour la tenue en dessins. */
+    fun saveRenders(context: Context, renders: List<JSONObject>) {
+        prefs(context).edit().putString("renders", JSONArray(renders).toString()).apply()
+    }
+
+    fun saveMessage(context: Context, place: String, text: String, footer: String = "") {
+        saveRenders(context, listOf(JSONObject().put("place", place).put("lines", JSONArray(listOf(text))).put("footer", footer)))
     }
 }
 
-/** Configuration produite par l'app web : « SB1. » suivi d'un JSON en base64url. */
+/** Configuration produite par l'app web : « SB1. » suivi d'un JSON en base64url (v1 : un enfant ; v2 : plusieurs, liste k). */
 object SbConfig {
-    data class Place(val name: String, val lat: Double, val lon: Double)
+    data class Child(val id: String, val name: String)
+
+    data class Place(val name: String, val lat: Double, val lon: Double, val children: List<Child>)
 
     fun decode(text: String?): Place? {
         val raw = text?.trim() ?: return null
@@ -120,7 +176,14 @@ object SbConfig {
         return runCatching {
             val bytes = Base64.decode(raw.removePrefix("SB1."), Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
             val json = JSONObject(String(bytes, Charsets.UTF_8))
-            if (json.optInt("v") != 1) null else Place(json.optString("n", "Superbébé"), json.getDouble("la"), json.getDouble("lo"))
+            val children = when (json.optInt("v")) {
+                1 -> listOf(Child("", ""))
+                2 -> json.optJSONArray("k")?.let { k ->
+                    (0 until k.length()).mapNotNull { k.optJSONObject(it) }.map { Child(it.optString("id"), it.optString("p")) }
+                }.orEmpty()
+                else -> emptyList()
+            }
+            if (children.isEmpty()) null else Place(json.optString("n", "Superbébé"), json.getDouble("la"), json.getDouble("lo"), children)
         }.getOrNull()
     }
 }

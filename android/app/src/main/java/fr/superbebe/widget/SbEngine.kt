@@ -12,6 +12,7 @@ import org.json.JSONObject
 object SbEngine {
     class Unsupported : Exception("JavaScriptSandbox indisponible sur ce téléphone")
 
+    /** Rendu de tous les enfants de la configuration (fonction sbAndroidAll de android/entry.js). */
     suspend fun compute(
         context: Context,
         forecast: String,
@@ -22,7 +23,7 @@ object SbEngine {
     ): JSONObject {
         if (!JavaScriptSandbox.isSupported()) throw Unsupported()
         val code = context.assets.open("superbebe-android.js").bufferedReader().use { it.readText() }
-        val call = "$code\nsbAndroid($forecast, ${JSONObject.quote(config)}, $state, ${JSONObject.quote(date)}, ${JSONObject.quote(time)});"
+        val call = "$code\nsbAndroidAll($forecast, ${JSONObject.quote(config)}, $state, ${JSONObject.quote(date)}, ${JSONObject.quote(time)});"
         val sandbox = JavaScriptSandbox.createConnectedInstanceAsync(context).await()
         return sandbox.use { sb ->
             sb.createIsolate().use { isolate -> JSONObject(isolate.evaluateJavaScriptAsync(call).await()) }

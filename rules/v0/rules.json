@@ -2,7 +2,7 @@
   "id": "baby-rules",
   "version": "0.1.0",
   "status": "brouillon, à relire avant toute diffusion",
-  "updated": "2026-10-21",
+  "updated": "2026-10-22",
   "locale": "fr-FR",
   "policy": {
     "medical_advice": false,
@@ -73,7 +73,7 @@
       { "id": "tres_froid", "min_feels_c": null, "items": ["body_ml", "pyjama_chaud", "pull", "combi_pilote_doublee", "bonnet", "moufles", "chaussons", "chanceliere"] }
     ],
     "transport": {
-      "poussette": { "band_shift": 0, "remove_items": [], "notes": [] },
+      "poussette": { "band_shift": 0, "remove_items": [], "notes": [], "rain_gear": "habillage_pluie" },
       "porte_bebe": {
         "band_shift": -1,
         "remove_items": ["chanceliere"],
@@ -85,12 +85,49 @@
           "combi_pilote": ["manteau_portage"],
           "combi_pilote_doublee": ["manteau_portage"]
         },
-        "notes": ["practical.carrier.body_heat", "practical.carrier.no_footed"]
+        "notes": ["practical.carrier.body_heat", "practical.carrier.no_footed"],
+        "rain_gear": "cape_pluie"
       },
-      "voiture": { "band_shift": 0, "remove_items": ["chanceliere"], "notes": [] }
+      "a_pied": {
+        "band_shift": -1,
+        "min_age_m": 24,
+        "remove_items": ["chanceliere"],
+        "notes": ["practical.walk.body_heat"],
+        "rain_gear": "impermeable"
+      },
+      "voiture": {
+        "band_shift": 0,
+        "remove_items": ["chanceliere"],
+        "replace_items": {
+          "combi_legere": ["couverture_harnais"],
+          "combi_pilote": ["couverture_harnais"],
+          "combi_pilote_doublee": ["couverture_harnais"],
+          "veste": ["couverture_harnais"],
+          "manteau_chaud": ["couverture_harnais"],
+          "combi_ski": ["couverture_harnais"]
+        },
+        "notes": [],
+        "rain_gear": "capuche"
+      }
     },
+    "age_variants": [
+      {
+        "id": "enfant",
+        "from_months": 24,
+        "bands": {
+          "tres_chaud": ["tenue_ample_claire", "chapeau"],
+          "chaud": ["tenue_legere", "chapeau_si_soleil"],
+          "doux": ["tshirt", "pantalon_leger", "gilet_fin"],
+          "frais": ["haut_ml", "pantalon", "gilet"],
+          "froid_modere": ["haut_ml", "pantalon", "gilet_chaud", "veste", "bonnet_fin"],
+          "froid": ["haut_ml", "pantalon_chaud", "pull", "manteau_chaud", "bonnet", "chaussettes_chaudes"],
+          "tres_froid": ["haut_ml", "pantalon_chaud", "pull", "combi_ski", "bonnet", "moufles", "chaussettes_chaudes"]
+        }
+      }
+    ],
     "overlays": {
       "rain_cover_prob_at_least": 30,
+      "rain_cover_warm_feels_c_at_least": 22,
       "rain_later_prob_at_least": 50,
       "wind_gust_kmh_at_least": 40
     }
@@ -106,6 +143,8 @@
   "night": {
     "room_range_c": { "min": 18, "max": 20, "source": "carnet-1000-jours" },
     "always": ["relay.sleep.basics", "relay.sleep.room_range", "relay.sleep.check_temp"],
+    "baby_only": ["relay.sleep.basics"],
+    "baby_until_months": 24,
     "when_room_known": ["relay.sleep.season_thickness"],
     "heat_room_c_at_least": 26,
     "tog_hint": {
@@ -135,7 +174,10 @@
         { "code": "12m", "label": "12 mois", "max_age_m": 13 },
         { "code": "18m", "label": "18 mois", "max_age_m": 19 },
         { "code": "24m", "label": "24 mois", "max_age_m": 25 },
-        { "code": "36m", "label": "36 mois", "max_age_m": 37 }
+        { "code": "36m", "label": "3 ans", "max_age_m": 37 },
+        { "code": "4a", "label": "4 ans", "max_age_m": 49 },
+        { "code": "5a", "label": "5 ans", "max_age_m": 61 },
+        { "code": "6a", "label": "6 ans", "max_age_m": 73 }
       ],
       "gigoteuse": [
         { "code": "0-6m", "label": "0-6 mois", "max_age_m": 6 },
@@ -146,7 +188,8 @@
         { "code": "0-6m", "label": "0-6 mois", "max_age_m": 6 },
         { "code": "6-12m", "label": "6-12 mois", "max_age_m": 12 },
         { "code": "12-24m", "label": "12-24 mois", "max_age_m": 24 },
-        { "code": "24-36m", "label": "24-36 mois", "max_age_m": 36 }
+        { "code": "24-36m", "label": "2-3 ans", "max_age_m": 36 },
+        { "code": "3-6a", "label": "3-6 ans", "max_age_m": 72 }
       ],
       "unique": [
         { "code": "unique", "label": "taille unique", "max_age_m": 999 }
@@ -155,19 +198,25 @@
     "size_note": "Correspondance âge/taille indicative (convention des étiquettes) ; la taille réellement portée, saisie par le parent, prime.",
     "categories": [
       {
-        "id": "gigoteuse_hiver", "size_system": "gigoteuse", "priority": 1,
+        "id": "gigoteuse_hiver", "size_system": "gigoteuse", "priority": 1, "max_age_m": 36,
         "need_if": { "week_tmean_below": 15 },
         "reason": "nuits_fraiches",
         "relays": ["relay.sleep.size_adapted", "fabricant.sleepbag.norm"]
       },
       {
-        "id": "gigoteuse_ete", "size_system": "gigoteuse", "priority": 2,
+        "id": "gigoteuse_ete", "size_system": "gigoteuse", "priority": 2, "max_age_m": 36,
         "need_if": { "week_tmax_at_least": 27 },
         "reason": "nuits_chaudes",
         "relays": ["relay.sleep.size_adapted", "fabricant.sleepbag.norm"]
       },
       {
-        "id": "combi_pilote", "size_system": "vetement", "priority": 1,
+        "id": "combi_pilote", "size_system": "vetement", "priority": 1, "max_age_m": 24,
+        "need_if": { "week_band_in": ["froid", "tres_froid"] },
+        "reason": "froid",
+        "relays": ["relay.cold.layers"]
+      },
+      {
+        "id": "manteau_hiver", "size_system": "vetement", "priority": 1, "min_age_m": 24,
         "need_if": { "week_band_in": ["froid", "tres_froid"] },
         "reason": "froid",
         "relays": ["relay.cold.layers"]
@@ -179,7 +228,7 @@
         "relays": ["relay.cold.layers"]
       },
       {
-        "id": "chanceliere", "size_system": "unique", "priority": 3,
+        "id": "chanceliere", "size_system": "unique", "priority": 3, "max_age_m": 24,
         "need_if": { "week_band_in": ["froid", "tres_froid"], "transport_in": ["poussette"] },
         "reason": "froid",
         "relays": []

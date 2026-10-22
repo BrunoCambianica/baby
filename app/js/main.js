@@ -1,8 +1,9 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
-import { addDays, clamp, displayMoment, evaluate, hourFr, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
-import { buildInput, decodeConfig, encodeConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
+import { addDays, ageMonths, clamp, displayMoment, evaluate, hourFr, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
+import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { dayLong, dayShort } from './format.js';
+import { ageLabel, fromConfig, isNewer, migrate, newChild, profileOf } from './household.js';
 import { store } from './storage.js';
 import * as V from './views.js';
 
@@ -20,11 +21,33 @@ const ask = (fn, fallback) => {
     return fallback;
   }
 };
+// L'app Android gère plusieurs enfants à partir de la 0.6 ; avant, elle ne lit qu'une configuration v1.
+function androidAtLeast(major, minor) {
+  const m = ask(() => android.version(), '').match(/^(\d+)\.(\d+)/);
+  return Boolean(m) && (Number(m[1]) > major || (Number(m[1]) === major && Number(m[2]) >= minor));
+}
+const androidMulti = host === 'android' && androidAtLeast(0, 6);
+const widgetKids = () => (androidMulti ? ask(() => JSON.parse(android.widgetChildren()), {}) : {});
+
+// Foyer enregistré ; le profil à un seul enfant des versions précédentes devient le premier enfant.
+function loadHousehold() {
+  const raw = store.profile();
+  const household = migrate(raw);
+  if (household && raw.v !== 2) {
+    store.saveProfile(household);
+    store.adoptHidden(household.children[0].id);
+  }
+  return household;
+}
 
 const state = {
   bundle: null,
   sourcesById: new Map(),
-  profile: store.profile(),
+  household: loadHousehold(),
+  // Réglages de l'enfant affiché, complétés de ceux du foyer (voir refreshProfile).
+  profile: null,
+  // Profils reçus de l'autre parent (lien #partage=…), en attente de confirmation.
+  received: null,
   forecast: null,
   climate: [],
   climateReady: false,
@@ -48,6 +71,7 @@ const state = {
   // Onglet de navigateur sur téléphone : on propose d'ouvrir Superbébé comme une app, sans les barres du navigateur.
   inBrowser: !host && !standalone && /Android|iPhone|iPod/i.test(navigator.userAgent),
   widgets: host === 'android' ? ask(() => android.widgets(), 0) : 0,
+  widgetKids: widgetKids(),
   steps: new Set(),
   androidLink: '',
   updateLink: '',
@@ -59,6 +83,11 @@ const state = {
   tabChosen: false,
 };
 
+function refreshProfile() {
+  state.profile = state.household ? profileOf(state.household, store.currentChild()) : null;
+}
+refreshProfile();
+
 // Comme le widget : après la dernière sortie possible, l'app s'ouvre sur la nuit.
 function eveningTab() {
   if (state.tabChosen || state.tab !== 'sortir' || currentView() !== 'app') return;
@@ -68,9 +97,11 @@ function eveningTab() {
 const route = () => location.hash.replace('#', '');
 
 function currentView() {
-  if (!state.profile) return 'onboarding';
+  if (!state.household) return state.received || route() === 'recevoir' ? 'recevoir' : 'onboarding';
   const r = route();
-  return ['reglages', 'widget', 'apropos'].includes(r) ? r : 'app';
+  if (r.startsWith('enfant/')) return 'enfant';
+  if (['reglages', 'widget', 'apropos', 'recevoir'].includes(r)) return r;
+  return state.received ? 'recevoir' : 'app';
 }
 
 const freshRoom = (profile) => (profile.room && Date.now() - profile.room.at < ROOM_TTL_MS ? profile.room.value : null);
@@ -104,33 +135,49 @@ function compute(day, { pick = true } = {}) {
   });
   const result = evaluate(input, state.bundle);
   const hidden = store.hidden();
-  result.purchases = result.purchases.filter((x) => !hidden.includes(x.key));
+  result.purchases = result.purchases.filter((x) => !hidden.includes(`${p.id}|${x.key}`));
   const picked = pick && state.pickedHour ? outfitAt(input, state.bundle, state.pickedHour) : null;
   return { input, result, date, moment: tomorrow ? 'jour' : displayMoment(result, time), picked, tomorrow, forecast: state.forecast };
 }
 
-function newDraft(profile) {
+// Brouillon d'un écran de saisie : premier lancement, réglages (commune), fiche d'un enfant (#enfant/identifiant ou nouveau).
+function newDraft(view) {
   const now = parisNow().date;
+  if (view === 'enfant') {
+    const child = state.household.children.find((c) => c.id === route().slice('enfant/'.length));
+    return {
+      child: child?.id ?? 'nouveau',
+      name: child?.name ?? '',
+      birthMonth: child?.birth.slice(5, 7) ?? now.slice(5, 7),
+      birthYear: child?.birth.slice(0, 4) ?? now.slice(0, 4),
+      transport: child?.transport ?? 'poussette',
+      offset: child?.outfit_offset ?? 0,
+    };
+  }
+  const settings = view === 'reglages';
   return {
     step: 1,
-    commune: profile?.commune ?? null,
-    query: profile?.commune?.nom ?? '',
-    birthMonth: profile?.birth?.slice(5, 7) ?? now.slice(5, 7),
-    birthYear: profile?.birth?.slice(0, 4) ?? now.slice(0, 4),
-    transport: profile?.transport ?? 'poussette',
+    commune: settings ? state.profile.commune : null,
+    query: settings ? state.profile.commune.nom : '',
+    birthMonth: now.slice(5, 7),
+    birthYear: now.slice(0, 4),
+    transport: 'poussette',
+    name: '',
   };
 }
 
 let lastKey = '';
 function paint() {
   const view = currentView();
-  if ((view === 'onboarding' || view === 'reglages') && !state.draft) state.draft = newDraft(view === 'reglages' ? state.profile : null);
-  const key = `${view}|${state.tab}|${state.day}|${state.draft?.step ?? ''}`;
+  if (['onboarding', 'reglages', 'enfant'].includes(view) && !state.draft) state.draft = newDraft(view);
+  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.draft?.step ?? ''}`;
   app.classList.toggle('anim', key !== lastKey);
   lastKey = key;
   let html;
   if (!state.bundle) html = state.error ? V.fatal(state.error) : V.loading();
   else if (view === 'onboarding') html = V.viewOnboarding(state);
+  else if (view === 'recevoir') html = V.viewReceive(state);
+  else if (view === 'enfant') html = V.viewChild(state);
   else if (view === 'reglages') {
     state.updateLink = scriptableLink();
     html = V.viewSettings(state);
@@ -175,22 +222,53 @@ function setThemeColor(view) {
   if (host === 'android') ask(() => android.colors(color, bottom));
 }
 
-function updateProfile(patch) {
-  state.profile = { ...state.profile, ...patch };
-  store.saveProfile(state.profile);
+function saveHousehold() {
+  store.saveProfile(state.household);
+  refreshProfile();
   syncHost();
 }
 
-// Le widget suit l'app : réglages et relevé de la chambre lui sont transmis à chaque changement.
+// Réglages du foyer : commune, horaires, affichage.
+function updateHousehold(patch) {
+  state.household = { ...state.household, ...patch, updated: Date.now() };
+  saveHousehold();
+}
+
+// Réglages d'un enfant (l'enfant affiché par défaut) : prénom, naissance, mode, tendance, garde-robe, chambre.
+function updateChild(patch, id = state.profile.id) {
+  const children = state.household.children.map((c) => (c.id === id ? { ...c, ...patch } : c));
+  state.household = { ...state.household, children, updated: Date.now() };
+  saveHousehold();
+}
+
+function showChild(id) {
+  store.setCurrentChild(id);
+  refreshProfile();
+  state.pickedHour = null;
+}
+
+// Le widget suit l'app : réglages et relevés des chambres lui sont transmis à chaque changement.
 function syncHost() {
   if (!host) return;
-  const config = state.profile ? configText() : '';
-  const room = state.profile?.room ?? null;
+  const h = state.household;
+  const children = h?.children ?? [];
   if (host === 'android') {
-    ask(() => android.sync(config, room ? JSON.stringify(room) : ''));
+    // Avant la 0.6, l'app Android ne connaît qu'un enfant : celui affiché, avec son relevé.
+    if (androidMulti) {
+      const rooms = Object.fromEntries(children.filter((c) => c.room).map((c) => [c.id, c.room]));
+      ask(() => android.sync(h ? configText() : '', JSON.stringify(rooms)));
+    } else {
+      const room = state.profile?.room ?? null;
+      ask(() => android.sync(h ? encodeConfig(profileToConfig(state.profile), (x) => btoa(x)) : '', room ? JSON.stringify(room) : ''));
+    }
     state.widgets = ask(() => android.widgets(), state.widgets);
+    state.widgetKids = widgetKids();
     return;
   }
+  const config = h ? configText() : '';
+  // room= : le premier enfant, pour un widget iPhone dont le code n'est pas encore à jour.
+  const rooms = children.filter((c) => c.room).map((c) => `${c.id}:${c.room.value}@${c.room.at}`).join(',');
+  const first = children[0]?.room;
   let frame = document.getElementById('sb-sync');
   if (!frame) {
     frame = document.createElement('iframe');
@@ -198,38 +276,44 @@ function syncHost() {
     frame.hidden = true;
     document.body.appendChild(frame);
   }
-  frame.src = `superbebe-sync:?config=${encodeURIComponent(config)}${room ? `&room=${room.value}@${room.at}` : ''}`;
+  frame.src = `superbebe-sync:?config=${encodeURIComponent(config)}${rooms ? `&rooms=${rooms}` : ''}${first ? `&room=${first.value}@${first.at}` : ''}`;
 }
 
-// Réglages reçus du widget ou de l'app Android (#import=SB1.…) : ils remplacent les réglages de bébé et des sorties ;
-// garde-robe et relevé de la chambre sont conservés.
-function takeImport() {
-  const match = location.hash.match(/^#import=(SB1\.[\w-]+)/);
-  if (!match) return false;
-  history.replaceState(null, '', location.pathname + location.search);
-  const cfg = decodeConfig(match[1], (b64) => atob(b64));
-  if (!cfg) return false;
-  const p = state.profile;
-  // Sans code Insee (anciennes configurations), la position sert de clé pour la météo en cache.
-  const commune = { nom: cfg.n ?? '', code: cfg.c ?? `${cfg.la},${cfg.lo}`, dep: cfg.dp ?? '', cp: '', lat: cfg.la, lon: cfg.lo };
-  const same = Boolean(p) && p.commune.lat === commune.lat && p.commune.lon === commune.lon;
-  const settings = {
-    commune: same ? p.commune : commune,
-    birth: cfg.b,
-    transport: cfg.t ?? 'poussette',
-    outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
-    outing_duration_h: cfg.d ?? 1,
-    outfit_offset: cfg.o ?? 0,
-    outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
-  };
-  state.profile = p ? { ...p, ...settings } : { ...settings, inventory: {}, room: null, created: Date.now() };
-  store.saveProfile(state.profile);
-  if (!same) {
+// Foyer remplacé (configuration plus récente d'un widget, profils de l'autre parent) : météo à recharger si la commune change.
+function replaceHousehold(household) {
+  const before = state.household;
+  state.household = household;
+  store.saveProfile(household);
+  if (!household.children.some((c) => c.id === store.currentChild())) store.setCurrentChild(household.children[0].id);
+  refreshProfile();
+  if (!before || before.commune.lat !== household.commune.lat || before.commune.lon !== household.commune.lon) {
     state.forecast = null;
     state.climate = [];
     state.climateReady = false;
   }
-  return true;
+}
+
+// Réglages reçus du widget ou de l'app Android (#import=SB1.…) : ils remplacent ceux de l'app s'ils sont plus récents
+// (garde-robe et relevés des chambres conservés). ?enfant=… : l'enfant du widget touché.
+// #partage=SB1.… : profils envoyés par l'autre parent, appliqués après confirmation (écran « recevoir »).
+function takeImport() {
+  const params = new URLSearchParams(location.search);
+  const wanted = params.get('enfant');
+  const match = location.hash.match(/^#(import|partage)=(SB1\.[\w-]+)/);
+  if (match || wanted) {
+    params.delete('enfant');
+    const query = params.toString();
+    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${match ? '' : location.hash}`);
+  }
+  const cfg = match && decodeConfig(match[2], (b64) => atob(b64));
+  let changed = false;
+  if (cfg && match[1] === 'partage') state.received = cfg;
+  else if (cfg && isNewer(cfg, state.household)) {
+    replaceHousehold(fromConfig(cfg, state.household));
+    changed = true;
+  }
+  if (wanted && state.household?.children.some((c) => c.id === wanted)) showChild(wanted);
+  return changed;
 }
 
 let toastTimer = null;
@@ -273,7 +357,11 @@ async function copy(text) {
   }
 }
 
-const configText = () => encodeConfig(profileToConfig(state.profile), (s) => btoa(s));
+const configText = () => encodeConfig(householdToConfig(state.household), (s) => btoa(s));
+
+// Lien pour l'autre parent : les profils (prénoms compris) passent dans le message, jamais par un serveur.
+const profilesLink = () => `${new URL('./', location.href).href}#partage=${configText()}`;
+const childName = (c, i) => c.name || `Enfant ${i + 1}`;
 
 // iPhone : lien qui renvoie les réglages au widget (script Scriptable nommé « Superbébé »).
 const scriptableLink = () => (state.profile ? `scriptable:///run/${encodeURIComponent('Superbébé')}?config=${configText()}` : '');
@@ -290,7 +378,8 @@ function shareText(ctx) {
   const M = state.bundle.messages;
   const { result, date } = ctx;
   const w = result.outing.window;
-  const lines = [`Superbébé · ${dayLong(date)} · ${state.profile.commune.nom}`];
+  const name = state.profile.name ? `${state.profile.name} · ` : '';
+  const lines = [`Superbébé · ${name}${dayLong(date)} · ${state.profile.commune.nom}`];
   lines.push(w
     ? `Sortie idéale de ${hourFr(w.start)} à ${hourFr(w.end)}, ${Math.round(w.feels_c)} °C ressentis`
     : render(M, `outing.none.${result.outing.reason}`, 'text'));
@@ -300,22 +389,28 @@ function shareText(ctx) {
   return lines.join('\n');
 }
 
+// Sans prénom : seulement l'âge, le mode et la tendance de chaque enfant.
 function reportText() {
-  const p = state.profile;
+  const h = state.household;
   const days = [...store.days()].sort();
-  const transport = V.TRANSPORTS.find(([v]) => v === p.transport)?.[1] ?? p.transport;
-  const pref = { '-1': 'a chaud', 0: 'normal', 1: 'a froid' }[Math.sign(p.outfit_offset ?? 0)];
-  const owned = Object.values(p.inventory ?? {}).reduce((a, sizes) => a + sizes.length, 0);
+  const owned = h.children.reduce((n, c) => n + Object.values(c.inventory ?? {}).reduce((a, sizes) => a + sizes.length, 0), 0);
+  const kids = h.children.map((c) => {
+    const transport = V.TRANSPORTS.find(([v]) => v === c.transport)?.[1] ?? c.transport;
+    const pref = { '-1': 'a chaud', 0: 'normal', 1: 'a froid' }[Math.sign(c.outfit_offset ?? 0)];
+    return `${ageLabel(ageMonthsNow(c.birth))}, ${transport.toLowerCase()}, tendance ${pref}`;
+  });
   return [
     `Superbébé ${V.VERSION} · mes retours de test`,
     `Jours d'utilisation : ${days.length}${days.length ? ` (du ${dayShort(days[0])} au ${dayShort(days.at(-1))})` : ''}`,
-    `Sorties : ${transport}, de ${hourFr(p.outing_window.from)} à ${hourFr(p.outing_window.to)}, ${p.outing_duration_h} h`,
-    `Tendance de bébé : ${pref}`,
+    `Enfants : ${kids.join(' ; ')}`,
+    `Sorties : de ${hourFr(h.outing_window.from)} à ${hourFr(h.outing_window.to)}, ${h.outing_duration_h} h`,
     `Garde-robe : ${owned} article(s) ; ${store.hidden().length} suggestion(s) masquée(s)`,
     `Widget : ${(host === 'android' ? state.widgets > 0 : state.widgetReady) ? 'posé' : 'pas encore'}`,
     host === 'android' ? `App Android : ${ask(() => android.version(), '?')}` : `Ouverture : ${host === 'scriptable' ? 'depuis le widget iPhone' : standalone ? 'app installée' : 'navigateur'}`,
   ].join('\n');
 }
+
+const ageMonthsNow = (birth) => ageMonths(birth, parisNow().date);
 
 function validBirth(draft) {
   const birth = `${draft.birthYear}-${draft.birthMonth}`;
@@ -363,7 +458,7 @@ function changeCommune(commune) {
   state.draft.query = commune.nom;
   state.results = [];
   if (currentView() !== 'reglages') return;
-  updateProfile({ commune });
+  updateHousehold({ commune });
   state.forecast = null;
   state.climate = [];
   state.climateReady = false;
@@ -392,17 +487,98 @@ const actions = {
     state.pickedHour = state.pickedHour === el.dataset.hour ? null : el.dataset.hour;
     paint();
   },
+  kid(el) {
+    showChild(el.dataset.value);
+    paint();
+  },
+  // Sur la fiche d'un enfant, le brouillon suit ; un nouvel enfant n'est enregistré qu'au bouton « Ajouter ».
   transport(el) {
-    updateProfile({ transport: el.dataset.value });
+    const sheet = currentView() === 'enfant' ? state.draft : null;
+    if (sheet) sheet.transport = el.dataset.value;
+    if (sheet?.child !== 'nouveau') updateChild({ transport: el.dataset.value }, sheet?.child);
     paint();
   },
   pref(el) {
-    updateProfile({ outfit_offset: Number(el.dataset.value) });
+    const sheet = currentView() === 'enfant' ? state.draft : null;
+    if (sheet) sheet.offset = Number(el.dataset.value);
+    if (sheet?.child !== 'nouveau') updateChild({ outfit_offset: Number(el.dataset.value) }, sheet?.child);
     paint();
   },
   'outfit-view'(el) {
-    updateProfile({ outfit_view: el.dataset.value });
+    updateHousehold({ outfit_view: el.dataset.value });
     paint();
+  },
+  // Fiche « Ajouter un enfant » : enregistré d'un coup, puis affiché.
+  'child-add'() {
+    const d = state.draft;
+    const birth = validBirth(d);
+    if (!birth) {
+      paint();
+      return;
+    }
+    const child = newChild({ name: d.name.trim().slice(0, 24), birth, transport: d.transport, outfit_offset: d.offset });
+    updateHousehold({ children: [...state.household.children, child] });
+    showChild(child.id);
+    toast(`Profil de ${childName(child, state.household.children.length - 1)} ajouté.`);
+    location.hash = 'reglages';
+  },
+  'child-remove'() {
+    const d = state.draft;
+    if (state.household.children.length < 2) return;
+    if (!d.confirmRemove) {
+      d.confirmRemove = true;
+      paint();
+      return;
+    }
+    const children = state.household.children.filter((c) => c.id !== d.child);
+    updateHousehold({ children });
+    if (store.currentChild() === d.child) showChild(children[0].id);
+    location.hash = 'reglages';
+  },
+  async 'share-profiles'() {
+    const names = state.household.children.map(childName).join(' et ');
+    const text = `Les profils Superbébé (${names}) : ouvrez ce lien sur votre téléphone, ou collez-le dans Superbébé, Réglages, « Recevoir des profils ».\n${profilesLink()}`;
+    if (host === 'android' && ask(() => android.share(text), false) !== false) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Superbébé', text });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+    if (await copy(text)) toast('Lien copié : envoyez-le à l\'autre parent.');
+  },
+  'copy-profiles'() {
+    copy(`${new URL('./', location.href).href}#partage=${encodeConfig(state.received, (x) => btoa(x))}`)
+      .then((ok) => ok && toast('Lien copié : collez-le dans Superbébé, Réglages, « Recevoir des profils ».'));
+  },
+  'read-profiles'() {
+    const text = document.getElementById('profiles-link')?.value ?? '';
+    const code = text.match(/SB1\.[\w-]+/)?.[0];
+    const cfg = code && decodeConfig(code, (b64) => atob(b64));
+    if (!cfg) {
+      toast('Lien non reconnu : copiez tout le message reçu.');
+      return;
+    }
+    state.received = cfg;
+    paint();
+  },
+  'accept-profiles'() {
+    replaceHousehold({ ...fromConfig(state.received, state.household, { keepView: true }), updated: Date.now() });
+    const names = state.household.children.map(childName).join(', ');
+    state.received = null;
+    syncHost();
+    if (location.hash) location.hash = '';
+    else paint();
+    toast(`Profils reçus : ${names}.`);
+    store.markDay(parisNow().date);
+    loadData({ force: true });
+  },
+  'refuse-profiles'() {
+    state.received = null;
+    if (location.hash) location.hash = '';
+    else paint();
   },
   duration(el) {
     const d = Number(el.dataset.value);
@@ -410,25 +586,25 @@ const actions = {
       toast('La plage horaire est plus courte que cette durée.');
       return;
     }
-    updateProfile({ outing_duration_h: d });
+    updateHousehold({ outing_duration_h: d });
     paint();
   },
   room(el) {
     const p = state.profile;
     const base = freshRoom(p) ?? p.room?.value ?? 19;
     const value = clamp(Math.round((base + Number(el.dataset.value)) * 2) / 2, 10, 35);
-    updateProfile({ room: { value, at: Date.now() } });
+    updateChild({ room: { value, at: Date.now() } });
     paint();
   },
   own(el) {
     const inventory = { ...(state.profile.inventory ?? {}) };
     inventory[el.dataset.cat] = [...new Set([...(inventory[el.dataset.cat] ?? []), el.dataset.size])];
-    updateProfile({ inventory });
+    updateChild({ inventory });
     toast('Ajouté à votre garde-robe.');
     paint();
   },
   hide(el) {
-    store.hide(el.dataset.key);
+    store.hide(`${state.profile.id}|${el.dataset.key}`);
     toast('Suggestion masquée.');
     paint();
   },
@@ -438,7 +614,7 @@ const actions = {
     if (sizes.has(el.dataset.size)) sizes.delete(el.dataset.size);
     else sizes.add(el.dataset.size);
     inventory[el.dataset.cat] = [...sizes];
-    updateProfile({ inventory });
+    updateChild({ inventory });
     paint();
   },
   async share() {
@@ -508,19 +684,19 @@ const actions = {
     const d = state.draft;
     const birth = validBirth(d);
     if (!d.commune || !birth) return;
-    state.profile = {
+    const child = newChild({ name: d.name.trim().slice(0, 24), birth, transport: d.transport });
+    state.household = {
+      v: 2,
       commune: d.commune,
-      birth,
-      transport: d.transport,
       outing_window: { from: '09:00', to: '18:00' },
       outing_duration_h: 1,
-      outfit_offset: 0,
-      inventory: {},
-      room: null,
+      outfit_view: 'dessins',
+      children: [child],
       created: Date.now(),
+      updated: Date.now(),
     };
-    store.saveProfile(state.profile);
-    syncHost();
+    store.setCurrentChild(child.id);
+    saveHousehold();
     store.markDay(parisNow().date);
     state.draft = null;
     state.results = [];
@@ -541,8 +717,10 @@ const actions = {
     }
     paint();
   },
-  'add-widget'() {
-    if (!ask(() => android.addWidget(), false)) toast("Appui long sur l'écran d'accueil, Widgets, puis Superbébé.");
+  'add-widget'(el) {
+    const id = el.dataset.child;
+    const asked = id && androidMulti ? ask(() => android.addChildWidget(id), false) : ask(() => android.addWidget(), false);
+    if (!asked) toast("Appui long sur l'écran d'accueil, Widgets, puis Superbébé.");
   },
   'hide-promo'() {
     store.hidePromo();
@@ -584,6 +762,7 @@ const actions = {
       return;
     }
     store.clear();
+    state.household = null;
     state.profile = null;
     syncHost();
     location.hash = '';
@@ -593,6 +772,7 @@ const actions = {
 
 let searchTimer = null;
 document.addEventListener('input', (event) => {
+  if (event.target.id === 'child-name' && state.draft) state.draft.name = event.target.value;
   if (event.target.id !== 'commune-q' || !state.draft) return;
   state.draft.query = event.target.value;
   clearTimeout(searchTimer);
@@ -620,7 +800,12 @@ document.addEventListener('change', (event) => {
     if (id === 'birth-month') d.birthMonth = value;
     else d.birthYear = value;
     const birth = validBirth(d);
-    if (birth && currentView() === 'reglages') updateProfile({ birth });
+    if (birth && currentView() === 'enfant' && d.child !== 'nouveau') updateChild({ birth }, d.child);
+    paint();
+  }
+  // Prénom d'un enfant déjà enregistré : gardé dès qu'on quitte le champ.
+  if (id === 'child-name' && d && currentView() === 'enfant' && d.child !== 'nouveau') {
+    updateChild({ name: value.trim().slice(0, 24) }, d.child);
     paint();
   }
   if ((id === 'from' || id === 'to') && currentView() === 'reglages') {
@@ -629,7 +814,7 @@ document.addEventListener('change', (event) => {
       d.error = 'La plage doit être au moins aussi longue que la sortie.';
     } else {
       d.error = null;
-      updateProfile({ outing_window: next });
+      updateHousehold({ outing_window: next });
     }
     paint();
   }
@@ -700,9 +885,10 @@ document.addEventListener('visibilitychange', () => {
   if (host === 'android') {
     // Retour de la fenêtre « Ajouter le widget » ou de l'écran d'accueil.
     state.widgets = ask(() => android.widgets(), state.widgets);
+    state.widgetKids = widgetKids();
     if (currentView() !== 'onboarding') paint();
   }
-  if (!state.profile) return;
+  if (!state.household) return;
   const today = parisNow().date;
   if (today !== state.today) {
     state.today = today;
@@ -718,6 +904,13 @@ setInterval(() => {
   if (currentView() === 'app' && document.visibilityState === 'visible') paint();
 }, 5 * 60 * 1000);
 
+// Widget Android touché alors que l'app est déjà ouverte : elle passe à son enfant.
+window.sbChoisirEnfant = (id) => {
+  if (!state.household?.children.some((c) => c.id === id)) return;
+  showChild(id);
+  if (currentView() === 'app') paint();
+};
+
 async function boot() {
   takeImport();
   paint();
@@ -729,7 +922,7 @@ async function boot() {
     paint();
     return;
   }
-  if (state.profile) {
+  if (state.household) {
     const cached = store.forecast();
     if (cached?.code === state.profile.commune.code) {
       state.forecast = { ...cached, offline: false };
@@ -743,7 +936,7 @@ async function boot() {
   }
   paint();
   if (route() === 'widget') preloadLoader();
-  if (state.profile) loadData();
+  if (state.household) loadData();
 }
 
 boot();

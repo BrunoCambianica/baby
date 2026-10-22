@@ -21,7 +21,7 @@ import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-/** Récupère la météo, calcule les trois lignes et redessine le widget (toutes les 30 minutes). */
+/** Récupère la météo, calcule les lignes de chaque enfant et redessine les widgets (toutes les 30 minutes). */
 class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -29,7 +29,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val config = SbStore.config(c)
         val place = SbConfig.decode(config)
         if (config == null || place == null) {
-            SbStore.saveRender(c, "Superbébé", listOf("Ouvrez Superbébé pour choisir votre commune."), "")
+            SbStore.saveMessage(c, "Superbébé", "Ouvrez Superbébé pour choisir votre commune.")
             SbWidget().updateAll(c)
             return Result.success()
         }
@@ -44,7 +44,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         }
         val forecast = SbStore.forecast(c, key)
         if (forecast == null) {
-            SbStore.saveRender(c, place.name, listOf("Météo indisponible. Vérifiez la connexion."), "")
+            SbStore.saveMessage(c, place.name, "Météo indisponible. Vérifiez la connexion.")
             SbWidget().updateAll(c)
             return Result.success()
         }
@@ -53,7 +53,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val updated = Instant.ofEpochMilli(SbStore.forecastAt(c)).atZone(PARIS)
         val footer = (if (offline) "Hors ligne · " else "") +
             String.format(Locale.FRANCE, "Mis à jour à %02d h %02d · Open-Meteo", updated.hour, updated.minute)
-        val state = JSONObject().put("room", SbStore.room(c) ?: JSONObject.NULL)
+        val state = JSONObject().put("rooms", SbStore.rooms(c)).put("room", SbStore.room(c) ?: JSONObject.NULL)
         try {
             val out = SbEngine.compute(
                 c, forecast, config, state,
@@ -61,19 +61,15 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
                 String.format(Locale.ROOT, "%02d:%02d", now.hour, now.minute),
             )
             if (out.has("error")) throw IllegalStateException("configuration invalide")
-            val array = out.getJSONArray("lines")
-            SbStore.saveRender(
-                c, out.optString("place", place.name),
-                (0 until array.length()).map { array.get(it) }, footer, out.optString("theme", "nuageux"),
-            )
+            val children = out.getJSONArray("children")
+            SbStore.saveRenders(c, (0 until children.length()).map { children.getJSONObject(it).put("footer", footer) })
         } catch (e: SbEngine.Unsupported) {
-            SbStore.saveRender(
+            SbStore.saveMessage(
                 c, place.name,
-                listOf("Ce téléphone ne permet pas le calcul : mettez à jour « Android System WebView » dans le Play Store."),
-                "",
+                "Ce téléphone ne permet pas le calcul : mettez à jour « Android System WebView » dans le Play Store.",
             )
         } catch (e: Exception) {
-            SbStore.saveRender(c, place.name, listOf("Calcul impossible pour le moment.", e.message ?: ""), footer)
+            SbStore.saveMessage(c, place.name, "Calcul impossible pour le moment. ${e.message ?: ""}".trim(), footer)
         }
         SbWidget().updateAll(c)
         return Result.success()

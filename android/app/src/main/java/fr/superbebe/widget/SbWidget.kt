@@ -1,7 +1,10 @@
 package fr.superbebe.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -10,10 +13,11 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -31,16 +35,22 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 
-/** Widget d'écran d'accueil : trois lignes calculées par SbWorker sur un ciel assorti à la météo ; le toucher ouvre l'app. */
+/**
+ * Widget d'écran d'accueil : les lignes d'un enfant, calculées par SbWorker, sur un ciel assorti à la météo.
+ * Chaque widget garde son enfant (choisi à la pose ou dans l'app) ; le toucher ouvre l'app sur cet enfant.
+ */
 class SbWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val render = SbStore.render(context)
-        provideContent { Content(render) }
+        val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val render = SbStore.render(context, SbStore.widgetChild(context, widgetId))
+        // Une adresse par enfant, pour que chaque widget ouvre l'app sur le sien.
+        val open = Intent(context, MainActivity::class.java).setData(Uri.parse("superbebe://enfant/${Uri.encode(render.id)}"))
+        provideContent { Content(render, open) }
     }
 
     @Composable
-    private fun Content(render: SbStore.Render) {
+    private fun Content(render: SbStore.Render, open: Intent) {
         val white = ColorProvider(Color.White)
         val soft = ColorProvider(Color(0xD1FFFFFF))
         Column(
@@ -49,10 +59,10 @@ class SbWidget : GlanceAppWidget() {
                 .background(ImageProvider(background(render.theme)))
                 .cornerRadius(22.dp)
                 .padding(horizontal = 16.dp, vertical = 14.dp)
-                .clickable(actionStartActivity<MainActivity>()),
+                .clickable(actionStartActivity(open)),
         ) {
             Text(
-                text = "SUPERBÉBÉ · ${render.place.uppercase()}",
+                text = "${render.name.ifEmpty { "Superbébé" }} · ${render.place}".uppercase(),
                 style = TextStyle(color = soft, fontSize = 10.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
             )
@@ -125,5 +135,25 @@ class SbWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         SbWorker.refreshNow(context)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        SbStore.forgetWidgets(context, appWidgetIds)
+    }
+}
+
+/** Widget posé depuis l'app (« Ajouter le widget de Léo ») : Android renvoie son numéro, on y attache l'enfant. */
+class SbPinReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        val child = intent.getStringExtra(EXTRA_CHILD) ?: return
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        SbStore.setWidgetChild(context, widgetId, child)
+        SbWorker.refreshNow(context, replace = true)
+    }
+
+    companion object {
+        const val EXTRA_CHILD = "enfant"
     }
 }

@@ -220,13 +220,18 @@
     },
     "practical.rain.cover": {
       "kind": "pratique",
-      "text": "Pluie possible pendant la sortie : habillage pluie ou capuche.",
-      "short": "Pluie possible : habillage pluie"
+      "text": "Pluie possible pendant la sortie : prévoyez {gear}.",
+      "short": "Pluie possible : {gear_short}"
+    },
+    "practical.rain.cover_warm": {
+      "kind": "pratique",
+      "text": "Averse possible : l'habillage pluie seulement pendant l'averse, il retient la chaleur.",
+      "short": "Averse : habillage pluie le temps de l'averse"
     },
     "practical.rain.later": {
       "kind": "pratique",
-      "text": "Pluie prévue vers {hour} : prévoyez l'habillage pluie pour le retour.",
-      "short": "Pluie vers {hour} : habillage pluie"
+      "text": "Pluie prévue vers {hour} : prévoyez {gear} pour le retour.",
+      "short": "Pluie vers {hour} : {gear_short}"
     },
     "practical.wind": {
       "kind": "pratique",
@@ -237,6 +242,11 @@
       "kind": "pratique",
       "text": "En porte-bébé, votre chaleur réchauffe bébé : une couche de moins qu'en poussette.",
       "short": "Porte-bébé : une couche de moins"
+    },
+    "practical.walk.body_heat": {
+      "kind": "pratique",
+      "text": "À pied, il se réchauffe en marchant : une couche de moins qu'en poussette, à remettre s'il s'arrête ou remonte dans la poussette.",
+      "short": "À pied : une couche de moins"
     },
     "practical.carrier.no_footed": {
       "kind": "pratique",
@@ -364,7 +374,17 @@
       "chaussettes": "chaussettes",
       "chaussettes_chaudes": "chaussettes chaudes",
       "couverture_portage": "couverture de portage par-dessus",
-      "manteau_portage": "manteau ou couverture de portage par-dessus"
+      "manteau_portage": "manteau ou couverture de portage par-dessus",
+      "couverture_harnais": "couverture par-dessus le harnais",
+      "tshirt": "t-shirt",
+      "haut_ml": "haut à manches longues",
+      "veste": "veste ou manteau léger",
+      "manteau_chaud": "manteau chaud",
+      "combi_ski": "combinaison de ski",
+      "habillage_pluie": "habillage pluie",
+      "cape_pluie": "cape de pluie",
+      "impermeable": "imperméable à capuche",
+      "capuche": "capuche ou parapluie"
     },
     "items_short": {
       "body_leger": "body léger",
@@ -395,7 +415,17 @@
       "chaussettes": "chaussettes",
       "chaussettes_chaudes": "chaussettes chaudes",
       "couverture_portage": "couverture de portage",
-      "manteau_portage": "manteau de portage"
+      "manteau_portage": "manteau de portage",
+      "couverture_harnais": "couverture",
+      "tshirt": "t-shirt",
+      "haut_ml": "haut ML",
+      "veste": "veste",
+      "manteau_chaud": "manteau chaud",
+      "combi_ski": "combi de ski",
+      "habillage_pluie": "habillage pluie",
+      "cape_pluie": "cape de pluie",
+      "impermeable": "imperméable",
+      "capuche": "capuche"
     },
     "item_layers": {
       "body_leger": "peau",
@@ -418,6 +448,16 @@
       "combi_pilote_doublee": "dessus",
       "couverture_portage": "dessus",
       "manteau_portage": "dessus",
+      "couverture_harnais": "dessus",
+      "tshirt": "peau",
+      "haut_ml": "peau",
+      "veste": "dessus",
+      "manteau_chaud": "dessus",
+      "combi_ski": "dessus",
+      "habillage_pluie": "accessoire",
+      "cape_pluie": "accessoire",
+      "impermeable": "accessoire",
+      "capuche": "accessoire",
       "bonnet_fin": "accessoire",
       "bonnet": "accessoire",
       "moufles": "accessoire",
@@ -428,9 +468,16 @@
       "chapeau_si_soleil": "accessoire",
       "chanceliere": "accessoire"
     },
+    "rain_gear": {
+      "habillage_pluie": "l'habillage pluie",
+      "cape_pluie": "une cape de pluie",
+      "impermeable": "un imperméable à capuche",
+      "capuche": "une capuche ou un parapluie"
+    },
     "item_hints": {
       "gilet_fin": "à emporter",
-      "chapeau_si_soleil": "si soleil"
+      "chapeau_si_soleil": "si soleil",
+      "couverture_harnais": "par-dessus le harnais"
     },
     "bands": {
       "tres_chaud": "Très chaud",
@@ -451,6 +498,7 @@
       "gigoteuse_hiver": "gigoteuse chaude (≈ 2,5 TOG)",
       "gigoteuse_ete": "gigoteuse légère (≈ 0,5-1 TOG)",
       "combi_pilote": "combinaison pilote",
+      "manteau_hiver": "manteau chaud",
       "accessoires_hiver": "bonnet, moufles et chaussons",
       "chanceliere": "chancelière pour la poussette",
       "habillage_pluie": "habillage pluie pour la poussette",

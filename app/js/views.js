@@ -1,13 +1,16 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { hourFr, render, skyTheme, widgetLines } from '../../engine/engine.js';
+import { ageMonths, hourFr, render, skyTheme, widgetLines } from '../../engine/engine.js';
+import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
+import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.5.1';
+export const VERSION = '0.6.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
+  ['a_pied', 'À pied', 'walk'],
   ['voiture', 'Voiture', 'car'],
 ];
 const SLOT_FLAG = {
@@ -20,16 +23,22 @@ const SLOT_FLAG = {
 };
 const NOTE_ICON = {
   'practical.rain.cover': 'umbrella',
+  'practical.rain.cover_warm': 'umbrella',
   'practical.rain.later': 'umbrella',
   'practical.wind': 'wind',
   'practical.carrier.body_heat': 'carrier',
   'practical.carrier.no_footed': 'carrier',
+  'practical.walk.body_heat': 'walk',
 };
 const SCRIPTABLE_URL = 'https://apps.apple.com/fr/app/scriptable/id1405459188';
 
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 // Tenues en dessins (par défaut) ou en texte, au choix dans les réglages.
 const drawingsOn = (state) => state.profile?.outfit_view !== 'texte';
+const childName = (c, i) => c.name || `Enfant ${i + 1}`;
+// Le mode « à pied » n'est proposé qu'à partir de l'âge prévu par les règles (2 ans).
+const canWalk = (state, birth) => ageMonths(birth, state.today) >= state.bundle.rules.outfit.transport.a_pied.min_age_m;
+const modesFor = (state, birth) => TRANSPORTS.filter(([v]) => v !== 'a_pied' || canWalk(state, birth));
 const chev = (size = 18) => `<span class="chev">${icon('chevronRight', { size })}</span>`;
 const heroArt = (name) => `<div class="hero-art">${icon(name, { size: 150, stroke: 1.2 })}</div>`;
 // Nom court dans le texte, nom complet et titre au survol ; la liste complète est dans « Charte et sources ».
@@ -70,13 +79,31 @@ function birthSelects(draft, today) {
     const v = String(i + 1).padStart(2, '0');
     return `<option value="${v}"${draft.birthMonth === v ? ' selected' : ''}>${m}</option>`;
   }).join('');
-  const years = [year, year - 1, year - 2, year - 3]
+  const years = Array.from({ length: 6 }, (_, k) => year - k)
     .map((y) => `<option value="${y}"${draft.birthYear === String(y) ? ' selected' : ''}>${y}</option>`).join('');
   return `<div class="pair">
       <select id="birth-month" aria-label="Mois de naissance">${months}</select>
       <select id="birth-year" aria-label="Année de naissance">${years}</select>
     </div>
     ${draft.birthError ? `<p class="error">${esc(draft.birthError)}</p>` : ''}`;
+}
+
+// Prénom ou surnom, facultatif : il sert à distinguer les enfants et les widgets, et reste sur le téléphone.
+const nameField = (draft) => `<label class="field"><span>Prénom ou surnom <em>facultatif</em></span>
+    <input id="child-name" type="text" maxlength="24" autocomplete="off" autocapitalize="words" spellcheck="false" value="${esc(draft.name ?? '')}" placeholder="Par exemple : Léo">
+  </label>`;
+
+const TRANSPORT_TEXT = {
+  poussette: 'La tenue de sortie classique.',
+  porte_bebe: 'Une couche de moins, sans pyjama à pieds.',
+  a_pied: 'Il marche : une couche de moins qu\'en poussette.',
+  voiture: 'Sans manteau épais sous le harnais.',
+};
+function transportChoices(state, draft, birth) {
+  return `<div class="choices" role="radiogroup">${modesFor(state, birth).map(([v, title, ico]) => `
+    <button class="choice" role="radio" aria-checked="${draft.transport === v}" data-action="draft-transport" data-value="${v}">
+      <span class="choice-ico">${icon(ico)}</span><span><strong>${title}</strong><span>${TRANSPORT_TEXT[v]}</span></span>
+    </button>`).join('')}</div>`;
 }
 
 // Premier lancement : une question par écran.
@@ -89,26 +116,19 @@ export function viewOnboarding(state) {
     body = `<h2>Où vit bébé ?</h2>
       <p class="lead">Pour la météo de votre commune, rien d'autre.</p>
       ${communePicker(draft, results)}
-      <button class="btn" data-action="onboard-next"${draft.commune ? '' : ' disabled'}>Continuer</button>`;
+      <button class="btn" data-action="onboard-next"${draft.commune ? '' : ' disabled'}>Continuer</button>
+      <a class="link center" href="#recevoir">L'autre parent utilise déjà Superbébé ? Recevoir ses profils</a>`;
   } else if (step === 2) {
-    body = `<h2>Quand est né bébé ?</h2>
+    body = `<h2>Quand est né votre enfant ?</h2>
       <p class="lead">Pour adapter les repères et les tailles à son âge.</p>
       ${birthSelects(draft, today)}
+      ${nameField(draft)}
       <button class="btn" data-action="onboard-next">Continuer</button>
       <button class="link" data-action="onboard-back">Retour</button>`;
   } else {
-    const choices = [
-      ['poussette', 'Poussette', 'La tenue de sortie classique.'],
-      ['porte_bebe', 'Porte-bébé', 'Une couche de moins, sans pyjama à pieds.'],
-      ['voiture', 'Voiture', 'Sans manteau épais sous le harnais.'],
-    ];
-    const iconOf = Object.fromEntries(TRANSPORTS.map(([v, , i]) => [v, i]));
     body = `<h2>Comment sortez-vous le plus souvent ?</h2>
-      <p class="lead">Vous pourrez changer chaque jour.</p>
-      <div class="choices" role="radiogroup">${choices.map(([v, title, text]) => `
-        <button class="choice" role="radio" aria-checked="${draft.transport === v}" data-action="draft-transport" data-value="${v}">
-          <span class="choice-ico">${icon(iconOf[v])}</span><span><strong>${title}</strong><span>${text}</span></span>
-        </button>`).join('')}</div>
+      <p class="lead">Vous pourrez changer chaque jour. Un autre enfant ? Vous l'ajouterez ensuite dans les réglages.</p>
+      ${transportChoices(state, draft, `${draft.birthYear}-${draft.birthMonth}`)}
       <p class="fine">Les repères de santé viennent de sources publiques (Santé publique France, ministère de la Santé, Météo-France…), toujours citées : ce n'est pas un avis médical. Vos réglages restent sur ce téléphone.</p>
       <button class="btn" data-action="onboard-finish">C'est parti</button>
       <button class="link" data-action="onboard-back">Retour</button>`;
@@ -124,14 +144,19 @@ export function viewOnboarding(state) {
 }
 
 // Écran principal : un ciel qui donne la réponse, des cartes, trois onglets.
+// À partir de deux enfants, des pastilles choisissent l'enfant affiché ; les trois onglets le suivent.
 function heroTop(state, date) {
+  const children = state.household?.children ?? [];
+  const kids = children.length > 1
+    ? `<div class="kids" role="tablist" aria-label="Enfant">${children.map((c, i) => `<button class="glass" role="tab" aria-selected="${c.id === state.profile.id}" data-action="kid" data-value="${esc(c.id)}">${esc(childName(c, i))}</button>`).join('')}</div>`
+    : '';
   return `<div class="hero-top">
       <div>
         <a class="hero-place" href="#reglages">${icon('pin', { size: 18 })}${esc(state.profile.commune.nom)}</a>
         <p class="hero-date">${esc(dayLong(date))}</p>
       </div>
       <a class="glass glass-btn" href="#reglages" aria-label="Réglages">${icon('settings', { size: 20 })}</a>
-    </div>`;
+    </div>${kids}`;
 }
 
 function windowSlots(result) {
@@ -175,8 +200,8 @@ function heroSortir(state, ctx) {
   return `<header class="hero hero--${theme}">${heroArt(art)}${heroTop(state, date)}${days}${main}</header>`;
 }
 
-function modes(current) {
-  return `<div class="modes" role="radiogroup" aria-label="Mode de sortie">${TRANSPORTS.map(([v, l, i]) =>
+function modes(state, current, birth) {
+  return `<div class="modes" role="radiogroup" aria-label="Mode de sortie">${modesFor(state, birth).map(([v, l, i]) =>
     `<button role="radio" aria-checked="${current === v}" data-action="transport" data-value="${v}">${icon(i, { size: 22 })}${l}</button>`).join('')}</div>`;
 }
 
@@ -229,7 +254,7 @@ function outfitCard(state, ctx) {
       <button class="icon-btn" data-action="share" aria-label="Envoyer à la nounou ou au co-parent">${icon('share', { size: 18 })}</button>
     </div>
     ${pickedBar}
-    ${modes(state.profile.transport)}
+    ${modes(state, ctx.result.transport, state.profile.birth)}
     ${bandTitle(state, outfit)}
     ${dressList(state, outfit)}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
@@ -289,6 +314,7 @@ const promo = (title, text) => `<section class="card promo">
 
 function promoCard(state) {
   if (state.promoHidden || state.host === 'scriptable') return '';
+  const one = state.profile.count > 1 ? ` de ${esc(childName(state.profile, state.profile.index))}` : '';
   // Dans un onglet du navigateur, d'abord l'app en plein écran ; le widget ensuite.
   if (state.inBrowser) {
     return state.device === 'android'
@@ -296,7 +322,7 @@ function promoCard(state) {
       : promo('Superbébé en plein écran', 'Sans les barres de Safari : bouton Partager, puis « Sur l\'écran d\'accueil ». Ouvrez ensuite Superbébé depuis son icône.');
   }
   if (state.host === 'android') {
-    return state.widgets ? '' : promo('Ajoutez le widget', `La réponse du jour sur l'écran d'accueil, sans ouvrir l'app. <button class="link" data-action="add-widget">Ajouter</button>`);
+    return state.widgets ? '' : promo(`Ajoutez le widget${one}`, `La réponse du jour sur l'écran d'accueil, sans ouvrir l'app. <button class="link" data-action="add-widget" data-child="${esc(state.profile.id)}">Ajouter</button>`);
   }
   return state.widgetReady ? '' : promo('Ajoutez le widget', `La réponse du jour sur l'écran d'accueil, sans ouvrir l'app. <a class="link" href="#widget">Comment faire</a>`);
 }
@@ -346,7 +372,7 @@ function heroNuit(state, ctx) {
     below: ['warn', `Un peu frais : sous ${range.min} °C`],
   }[n.room_status];
   return `<header class="hero hero--nuit">${heroArt('moonStars')}${heroTop(state, ctx.date)}
-    <p class="hero-label">Ce soir · chambre de bébé</p>
+    <p class="hero-label">Ce soir · chambre ${state.profile.count > 1 ? `de ${esc(childName(state.profile, state.profile.index))}` : 'de bébé'}</p>
     <div class="stepper">
       <button class="glass glass-btn" data-action="room" data-value="-0.5" aria-label="Baisser d'un demi-degré">${icon('minus')}</button>
       <p class="hero-big${known ? '' : ' pending'}" aria-live="polite">${decimal(value)}°</p>
@@ -361,8 +387,9 @@ function heroNuit(state, ctx) {
 function nuitContent(state, ctx) {
   const M = state.bundle.messages;
   const n = ctx.result.night;
-  const basics = M.messages['relay.sleep.basics'];
-  const facts = [...(basics.list ?? [basics.short]), ...n.relays.filter((id) => id !== 'relay.sleep.basics').map((id) => render(M, id, 'short'))];
+  // Les repères du couchage du nourrisson (liste détaillée) ne concernent que les moins de 2 ans.
+  const basics = n.relays.includes('relay.sleep.basics') ? M.messages['relay.sleep.basics'] : null;
+  const facts = [...(basics ? basics.list ?? [basics.short] : []), ...n.relays.filter((id) => id !== 'relay.sleep.basics').map((id) => render(M, id, 'short'))];
   const sources = [...new Set(n.relays.flatMap((id) => M.messages[id]?.sources ?? []))];
   return `${nightWearCard(state, n)}
     <section class="card">
@@ -479,34 +506,30 @@ export function viewApp(state, ctx) {
 
 // Réglages, façon réglages iOS : enregistrés dès qu'on les change.
 export function viewSettings(state) {
-  const { draft, results, profile, today } = state;
+  const { draft, results, profile } = state;
   const hours = (from, to) => Array.from({ length: to - from + 1 }, (_, k) => `${String(from + k).padStart(2, '0')}:00`);
-  const pref = Math.sign(profile.outfit_offset ?? 0);
+  const label = Object.fromEntries(TRANSPORTS.map(([v, l]) => [v, l]));
+  const kids = state.household.children.map((c, i) => `<a class="row" href="#enfant/${esc(c.id)}">
+      <span>${esc(childName(c, i))}<span class="hint"> · ${esc(ageLabel(ageMonths(c.birth, state.today)))} · ${esc(label[c.transport] ?? '')}</span></span>${chev()}</a>`).join('');
   return `<header class="page-head"><a class="back" href="#">${icon('chevronLeft')}Retour</a><h1>Réglages</h1></header>
   <div class="page">
-    <section class="group"><h2 class="group-title">Bébé</h2>
+    <section class="group"><h2 class="group-title">Enfants</h2>
       <div class="group-body">
-        <div class="row column"><span>Commune</span>${communePicker(draft, results)}</div>
-        <div class="row column"><span>Mois de naissance</span>${birthSelects(draft, today)}</div>
-        <div class="row column"><span>Tendance de bébé</span>
-          <div class="seg" role="radiogroup" aria-label="Tendance de bébé">${[[-1, 'A chaud'], [0, 'Normal'], [1, 'A froid']].map(([v, l]) =>
-            `<button role="radio" aria-checked="${pref === v}" data-action="pref" data-value="${v}">${l}</button>`).join('')}</div>
-        </div>
+        ${kids}
+        <a class="row" href="#enfant/nouveau"><span>Ajouter un enfant</span>${icon('userPlus', { size: 20 })}</a>
       </div>
-      <p class="group-note">« A chaud » allège toutes les tenues d'un cran, « A froid » les réchauffe d'un cran.</p>
+      <p class="group-note">Mois de naissance, mode de sortie et tendance de chacun. Prénoms et réglages restent sur ce téléphone.</p>
     </section>
-    <section class="group"><h2 class="group-title">Affichage</h2>
+    <section class="group"><h2 class="group-title">Avec l'autre parent</h2>
       <div class="group-body">
-        <div class="row column"><span>Tenues</span>
-          <div class="seg" role="radiogroup" aria-label="Affichage des tenues">${[['dessins', 'Dessins'], ['texte', 'Texte']].map(([v, l]) =>
-            `<button role="radio" aria-checked="${(profile.outfit_view ?? 'dessins') === v}" data-action="outfit-view" data-value="${v}">${l}</button>`).join('')}</div>
-        </div>
+        <button class="row" data-action="share-profiles"><span>Envoyer les profils</span>${icon('share', { size: 20 })}</button>
+        <a class="row" href="#recevoir"><span>Recevoir des profils</span>${chev()}</a>
       </div>
-      <p class="group-note">Dans l'app et le widget : un petit dessin par vêtement, ou la liste écrite.</p>
+      <p class="group-note">Un lien à envoyer par message : il contient les prénoms et les réglages, et ne passe par aucun serveur de Superbébé. Les changements faits ensuite ne se transmettent pas tout seuls.</p>
     </section>
     <section class="group"><h2 class="group-title">Sorties</h2>
       <div class="group-body">
-        <div class="row column"><span>Le plus souvent</span>${modes(profile.transport)}</div>
+        <div class="row column"><span>Commune</span>${communePicker(draft, results)}</div>
         <div class="row column"><span>Plage horaire</span>
           <div class="pair">
             <select id="from" aria-label="Début">${hours(6, 20).map((h) => `<option value="${h}"${profile.outing_window.from === h ? ' selected' : ''}>de ${hourFr(h)}</option>`).join('')}</select>
@@ -519,6 +542,16 @@ export function viewSettings(state) {
             `<button role="radio" aria-checked="${profile.outing_duration_h === d}" data-action="duration" data-value="${d}">${d} h</button>`).join('')}</div>
         </div>
       </div>
+      <p class="group-note">Les mêmes pour tous les enfants.</p>
+    </section>
+    <section class="group"><h2 class="group-title">Affichage</h2>
+      <div class="group-body">
+        <div class="row column"><span>Tenues</span>
+          <div class="seg" role="radiogroup" aria-label="Affichage des tenues">${[['dessins', 'Dessins'], ['texte', 'Texte']].map(([v, l]) =>
+            `<button role="radio" aria-checked="${(profile.outfit_view ?? 'dessins') === v}" data-action="outfit-view" data-value="${v}">${l}</button>`).join('')}</div>
+        </div>
+      </div>
+      <p class="group-note">Dans l'app et le widget : un petit dessin par vêtement, ou la liste écrite.</p>
     </section>
     ${homeScreenGroup(state)}
     <section class="group"><h2 class="group-title">Application</h2>
@@ -532,11 +565,73 @@ export function viewSettings(state) {
   </div>`;
 }
 
+// Fiche d'un enfant : enregistrée dès qu'on la change ; « Ajouter un enfant » ne l'enregistre qu'au bouton.
+export function viewChild(state) {
+  const d = state.draft;
+  const fresh = d.child === 'nouveau';
+  const index = state.household.children.findIndex((c) => c.id === d.child);
+  const title = fresh ? 'Nouvel enfant' : childName({ name: d.name }, index);
+  const birth = `${d.birthYear}-${d.birthMonth}`;
+  const pref = Math.sign(d.offset ?? 0);
+  const remove = !fresh && state.household.children.length > 1
+    ? `<section class="group"><div class="group-body"><button class="row danger" data-action="child-remove">${d.confirmRemove ? 'Toucher à nouveau pour retirer ce profil' : `Retirer ${esc(title)}`}</button></div></section>`
+    : '';
+  return `<header class="page-head"><a class="back" href="#reglages">${icon('chevronLeft')}Réglages</a><h1>${esc(title)}</h1></header>
+  <div class="page">
+    <section class="group">
+      <div class="group-body">
+        <div class="row column">${nameField(d)}</div>
+        <div class="row column"><span>Mois de naissance</span>${birthSelects(d, state.today)}</div>
+        <div class="row column"><span>Le plus souvent</span>${modes(state, d.transport, birth)}</div>
+        <div class="row column"><span>Tendance</span>
+          <div class="seg" role="radiogroup" aria-label="Tendance">${[[-1, 'A chaud'], [0, 'Normal'], [1, 'A froid']].map(([v, l]) =>
+            `<button role="radio" aria-checked="${pref === v}" data-action="pref" data-value="${v}">${l}</button>`).join('')}</div>
+        </div>
+      </div>
+      <p class="group-note">« A chaud » allège toutes ses tenues d'un cran, « A froid » les réchauffe d'un cran. « À pied » apparaît à partir de 2 ans.</p>
+    </section>
+    ${fresh ? '<button class="btn" data-action="child-add">Ajouter</button>' : remove}
+  </div>`;
+}
+
+// Profils reçus de l'autre parent : ce qu'ils contiennent, puis l'accord. Sans lien reçu, un champ pour le coller.
+export function viewReceive(state) {
+  const cfg = state.received;
+  const back = state.household
+    ? `<a class="back" href="#reglages">${icon('chevronLeft')}Réglages</a>`
+    : `<a class="back" href="#">${icon('chevronLeft')}Retour</a>`;
+  if (!cfg) {
+    return `<header class="page-head">${back}<h1>Recevoir des profils</h1>
+      <p class="lead">Collez le lien envoyé par l'autre parent.</p></header>
+    <div class="page">
+      <section class="group"><div class="group-body"><div class="row column">
+        <textarea id="profiles-link" rows="4" placeholder="https://…#partage=SB1…" aria-label="Lien reçu"></textarea>
+      </div></div></section>
+      <button class="btn" data-action="read-profiles">Continuer</button>
+    </div>`;
+  }
+  const label = Object.fromEntries(TRANSPORTS.map(([v, l]) => [v, l]));
+  const kids = configChildren(cfg).map((c, i) => `<div class="row"><span>${esc(childName(c, i))}</span>
+      <span class="value">${esc(ageLabel(ageMonths(c.birth, state.today)))} · ${esc(label[c.transport] ?? '')}</span></div>`).join('');
+  const h = state.household;
+  const replaces = h
+    ? `<p class="group-note">Ils remplacent les réglages de ce téléphone (${esc(h.commune.nom)} : ${esc(h.children.map(childName).join(', '))}). Garde-robe et relevés de la chambre sont gardés pour les mêmes enfants.</p>`
+    : '';
+  return `<header class="page-head">${back}<h1>Profils reçus</h1>
+      <p class="lead">Envoyés par l'autre parent, pour ${esc(cfg.n || 'votre commune')}.</p></header>
+    <div class="page">
+      <section class="group"><div class="group-body">${kids}</div>${replaces}</section>
+      <button class="btn" data-action="accept-profiles">Utiliser ces profils</button>
+      <button class="link" data-action="refuse-profiles">Ne pas les utiliser</button>
+      ${state.host ? '' : `<p class="fine">Vous utilisez Superbébé depuis l'icône de l'écran d'accueil ? Elle garde ses propres réglages : <button class="link" data-action="copy-profiles">copiez le lien</button>, puis dans l'app : Réglages, « Recevoir des profils ».</p>`}
+    </div>`;
+}
+
 // Réglages : le widget selon le téléphone. Dans l'app Android, un seul bouton ; ouverte depuis le widget iPhone, rien.
 function homeScreenGroup(state) {
   if (state.host === 'scriptable') return '';
   const rows = state.host === 'android'
-    ? `<button class="row" data-action="add-widget"><span>${state.widgets ? 'Ajouter un autre widget' : 'Ajouter le widget'}</span>${icon('plus', { size: 20 })}</button>`
+    ? androidWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('plus', { size: 20 })}</button>`)
     : `<a class="row" href="#widget"><span>Ajouter le widget</span>${chev()}</a>
         ${state.device === 'ios' && state.widgetReady && state.updateLink ? `<a class="row" href="${esc(state.updateLink)}"><span>Envoyer mes réglages au widget</span>${icon('refresh', { size: 20 })}</a>` : ''}
         ${state.installPrompt ? `<button class="row" data-action="install"><span>Installer l'app</span>${icon('download', { size: 20 })}</button>` : ''}`;
@@ -544,6 +639,26 @@ function homeScreenGroup(state) {
     ? '<p class="group-note">Après un changement de commune ou de réglage, touchez « Envoyer mes réglages au widget ».</p>'
     : '';
   return `<section class="group"><h2 class="group-title">Écran d'accueil</h2><div class="group-body">${rows}</div>${note}</section>`;
+}
+
+// App Android : un bouton par enfant (Android attache l'enfant au widget posé), ou un seul bouton pour un enfant.
+function androidWidgetRows(state, button) {
+  const children = state.household.children;
+  if (children.length < 2) {
+    return button(state.widgets ? 'Ajouter un autre widget' : 'Ajouter le widget', `data-action="add-widget" data-child="${esc(children[0].id)}"`);
+  }
+  return children.map((c, i) => {
+    const placed = state.widgetKids?.[c.id] ?? 0;
+    return button(`${placed ? 'Un autre widget' : 'Le widget'} de ${esc(childName(c, i))}`, `data-action="add-widget" data-child="${esc(c.id)}"`);
+  }).join('');
+}
+
+// iPhone : un widget par enfant, choisi par le champ Parameter du widget.
+function iosKidsHint(state) {
+  const children = state.household.children;
+  if (children.length < 2) return '';
+  const names = children.map((c, i) => `<strong>${esc(c.name || String(i + 1))}</strong>`).join(' ou ');
+  return `<p class="fine">Un widget par enfant : posez-en un pour chacun, puis appui long sur le widget, Modifier le widget, Parameter : ${names}.</p>`;
 }
 
 // Pose du widget sur iPhone en trois vignettes : les écrans tels qu'on les voit, l'endroit à toucher en bleu.
@@ -586,6 +701,7 @@ export function viewWidget(state, ctx) {
     <li class="step${at(4)}">${num(4)}<div class="step-body"><h3>Poser le widget</h3>
       ${widgetHowTo()}
       <button class="btn small soft" data-step="4">C'est fait</button>
+      ${iosKidsHint(state)}
       <p class="fine">Toucher le widget ouvre ensuite Superbébé en plein écran. Écran verrouillé : appui long dessus, Personnaliser, puis un widget Scriptable.</p></div></li>`;
   const android = `
     <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Télécharger l'app Superbébé</h3>
@@ -597,13 +713,15 @@ export function viewWidget(state, ctx) {
       <a class="btn small tint" href="${esc(state.androidLink)}" data-step="3" data-ready>Ouvrir l'app Superbébé</a>
       <p>Vos réglages y sont repris : rien à ressaisir.</p></div></li>
     <li class="step${done(4)}">${num(4)}<div class="step-body"><h3>Poser le widget</h3>
-      <p>Dans l'app : <strong>Ajouter</strong> sur la carte « Ajoutez le widget », ou Réglages, Ajouter le widget.</p>
+      <p>Dans l'app : <strong>Ajouter</strong> sur la carte « Ajoutez le widget », ou Réglages, Ajouter le widget${state.household.children.length > 1 ? ' : un bouton par enfant' : ''}.</p>
       <p class="fine">Utilisez ensuite l'icône de l'app Superbébé ; celle installée depuis le navigateur peut être retirée.</p></div></li>`;
   const inApp = `
     <li class="step${state.widgets ? ' done' : ''}"><span class="step-num">${state.widgets ? icon('check', { size: 16 }) : 1}</span><div class="step-body">
       <h3>${state.widgets ? 'Widget posé' : 'Poser le widget'}</h3>
-      <button class="btn small tint" data-action="add-widget">${state.widgets ? 'Ajouter un autre widget' : "Ajouter à l'écran d'accueil"}</button>
-      <p>Android demande de confirmer. Sinon : appui long sur l'écran d'accueil, Widgets, puis Superbébé.</p>
+      ${state.household.children.length > 1
+        ? androidWidgetRows(state, (label, attrs) => `<button class="btn small tint" ${attrs}>${label}</button>`)
+        : `<button class="btn small tint" data-action="add-widget" data-child="${esc(state.profile.id)}">${state.widgets ? 'Ajouter un autre widget' : "Ajouter à l'écran d'accueil"}</button>`}
+      <p>Android demande de confirmer. Sinon : appui long sur l'écran d'accueil, Widgets, puis Superbébé${state.household.children.length > 1 ? ', et choisissez l\'enfant' : ''}.</p>
       <p class="fine">Le widget suit vos réglages et le relevé de la chambre, sans rien copier. Le toucher ouvre l'app.</p></div></li>`;
   const tabs = state.host === 'android' ? '' : `<div class="seg" role="tablist" aria-label="Téléphone">${[['ios', 'iPhone'], ['android', 'Android']].map(([v, l]) =>
     `<button role="tab" aria-selected="${state.platform === v}" data-action="platform" data-value="${v}">${l}</button>`).join('')}</div>`;
@@ -611,7 +729,7 @@ export function viewWidget(state, ctx) {
   return `<header class="page-head"><a class="back" href="#">${icon('chevronLeft')}Retour</a><h1>Le widget</h1>
     <p class="lead">La réponse du jour sur l'écran d'accueil, sans ouvrir l'app.</p></header>
   <div class="page">
-    <div class="widget-demo hero--${theme}"><p class="w-head">Superbébé · ${esc(state.profile.commune.nom)}</p>${lines.map((l) => (typeof l === 'string'
+    <div class="widget-demo hero--${theme}"><p class="w-head">${esc(state.profile.name || 'Superbébé')} · ${esc(state.profile.commune.nom)}</p>${lines.map((l) => (typeof l === 'string'
       ? `<p class="w-line">${esc(l)}</p>`
       : `<p class="w-line w-drawings" aria-label="${esc(l.label)}">${l.drawings.map((id) => drawingSvg(id, { size: 22 })).join('')}${l.text ? `<span>${esc(l.text)}</span>` : ''}</p>`)).join('')}</div>
     ${tabs}
@@ -639,7 +757,9 @@ export function viewAbout(state) {
     </section>
     <section class="group"><h2 class="group-title">Confidentialité</h2>
       <div class="group-body"><div class="row column prose"><ul>
-        <li>Pas de compte : vos réglages restent sur ce téléphone.</li>
+        <li>Pas de compte : vos réglages et les prénoms restent sur ce téléphone.</li>
+        <li>« Envoyer les profils » crée un lien qui contient les prénoms et les réglages : il passe par la messagerie que vous choisissez, jamais par un serveur de Superbébé.</li>
+        <li>Widget iPhone : le script copié dans Scriptable contient les réglages et les prénoms ; selon vos réglages iCloud, Scriptable peut le ranger dans iCloud Drive.</li>
         <li>La météo est demandée à Open-Meteo avec les coordonnées du centre de la commune, rien d'autre.</li>
         <li>« Ma position » envoie une position arrondie à environ 1 km à geo.api.gouv.fr, sans la conserver.</li>
         <li>Ni publicité, ni mesure d'audience.</li>

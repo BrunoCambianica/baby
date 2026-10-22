@@ -1,6 +1,6 @@
 // Service worker : l'app et les règles restent disponibles hors ligne.
 // Changer VERSION à chaque mise en ligne pour que les téléphones récupèrent la nouvelle version.
-const VERSION = '0.5.1';
+const VERSION = '0.6.0';
 const CACHE = `superbebe-${VERSION}`;
 const ASSETS = [
   './',
@@ -11,6 +11,7 @@ const ASSETS = [
   'js/views.js',
   'js/data.js',
   'js/storage.js',
+  'js/household.js',
   'js/format.js',
   'js/icons.js',
   'icons/icon-192.png',
