@@ -112,9 +112,10 @@
       "source": "fabricants-tog",
       "round_room_temp": true,
       "bins": [
-        { "max_c": 15, "tog": "3,5", "wear": ["body_ml", "pyjama_chaud"] },
-        { "max_c": 20, "tog": "2,5", "wear": ["body_ml", "pyjama"] },
-        { "max_c": 24, "tog": "1", "wear": ["body_mc", "pyjama_leger"] },
+        { "max_c": 15, "tog": "3,5", "wear": ["body_leger", "pyjama_chaud"] },
+        { "max_c": 17, "tog": "2,5", "wear": ["body_leger", "pyjama"] },
+        { "max_c": 20, "tog": "2,5", "wear": ["body_ml"] },
+        { "max_c": 24, "tog": "1", "wear": ["pyjama_leger"] },
         { "max_c": 27, "tog": "0,5", "wear": ["body_mc"] },
         { "max_c": null, "tog": "0,2", "wear": ["body_leger"] }
       ]

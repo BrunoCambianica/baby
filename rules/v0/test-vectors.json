@@ -394,19 +394,25 @@
         "night.room_status": "unknown",
         "night.room_assumed": true,
         "night.tog": "2,5",
-        "night.wear": ["body_ml", "pyjama"],
+        "night.wear": ["body_ml"],
         "night.relays.include": ["relay.sleep.basics", "relay.sleep.room_range", "relay.sleep.check_temp"],
         "night.relays.exclude": ["relay.sleep.season_thickness"],
         "widget.lines.length": 3,
         "widget.lines.0.contains": "18 à 20",
-        "widget.lines.1.contains": "Body ML + pyjama + gigoteuse ≈ 2,5 TOG"
+        "widget.lines.1.contains": "Body ML + gigoteuse ≈ 2,5 TOG"
       }
     },
     {
       "id": "nuit-froide-tenue",
-      "description": "Chambre à 14 °C : body manches longues, pyjama chaud et 3,5 TOG",
+      "description": "Chambre à 14 °C : body sans manches, pyjama chaud et 3,5 TOG (tableau ergoPouch)",
       "input": { "now": "20:30", "profile": { "room_temp_c": 14 } },
-      "expect": { "night.room_assumed": false, "night.tog": "3,5", "night.wear": ["body_ml", "pyjama_chaud"] }
+      "expect": { "night.room_assumed": false, "night.tog": "3,5", "night.wear": ["body_leger", "pyjama_chaud"] }
+    },
+    {
+      "id": "nuit-17-tenue",
+      "description": "Chambre à 17 °C : body sans manches et pyjama sous 2,5 TOG",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 17 } },
+      "expect": { "night.tog": "2,5", "night.wear": ["body_leger", "pyjama"] }
     },
     {
       "id": "soir-apres-derniere-sortie",

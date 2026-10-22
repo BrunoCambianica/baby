@@ -298,8 +298,8 @@ await test('Le soir : ligne nuit et TOG selon le relevé de la chambre', async (
   const out = await run({ files, at: '2026-10-21T20:30:00+02:00' });
   assert(out.texts[1].includes('21,5'), out.texts[1]);
   const row = out.widget.rows[0];
-  // Chambre à 21,5 °C : body manches courtes et pyjama léger sous une gigoteuse de 1 TOG.
-  assert(row.images.length === 3 && row.texts[0].text === '≈ 1 TOG', `${row.images.length} dessins, ${JSON.stringify(row.texts)}`);
+  // Chambre à 21,5 °C : un pyjama léger sous une gigoteuse de 1 TOG.
+  assert(row.images.length === 2 && row.texts[0].text === '≈ 1 TOG', `${row.images.length} dessins, ${JSON.stringify(row.texts)}`);
   const texte = await run({ files, param: TEXTE, at: '2026-10-21T20:30:00+02:00' });
   assert(texte.texts[2].includes('TOG'), texte.texts[2]);
 });
@@ -454,8 +454,8 @@ await test('Android : le moteur embarqué renvoie le lieu et trois lignes', asyn
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
   assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit', JSON.stringify(out));
   assert(out.lines.length === 3 && out.lines[0].includes('19'), JSON.stringify(out.lines));
-  assert(out.lines[1].drawings?.join() === 'body_ml,pyjama,gigoteuse' && out.lines[1].text === '≈ 2,5 TOG', JSON.stringify(out.lines[1]));
-  assert(out.lines[1].label === 'Body ML + pyjama + gigoteuse ≈ 2,5 TOG', out.lines[1].label);
+  assert(out.lines[1].drawings?.join() === 'body_ml,gigoteuse' && out.lines[1].text === '≈ 2,5 TOG', JSON.stringify(out.lines[1]));
+  assert(out.lines[1].label === 'Body ML + gigoteuse ≈ 2,5 TOG', out.lines[1].label);
   const day = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {}, "2026-10-21", "07:30");`, vm.createContext({})));
   assert(day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines[1]));
   const texte = JSON.parse(vm.runInContext(call.replace(JSON.stringify(CONFIG), JSON.stringify(TEXTE)), vm.createContext({})));
