@@ -20,6 +20,7 @@ const code = [
   '// Réglages ajoutés au chargeur par l\'app au moment de la copie (les anciens chargeurs n\'en ont pas).',
   "const SB_CONFIG_LOADER = typeof SB_CONFIG_FROM_LOADER === 'string' ? SB_CONFIG_FROM_LOADER : '';",
   `const SB_RULES = ${JSON.stringify({ rules, messages })};`,
+  strip(read('engine/drawings.js')),
   strip(read('engine/engine.js')),
   strip(read('engine/adapter.js')),
   read('widget/main.scriptable.js'),
@@ -42,6 +43,7 @@ writeFileSync(join(ROOT, 'widget', 'superbebe-autonome.js'), `${scriptableHeader
 const android = [
   `// Superbébé ${version}, moteur pour le widget Android. Fichier généré par tools/build-widget.js.`,
   `const SB_RULES = ${JSON.stringify({ rules, messages })};`,
+  strip(read('engine/drawings.js')),
   strip(read('engine/engine.js')),
   strip(read('engine/adapter.js')),
   read('android/entry.js'),

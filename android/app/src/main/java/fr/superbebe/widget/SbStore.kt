@@ -10,7 +10,10 @@ object SbStore {
     const val DEFAULT_BASE_URL = "https://brunocambianica.github.io/baby/"
     private const val ROOM_TTL_MS = 16 * 3600 * 1000L
 
-    data class Render(val place: String, val lines: List<String>, val footer: String, val theme: String)
+    /** Ligne du widget : un texte, ou une rangée de dessins (identifiants de engine/drawings.js) suivie d'un texte. */
+    data class Line(val text: String, val drawings: List<String> = emptyList(), val label: String = text)
+
+    data class Render(val place: String, val lines: List<Line>, val footer: String, val theme: String)
 
     private fun prefs(context: Context) = context.getSharedPreferences("superbebe", Context.MODE_PRIVATE)
 
@@ -79,16 +82,25 @@ object SbStore {
     fun render(context: Context): Render {
         val p = prefs(context)
         val array = runCatching { JSONArray(p.getString("lines", "[]")) }.getOrDefault(JSONArray())
-        val lines = (0 until array.length()).map { array.getString(it) }
+        val lines = (0 until array.length()).map { i ->
+            val item = array.opt(i)
+            if (item is JSONObject) {
+                val ids = item.optJSONArray("drawings") ?: JSONArray()
+                Line(item.optString("text"), (0 until ids.length()).map { ids.getString(it) }, item.optString("label"))
+            } else {
+                Line(item?.toString() ?: "")
+            }
+        }
         return Render(
             place = p.getString("place", null) ?: "Superbébé",
-            lines = lines.ifEmpty { listOf("Ouvrez Superbébé pour choisir votre commune.") },
+            lines = lines.ifEmpty { listOf(Line("Ouvrez Superbébé pour choisir votre commune.")) },
             footer = p.getString("footer", null) ?: "",
             theme = p.getString("theme", null) ?: "nuageux",
         )
     }
 
-    fun saveRender(context: Context, place: String, lines: List<String>, footer: String, theme: String = "nuageux") {
+    /** `lines` : textes, ou objets { drawings, text, label } renvoyés par le moteur pour la tenue en dessins. */
+    fun saveRender(context: Context, place: String, lines: List<Any>, footer: String, theme: String = "nuageux") {
         prefs(context).edit()
             .putString("place", place)
             .putString("lines", JSONArray(lines).toString())

@@ -21,7 +21,8 @@ cp app/build/outputs/apk/debug/app-debug.apk ../dist/superbebe-android.apk
 | `MainActivity.kt` | Affiche l'app web en plein écran et lui offre le pont `SuperbebeAndroid` : réglages et relevé de la chambre vers le widget, couleurs des barres du système, pose du widget, partage. Reprend la configuration envoyée depuis Chrome (lien `superbebe://config/SB1.…`). Propose l'APK publié s'il est plus récent (`dist/android-version.json`) |
 | `SbWorker.kt` | Toutes les 30 minutes : météo Open-Meteo, appel du moteur, enregistrement des trois lignes |
 | `SbEngine.kt` | Exécute le moteur JavaScript dans le bac à sable |
-| `SbWidget.kt` | Widget Glance : affiche les lignes sur un ciel assorti à la météo (`res/drawable/widget_bg_*`) ; le toucher ouvre l'app |
+| `SbWidget.kt` | Widget Glance : affiche les lignes sur un ciel assorti à la météo (`res/drawable/widget_bg_*`), la tenue en dessins ; le toucher ouvre l'app |
+| `SbDrawings.kt`, `res/drawable/drawing_*.xml` | Dessins des vêtements, générés par `npm run build` (tools/make-drawings.js) à partir de `engine/drawings.js` : ne pas modifier à la main |
 | `SbStore.kt` | État local (préférences) et lecture de la configuration |
 
 ## Limites de la version de test

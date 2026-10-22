@@ -2,8 +2,9 @@
 import { hourFr, render, skyTheme, widgetLines } from '../../engine/engine.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { icon, weatherIcon } from './icons.js';
+import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -27,6 +28,8 @@ const NOTE_ICON = {
 const SCRIPTABLE_URL = 'https://apps.apple.com/fr/app/scriptable/id1405459188';
 
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '');
+// Tenues en dessins (par défaut) ou en texte, au choix dans les réglages.
+const drawingsOn = (state) => state.profile?.outfit_view !== 'texte';
 const chev = (size = 18) => `<span class="chev">${icon('chevronRight', { size })}</span>`;
 const heroArt = (name) => `<div class="hero-art">${icon(name, { size: 150, stroke: 1.2 })}</div>`;
 // Nom court dans le texte, nom complet et titre au survol ; la liste complète est dans « Charte et sources ».
@@ -198,6 +201,12 @@ function outfitCard(state, ctx) {
     ? `<div class="picked"><span>À ${hourFr(state.pickedHour)} · ${Math.round(picked.feels_c)}° ressentis${picked.reasons.length ? ` · ${esc(picked.reasons.map((r) => SLOT_FLAG[r] ?? r).join(', '))}` : ''}</span>
         <button class="icon-btn" data-action="pick-hour" data-hour="${state.pickedHour}" aria-label="Revenir au créneau idéal">${icon('x', { size: 18 })}</button></div>`
     : '';
+  // En dessins : une tuile par vêtement, de la peau vers le dessus, accessoires à la fin.
+  const dress = drawingsOn(state)
+    ? `<ul class="dress">${[...layered, ...extras].map((item) => `<li${labels.item_layers[item] === 'accessoire' ? ' class="extra"' : ''}>
+        <span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span><span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}</ul>`
+    : `<ol class="layers">${rows}</ol>
+    ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}`;
   return `<section class="card" aria-labelledby="t-tenue">
     <div class="card-head">
       <h2 class="card-title" id="t-tenue">${icon('shirt', { size: 18 })}${picked ? 'Tenue à cette heure' : "Comment l'habiller"}</h2>
@@ -205,8 +214,7 @@ function outfitCard(state, ctx) {
     </div>
     ${pickedBar}
     ${modes(state.profile.transport)}
-    <ol class="layers">${rows}</ol>
-    ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}
+    ${dress}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
   </section>`;
 }
@@ -318,9 +326,12 @@ function nuitContent(state, ctx) {
   const basics = M.messages['relay.sleep.basics'];
   const facts = [...(basics.list ?? [basics.short]), ...n.relays.filter((id) => id !== 'relay.sleep.basics').map((id) => render(M, id, 'short'))];
   const sources = [...new Set(n.relays.flatMap((id) => M.messages[id]?.sources ?? []))];
-  const tog = n.tog
-    ? `<p class="big-value">≈ ${esc(n.tog)} TOG</p><p class="hint">Pour une chambre à ${decimal(n.room_temp_c)} °C. Indication des fabricants : l'étiquette de la gigoteuse fait foi.</p>`
-    : '<p class="hint">Notez la température de la chambre ci-dessus pour une indication.</p>';
+  const togText = `<p class="big-value">≈ ${esc(n.tog)} TOG</p><p class="hint">Pour une chambre à ${decimal(n.room_temp_c)} °C. Indication des fabricants : l'étiquette de la gigoteuse fait foi.</p>`;
+  const tog = !n.tog
+    ? '<p class="hint">Notez la température de la chambre ci-dessus pour une indication.</p>'
+    : drawingsOn(state)
+      ? `<div class="tog-row"><span class="dress-ico">${drawingSvg('gigoteuse', { size: 34 })}</span><div>${togText}</div></div>`
+      : togText;
   return `<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('bed', { size: 18 })}Gigoteuse</h2><span class="tag amber">fabricants</span></div>
       ${tog}
@@ -362,7 +373,7 @@ function prevoirContent(state, ctx) {
     const why = x.reasons.map((r) => M.labels.reasons[r] ?? r).join(' · ');
     const official = x.relays.find((id) => M.messages[id]?.kind === 'officiel');
     return `<article class="buy">
-      <div class="buy-head"><h3>${esc(capitalize(M.labels.categories[x.category]))}</h3>${x.size === 'unique' ? '' : `<span class="tag blue">${esc(x.size_label)}</span>`}</div>
+      <div class="buy-head"><h3>${drawingsOn(state) ? `<span class="buy-ico">${drawingSvg(CATEGORY_DRAWINGS[x.category], { size: 26 })}</span>` : ''}${esc(capitalize(M.labels.categories[x.category]))}</h3>${x.size === 'unique' ? '' : `<span class="tag blue">${esc(x.size_label)}</span>`}</div>
       <div class="buy-meta"><span class="tag${when.urgent ? ' amber' : ''}">${esc(when.text)}</span><span class="buy-why">${esc(capitalize(why))}</span></div>
       ${official ? `<p class="source">${esc(render(M, official, 'short'))} · ${sourceLinks(state, M.messages[official].sources ?? [])}</p>` : ''}
       <div class="buy-actions">
@@ -437,6 +448,15 @@ export function viewSettings(state) {
       </div>
       <p class="group-note">« A chaud » allège toutes les tenues d'un cran, « A froid » les réchauffe d'un cran.</p>
     </section>
+    <section class="group"><h2 class="group-title">Affichage</h2>
+      <div class="group-body">
+        <div class="row column"><span>Tenues</span>
+          <div class="seg" role="radiogroup" aria-label="Affichage des tenues">${[['dessins', 'Dessins'], ['texte', 'Texte']].map(([v, l]) =>
+            `<button role="radio" aria-checked="${(profile.outfit_view ?? 'dessins') === v}" data-action="outfit-view" data-value="${v}">${l}</button>`).join('')}</div>
+        </div>
+      </div>
+      <p class="group-note">Dans l'app et le widget : un petit dessin par vêtement, ou la liste écrite.</p>
+    </section>
     <section class="group"><h2 class="group-title">Sorties</h2>
       <div class="group-body">
         <div class="row column"><span>Le plus souvent</span>${modes(profile.transport)}</div>
@@ -481,7 +501,7 @@ function homeScreenGroup(state) {
 
 // Assistant du widget : la plateforme du téléphone d'abord, une action par étape.
 export function viewWidget(state, ctx) {
-  const lines = ctx ? widgetLines(ctx.result, ctx.moment, state.bundle.messages) : [];
+  const lines = ctx ? widgetLines(ctx.result, ctx.moment, state.bundle.messages, { drawings: drawingsOn(state) }) : [];
   const theme = ctx ? sortirTheme(ctx) : 'clair';
   const done = (n) => (state.steps.has(`${state.platform}-${n}`) ? ' done' : '');
   const num = (n) => `<span class="step-num">${state.steps.has(`${state.platform}-${n}`) ? icon('check', { size: 16 }) : n}</span>`;
@@ -519,7 +539,9 @@ export function viewWidget(state, ctx) {
   return `<header class="page-head"><a class="back" href="#">${icon('chevronLeft')}Retour</a><h1>Le widget</h1>
     <p class="lead">La réponse du jour sur l'écran d'accueil, sans ouvrir l'app.</p></header>
   <div class="page">
-    <div class="widget-demo hero--${theme}"><p class="w-head">Superbébé · ${esc(state.profile.commune.nom)}</p>${lines.map((l) => `<p class="w-line">${esc(l)}</p>`).join('')}</div>
+    <div class="widget-demo hero--${theme}"><p class="w-head">Superbébé · ${esc(state.profile.commune.nom)}</p>${lines.map((l) => (typeof l === 'string'
+      ? `<p class="w-line">${esc(l)}</p>`
+      : `<p class="w-line w-drawings" aria-label="${esc(l.label)}">${l.drawings.map((id) => drawingSvg(id, { size: 22 })).join('')}${l.text ? `<span>${esc(l.text)}</span>` : ''}</p>`)).join('')}</div>
     ${tabs}
     <ol class="steps">${steps}</ol>
     ${state.platform === 'ios' && !state.host && state.script ? `<details class="card"><summary class="hint">Voir le script</summary><pre class="code">${esc(state.script)}</pre></details>` : ''}

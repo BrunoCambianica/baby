@@ -1,7 +1,7 @@
 // Partie propre au widget iPhone (Scriptable).
 // tools/build-widget.js la concatène après engine/engine.js et engine/adapter.js, avec les règles embarquées.
-/* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Script, Safari, WebView, config, args,
-   SB_BASE_URL, SB_CONFIG_LOADER, SB_RULES */
+/* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Script, Safari, WebView, DrawContext,
+   Path, Rect, Size, config, args, SB_BASE_URL, SB_CONFIG_LOADER, SB_RULES */
 
 const SB_APP_URL = `${SB_BASE_URL}app/`;
 const SB_ROOM_TTL_MS = 16 * 3600 * 1000;
@@ -97,6 +97,76 @@ async function sbOpenApp(state, configText) {
   }
 }
 
+// Dessins des vêtements (engine/drawings.js) tracés en blanc : commandes absolues M, L, Q, C et Z.
+function sbPath(d, k) {
+  const path = new Path();
+  const t = d.match(/[MLQCZ]|-?\d*\.?\d+/g) ?? [];
+  const point = (i) => new Point(Number(t[i]) * k, Number(t[i + 1]) * k);
+  let i = 0;
+  while (i < t.length) {
+    const cmd = t[i++];
+    if (cmd === 'M') path.move(point(i));
+    else if (cmd === 'L') path.addLine(point(i));
+    else if (cmd === 'Q') path.addQuadCurve(point(i + 2), point(i));
+    else if (cmd === 'C') path.addCurve(point(i + 4), point(i), point(i + 2));
+    else if (cmd === 'Z') path.closeSubpath();
+    i += { M: 2, L: 2, Q: 4, C: 6 }[cmd] ?? 0;
+  }
+  return path;
+}
+
+function sbDrawing(id, size) {
+  const parts = DRAWINGS[id];
+  if (!parts) return null;
+  const k = size / 24;
+  const ctx = new DrawContext();
+  ctx.size = new Size(size, size);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+  ctx.setStrokeColor(Color.white());
+  ctx.setFillColor(Color.white());
+  ctx.setLineWidth(DRAWING_STROKE * k);
+  for (const part of parts) {
+    const shape = () => {
+      if (!part.c) return sbPath(part.d, k);
+      const [cx, cy, r] = part.c;
+      const circle = new Path();
+      circle.addEllipse(new Rect((cx - r) * k, (cy - r) * k, 2 * r * k, 2 * r * k));
+      return circle;
+    };
+    // Comme dans l'app : un contour plein est aussi tracé, un point plein ne l'est pas.
+    if (part.fill) {
+      ctx.addPath(shape());
+      ctx.fillPath();
+    }
+    if (!(part.fill && part.c)) {
+      ctx.addPath(shape());
+      ctx.strokePath();
+    }
+  }
+  return ctx.getImage();
+}
+
+// Ligne de dessins : jusqu'à `max` dessins, puis « +n » et le texte éventuel (TOG de la gigoteuse).
+function sbDrawingsRow(widget, line, size, max, color) {
+  const row = widget.addStack();
+  row.layoutHorizontally();
+  row.centerAlignContent();
+  row.spacing = Math.round(size / 4);
+  for (const id of line.drawings.slice(0, max)) {
+    const image = sbDrawing(id, size);
+    if (image) row.addImage(image).imageSize = new Size(size, size);
+  }
+  const rest = line.drawings.length - max;
+  const text = [rest > 0 ? `+${rest}` : '', line.text].filter(Boolean).join('  ');
+  if (text) {
+    const t = row.addText(text);
+    t.font = Font.boldSystemFont(Math.round(size * 0.62));
+    t.textColor = color;
+    t.lineLimit = 1;
+  }
+}
+
 function sbText(widget, text, size, options = {}) {
   const t = widget.addText(text);
   t.font = options.bold ? Font.boldSystemFont(size) : Font.systemFont(size);
@@ -133,8 +203,9 @@ function sbMessageWidget(family, message) {
 function sbDraw(family, lines, info) {
   const w = new ListWidget();
   w.refreshAfterDate = new Date(Date.now() + 30 * 60 * 1000);
+  const label = (line) => (typeof line === 'string' ? line : line.label);
   if (family === 'accessoryInline') {
-    w.addText(lines[0] ?? 'Superbébé');
+    w.addText(label(lines[0] ?? 'Superbébé'));
     return w;
   }
   if (family === 'accessoryCircular') {
@@ -142,7 +213,7 @@ function sbDraw(family, lines, info) {
     return w;
   }
   if (family === 'accessoryRectangular') {
-    lines.slice(0, 3).forEach((line, k) => sbText(w, line, k === 0 ? 13 : 11, { bold: k === 0, scale: 0.6 }));
+    lines.slice(0, 3).forEach((line, k) => sbText(w, label(line), k === 0 ? 13 : 11, { bold: k === 0, scale: 0.6 }));
     return w;
   }
   const small = family === 'small';
@@ -154,9 +225,12 @@ function sbDraw(family, lines, info) {
   w.addSpacer(small ? 5 : 8);
   const shown = small ? lines.slice(0, 2) : lines;
   shown.forEach((line, k) => {
-    sbText(w, line, k === 0 ? (small ? 14 : 17) : small ? 11 : 13, {
-      bold: k === 0, color: k === 0 ? white : soft, lines: small ? 3 : 2, scale: 0.7,
-    });
+    if (typeof line !== 'string') sbDrawingsRow(w, line, small ? 20 : 24, small ? 4 : 8, white);
+    else {
+      sbText(w, line, k === 0 ? (small ? 14 : 17) : small ? 11 : 13, {
+        bold: k === 0, color: k === 0 ? white : soft, lines: small ? 3 : 2, scale: 0.7,
+      });
+    }
     if (k < shown.length - 1) w.addSpacer(small ? 3 : 5);
   });
   w.addSpacer();
@@ -215,7 +289,7 @@ async function runSuperbebe() {
   const input = buildInput({ forecast: cache.forecast, profile, date, now: time, lat: cfg.la });
   const result = evaluate(input, SB_RULES);
   const moment = momentOf(time);
-  const lines = widgetLines(result, moment, SB_RULES.messages);
+  const lines = widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 });
   const updated = parisNow(new Date(cache.at)).time.replace(':', ' h ');
   const window = result.outing.window;
   const info = {

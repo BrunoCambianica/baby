@@ -12,6 +12,10 @@ const CONFIG = encodeConfig(
   { v: 1, n: 'Lyon', la: 45.758, lo: 4.8351, b: '2026-05', t: 'poussette', f: '09:00', u: '18:00', d: 1, o: 0 },
   toB64,
 );
+const TEXTE = encodeConfig(
+  { v: 1, n: 'Lyon', la: 45.758, lo: 4.8351, b: '2026-05', t: 'poussette', f: '09:00', u: '18:00', d: 1, o: 0, i: 0 },
+  toB64,
+);
 const PARIS = encodeConfig({ v: 1, n: 'Paris', la: 48.8566, lo: 2.3522, b: '2026-05', t: 'porte_bebe' }, toB64);
 const APP = 'https://brunocambianica.github.io/baby/app/';
 
@@ -38,11 +42,33 @@ async function run({
   class ListWidget {
     constructor() {
       this.texts = [];
+      this.rows = [];
     }
     addText(text) {
       const t = { text };
       this.texts.push(t);
       return t;
+    }
+    // Rangée de dessins : images et textes gardés pour les vérifications.
+    addStack() {
+      const row = {
+        images: [],
+        texts: [],
+        layoutHorizontally() {},
+        centerAlignContent() {},
+        addImage(image) {
+          const item = { image };
+          this.images.push(item);
+          return item;
+        },
+        addText(text) {
+          const t = { text };
+          this.texts.push(t);
+          return t;
+        },
+      };
+      this.rows.push(row);
+      return row;
     }
     addSpacer() {}
     setPadding() {}
@@ -104,7 +130,7 @@ async function run({
   }
   const accessory = family.startsWith('accessory');
   const globals = {
-    ListWidget, Color, Font, Request, LinearGradient, Point,
+    ListWidget, Color, Font, Request, LinearGradient, Point, ...drawingMocks(),
     FileManager: { local: () => fm },
     Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
     Script: { setWidget: (w) => { out.widget = w; }, complete: () => { out.completed = true; }, name: () => 'Superbébé' },
@@ -124,6 +150,79 @@ async function run({
   return out;
 }
 
+// Imitation de DrawContext et Path : chaque tracé est relevé, avec ses points, pour vérifier les dessins.
+function drawingMocks() {
+  class Size {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+    }
+  }
+  class Rect {
+    constructor(x, y, width, height) {
+      Object.assign(this, { x, y, width, height });
+    }
+  }
+  class Path {
+    constructor() {
+      this.points = [];
+      this.commands = 0;
+    }
+    move(p) {
+      this.commands++;
+      this.points.push(p);
+    }
+    addLine(p) {
+      this.commands++;
+      this.points.push(p);
+    }
+    addQuadCurve(p, c) {
+      this.commands++;
+      this.points.push(p, c);
+    }
+    addCurve(p, c1, c2) {
+      this.commands++;
+      this.points.push(p, c1, c2);
+    }
+    addEllipse(r) {
+      this.commands++;
+      this.points.push({ x: r.x, y: r.y }, { x: r.x + r.width, y: r.y + r.height });
+    }
+    closeSubpath() {
+      this.commands++;
+    }
+  }
+  class DrawContext {
+    constructor() {
+      this.strokes = 0;
+      this.fills = 0;
+      this.paths = [];
+    }
+    setStrokeColor(c) {
+      this.stroke = c;
+    }
+    setFillColor(c) {
+      this.fill = c;
+    }
+    setLineWidth(w) {
+      this.lineWidth = w;
+    }
+    addPath(path) {
+      this.paths.push(path);
+    }
+    strokePath() {
+      this.strokes++;
+    }
+    fillPath() {
+      this.fills++;
+    }
+    getImage() {
+      return { size: this.size, strokes: this.strokes, fills: this.fills, paths: this.paths, lineWidth: this.lineWidth };
+    }
+  }
+  return { Size, Rect, Path, DrawContext };
+}
+
 let failed = 0;
 async function test(name, fn) {
   try {
@@ -138,18 +237,41 @@ function assert(cond, message) {
   if (!cond) throw new Error(message);
 }
 
-await test('Widget moyen : en-tête, créneau du jour, tenue, pied de page', async () => {
+await test('Widget moyen : en-tête, créneau du jour, tenue en dessins, pied de page', async () => {
   const out = await run();
   assert(out.completed, 'Script.complete() non appelé');
   assert(out.texts[0] === 'SUPERBÉBÉ · LYON', out.texts[0]);
   assert(/^(Sortie idéale \d+ h – \d+ h · -?\d+°|Pas de |Plus de )/.test(out.texts[1]), out.texts[1]);
-  assert(/^Body /.test(out.texts[2]), out.texts[2]);
+  const row = out.widget.rows[0];
+  assert(row && row.images.length >= 3 && row.images.every((i) => i.imageSize?.width === 24), `rangée de dessins : ${JSON.stringify(row?.images.length)}`);
   assert(out.texts.at(-1) === 'Mis à jour à 07 h 30 · Open-Meteo', out.texts.at(-1));
 });
 
-await test('Petit widget : deux lignes seulement', async () => {
+await test('Réglage « Texte » : la tenue reste écrite', async () => {
+  const out = await run({ param: TEXTE });
+  assert(/^Body /.test(out.texts[2]) && out.widget.rows.length === 0, JSON.stringify(out.texts));
+});
+
+await test('Petit widget : deux lignes, quatre dessins au plus', async () => {
   const out = await run({ family: 'small' });
-  assert(out.texts.length === 4, JSON.stringify(out.texts));
+  const row = out.widget.rows[0];
+  assert(out.texts.length === 3 && row.images.length <= 4 && row.images[0].imageSize.width === 20, JSON.stringify(out.texts));
+});
+
+await test('Chaque dessin se trace dans sa case, avec contour et points pleins', async () => {
+  const context = vm.createContext({ ...drawingMocks(), Point: class { constructor(x, y) { this.x = x; this.y = y; } }, Color: { white: () => '#fff' } });
+  const { sbDrawing, DRAWINGS } = vm.runInContext(`(function () {\n${code}\nreturn { sbDrawing, DRAWINGS };\n})()`, context);
+  for (const id of Object.keys(DRAWINGS)) {
+    const image = sbDrawing(id, 48);
+    assert(image.strokes > 0 && Math.abs(image.lineWidth - 3.2) < 1e-9, `${id} : rien de tracé`);
+    for (const path of image.paths) {
+      for (const p of path.points) assert(p.x >= 0 && p.x <= 48 && p.y >= 0 && p.y <= 48, `${id} : point hors cadre ${p.x},${p.y}`);
+    }
+  }
+  const bonnet = sbDrawing('bonnet', 48);
+  assert(bonnet.fills === 0, 'le pompon du bonnet ne doit pas être plein');
+  const body = sbDrawing('body_mc', 48);
+  assert(body.fills === 2 && body.paths[0].commands > 10, `pressions du body : ${body.fills}`);
 });
 
 await test('Écran verrouillé rectangulaire : trois lignes, sans en-tête', async () => {
@@ -168,7 +290,10 @@ await test('Le soir : ligne nuit et TOG selon le relevé de la chambre', async (
   const files = new Map([['/doc/superbebe/etat.json', JSON.stringify({ room: { value: 21.5, at: Date.parse('2026-10-21T19:00:00+02:00') } })]]);
   const out = await run({ files, at: '2026-10-21T20:30:00+02:00' });
   assert(out.texts[1].includes('21,5'), out.texts[1]);
-  assert(out.texts[2].includes('TOG'), out.texts[2]);
+  const row = out.widget.rows[0];
+  assert(row.images.length === 1 && row.texts[0].text === '≈ 1 TOG', JSON.stringify(row.texts));
+  const texte = await run({ files, param: TEXTE, at: '2026-10-21T20:30:00+02:00' });
+  assert(texte.texts[2].includes('TOG'), texte.texts[2]);
 });
 
 await test('Sans réglages : message d\'aide', async () => {
@@ -290,7 +415,7 @@ await test('Chargeur : télécharge le code, transmet l\'adresse du site et les 
     modificationDate: () => new Date(0),
   };
   const context = vm.createContext({
-    Request, WebView,
+    Request, WebView, ...drawingMocks(),
     FileManager: { local: () => fm },
     Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
     Script: { setWidget() {}, complete() {}, name: () => 'Superbébé' },
@@ -315,7 +440,12 @@ await test('Android : le moteur embarqué renvoie le lieu et trois lignes', asyn
   const call = `${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {"offset": 0, "room": 19}, "2026-10-21", "20:30");`;
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
   assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit', JSON.stringify(out));
-  assert(out.lines.length === 3 && out.lines[0].includes('19') && out.lines[1].includes('2,5 TOG'), JSON.stringify(out.lines));
+  assert(out.lines.length === 3 && out.lines[0].includes('19'), JSON.stringify(out.lines));
+  assert(out.lines[1].drawings?.[0] === 'gigoteuse' && out.lines[1].text === '≈ 2,5 TOG' && out.lines[1].label.includes('2,5 TOG'), JSON.stringify(out.lines[1]));
+  const day = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {}, "2026-10-21", "07:30");`, vm.createContext({})));
+  assert(day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines[1]));
+  const texte = JSON.parse(vm.runInContext(call.replace(JSON.stringify(CONFIG), JSON.stringify(TEXTE)), vm.createContext({})));
+  assert(texte.lines[1].includes('2,5 TOG'), JSON.stringify(texte.lines));
   const bad = JSON.parse(vm.runInContext(`${android}\nsbAndroid({}, "SB1.@@", {}, "2026-10-21", "08:00");`, vm.createContext({})));
   assert(bad.error === 'configuration', JSON.stringify(bad));
 });

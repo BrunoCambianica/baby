@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré par tools/make-drawings.js à partir de engine/drawings.js : ne pas modifier à la main. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M12 5.2 Q13.7 5.2 14.6 3.6 L17 4.6 Q19.6 5.9 20.6 12.6 L18.8 13.1 L17.2 9 L17.2 18.8 Q17.2 20.4 15.6 20.4 L12 20.4 L8.4 20.4 Q6.8 20.4 6.8 18.8 L6.8 9 L5.2 13.1 L3.4 12.6 Q4.4 5.9 7 4.6 L9.4 3.6 Q10.3 5.2 12 5.2 Z" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M6.8 17.6 L17.2 17.6" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M18.5 11.6 L20.4 11.1" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M5.5 11.6 L3.6 11.1" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

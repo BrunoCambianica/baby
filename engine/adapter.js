@@ -180,7 +180,8 @@ export function decodeConfig(text, fromBase64) {
   }
 }
 
-// Les clés c (code Insee) et dp (département) sont facultatives : les anciennes configurations restent valables.
+// Les clés c (code Insee), dp (département) et i (tenue en dessins : 1, en texte : 0) sont facultatives :
+// les anciennes configurations restent valables et affichent les dessins.
 export function profileToConfig(profile) {
   return {
     v: 1,
@@ -195,6 +196,7 @@ export function profileToConfig(profile) {
     u: profile.outing_window.to,
     d: profile.outing_duration_h,
     o: profile.outfit_offset ?? 0,
+    i: profile.outfit_view === 'texte' ? 0 : 1,
   };
 }
 
@@ -206,6 +208,7 @@ export function configToProfile(cfg) {
     outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
     outing_duration_h: cfg.d ?? 1,
     outfit_offset: cfg.o ?? 0,
+    outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
     room_temp_c: null,
     inventory: {},
   };

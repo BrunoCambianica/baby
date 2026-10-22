@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.3)
+# Tester Superbébé (version 0.4)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -10,7 +10,7 @@ Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir
 Au premier lancement, trois questions : votre commune, le mois de naissance de bébé, et comment vous sortez le plus souvent (poussette, porte-bébé ou voiture).
 
 L'app a trois onglets :
-- **Sortir** : le meilleur moment pour sortir aujourd'hui ou demain, et comment habiller bébé ;
+- **Sortir** : le meilleur moment pour sortir aujourd'hui ou demain, et comment habiller bébé, en petits dessins (ou en texte : Réglages, Affichage, Tenues) ;
 - **Nuit** : la température de la chambre et les repères pour dormir ;
 - **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
 

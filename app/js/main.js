@@ -206,6 +206,7 @@ function takeImport() {
     outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
     outing_duration_h: cfg.d ?? 1,
     outfit_offset: cfg.o ?? 0,
+    outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
   };
   state.profile = p ? { ...p, ...settings } : { ...settings, inventory: {}, room: null, created: Date.now() };
   store.saveProfile(state.profile);
@@ -381,6 +382,10 @@ const actions = {
   },
   pref(el) {
     updateProfile({ outfit_offset: Number(el.dataset.value) });
+    paint();
+  },
+  'outfit-view'(el) {
+    updateProfile({ outfit_view: el.dataset.value });
     paint();
   },
   duration(el) {

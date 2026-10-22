@@ -1,6 +1,6 @@
 // Service worker : l'app et les règles restent disponibles hors ligne.
 // Changer VERSION à chaque mise en ligne pour que les téléphones récupèrent la nouvelle version.
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 const CACHE = `superbebe-${VERSION}`;
 const ASSETS = [
   './',
@@ -19,6 +19,7 @@ const ASSETS = [
   'icons/apple-touch-icon.png',
   '../engine/engine.js',
   '../engine/adapter.js',
+  '../engine/drawings.js',
   '../rules/v0/rules.json',
   '../rules/v0/messages.fr.json',
   '../rules/v0/sources.json',

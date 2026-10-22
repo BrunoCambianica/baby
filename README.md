@@ -11,7 +11,7 @@ App web installable et widgets iPhone et Android : quand sortir avec bébé, com
 | Dossier | Contenu |
 |---|---|
 | `app/` | App web installable (PWA) : page, styles, modules JS, service worker, icônes |
-| `engine/` | Moteur de règles et adaptateur Open-Meteo, partagés par l'app et le widget |
+| `engine/` | Moteur de règles, adaptateur Open-Meteo et dessins des vêtements (`drawings.js`), partagés par l'app et les widgets |
 | `rules/` | Règles v0 en JSON, textes, registre des sources, cas de test |
 | `widget/` | Widget iPhone pour Scriptable : chargeur, source, fichiers générés |
 | `android/` | App Android : l'app web en plein écran et le widget natif (Kotlin, Glance), même moteur exécuté dans le bac à sable JavaScript : voir [android/README.md](android/README.md) |
@@ -24,7 +24,7 @@ Node 18 ou plus, aucune dépendance à installer.
 
 ```sh
 npm test          # charte des sources, 38 cas de règles, adaptateur, widgets iPhone et Android
-npm run build     # icônes, widgets iPhone et Android (moteur embarqué), version reportée dans l'app
+npm run build     # icônes, dessins Android, widgets iPhone et Android (moteur embarqué), version reportée dans l'app
 npm run serve     # http://localhost:8080/baby/app/
 npm run deploy    # pousse main, puis publie la même version sur la branche gh-pages
 ```

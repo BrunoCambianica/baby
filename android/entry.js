@@ -31,7 +31,8 @@ function sbAndroid(forecast, configText, state, date, time) {
   const moment = momentOf(time);
   return JSON.stringify({
     place: cfg.n || 'Superbébé',
-    lines: widgetLines(result, moment, SB_RULES.messages),
+    // Avec la tenue en dessins (réglage de l'app), certaines lignes sont des objets { drawings, text, label }.
+    lines: widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 }),
     moment,
     theme: skyTheme(result, moment),
   });

@@ -1,6 +1,7 @@
-// Moteur des règles v0 : fonctions pures, sans dépendance.
+// Moteur des règles v0 : fonctions pures, sans dépendance extérieure.
 // Le même fichier tourne dans l'app web, dans le widget iPhone (Scriptable) et dans les tests Node.
 // Il sert de spécification aux futurs portages Swift et Kotlin.
+import { CATEGORY_DRAWINGS, DRAWINGS, ITEM_DRAWINGS } from './drawings.js';
 
 const VIGILANCE_COLORS = ['vert', 'jaune', 'orange', 'rouge'];
 const colorRank = (color) => VIGILANCE_COLORS.indexOf(color);
@@ -279,7 +280,9 @@ export function render(M, id, variant, params = {}) {
 export const frNumber = (x) => String(x).replace('.', ',');
 
 // Les trois lignes du widget pour le moment voulu : « jour » (créneau) ou « soir » (nuit et achats).
-export function widgetLines(result, moment, M) {
+// Avec `drawings`, la tenue (le jour) et la gigoteuse (le soir) deviennent des dessins :
+// { drawings: [identifiants de engine/drawings.js], text, label }, `label` gardant le texte pour les petits formats.
+export function widgetLines(result, moment, M, { drawings = false } = {}) {
   const labels = M.labels;
   const lines = [];
   if (moment === 'jour') {
@@ -289,7 +292,10 @@ export function widgetLines(result, moment, M) {
         ? render(M, 'outing.window', 'short', { start: hourFr(w.start), end: hourFr(w.end), feels: Math.round(w.feels_c) })
         : render(M, `outing.none.${result.outing.reason}`, 'short'),
     );
-    if (result.outfit) lines.push(capitalize(result.outfit.items.map((i) => labels.items_short[i] ?? i).join(' · ')));
+    if (result.outfit) {
+      const label = capitalize(result.outfit.items.map((i) => labels.items_short[i] ?? i).join(' · '));
+      lines.push(drawings ? { drawings: result.outfit.items.map((i) => ITEM_DRAWINGS[i]).filter(Boolean), text: '', label } : label);
+    }
     const hint = result.relays[0] ?? result.outfit?.notes.find((n) => n.startsWith('practical.rain'));
     if (hint) lines.push(render(M, hint, 'short', result.params));
   } else {
@@ -299,7 +305,10 @@ export function widgetLines(result, moment, M) {
         ? render(M, 'night.room_unknown', 'short')
         : render(M, 'night.room', 'short', { room: frNumber(n.room_temp_c) }),
     );
-    if (n.tog) lines.push(render(M, 'fabricant.tog', 'short', { tog: n.tog }));
+    if (n.tog) {
+      const label = render(M, 'fabricant.tog', 'short', { tog: n.tog });
+      lines.push(drawings ? { drawings: ['gigoteuse'], text: `≈ ${n.tog} TOG`, label } : label);
+    }
     const p = result.purchases[0];
     lines.push(
       p
@@ -411,8 +420,12 @@ export function lint(bundle) {
     if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!M.labels.layers[M.labels.item_layers[item]]) errors.push(`couche inconnue pour : ${item}`);
+    if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
   }
-  for (const cat of R.purchases.categories) if (!M.labels.categories[cat.id]) errors.push(`libellé manquant : ${cat.id}`);
+  for (const cat of R.purchases.categories) {
+    if (!M.labels.categories[cat.id]) errors.push(`libellé manquant : ${cat.id}`);
+    if (!DRAWINGS[CATEGORY_DRAWINGS[cat.id]]) errors.push(`dessin manquant : ${cat.id}`);
+  }
   const toVerify = S.sources.filter((src) => src.verification !== 'lu').map((src) => `${src.id} (${src.verification})`);
   return { errors, toVerify };
 }

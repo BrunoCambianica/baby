@@ -107,8 +107,11 @@ test('Configuration du widget : aller-retour avec accents', () => {
   assert(back.commune.nom === 'Saint-Étienne' && back.transport === 'porte_bebe' && back.outfit_offset === 1, JSON.stringify(back));
   assert(back.outing_window.to === '17:00' && back.outing_duration_h === 2, JSON.stringify(back));
   assert(back.commune.code === '42218' && back.commune.dep === '42', JSON.stringify(back.commune));
+  assert(back.outfit_view === 'dessins', `affichage ${back.outfit_view}`);
+  const texte = configToProfile(decodeConfig(encodeConfig(profileToConfig({ ...profile, outfit_view: 'texte' }), toB64), fromB64));
+  assert(texte.outfit_view === 'texte', 'affichage en texte perdu');
   const old = configToProfile(decodeConfig(encodeConfig({ v: 1, n: 'Lyon', la: 45.758, lo: 4.8351, b: '2026-05' }, toB64), fromB64));
-  assert(old.commune.code === '' && old.transport === 'poussette', 'ancienne configuration refusée');
+  assert(old.commune.code === '' && old.transport === 'poussette' && old.outfit_view === 'dessins', 'ancienne configuration refusée');
 });
 
 test('Configuration du widget : texte invalide refusé', () => {

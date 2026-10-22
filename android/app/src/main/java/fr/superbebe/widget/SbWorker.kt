@@ -64,7 +64,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
             val array = out.getJSONArray("lines")
             SbStore.saveRender(
                 c, out.optString("place", place.name),
-                (0 until array.length()).map { array.getString(it) }, footer, out.optString("theme", "nuageux"),
+                (0 until array.length()).map { array.get(it) }, footer, out.optString("theme", "nuageux"),
             )
         } catch (e: SbEngine.Unsupported) {
             SbStore.saveRender(
