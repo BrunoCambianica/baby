@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.7.0';
+export const VERSION = '0.8.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -176,7 +176,24 @@ function conditions(slots) {
   return parts.join(' · ');
 }
 
+// La veille au soir : demain, à préparer ce soir (ressenti et pluie de demain).
+function heroEvening(state, ctx) {
+  const M = state.bundle.messages;
+  const next = ctx.evening.result;
+  const range = journeeRange(next.journee, next.journee.from);
+  const who = state.profile.count > 1 ? `${esc(childName(state.profile, state.profile.index))} · ` : '';
+  const slots = next.outing.slots.filter((s) => s.time >= next.journee.from && s.time < next.journee.to);
+  const w = next.outing.window;
+  const outing = w ? `sortie idéale ${hourFr(w.start)} – ${hourFr(w.end)}` : render(M, `outing.none.${next.outing.reason}`, 'short');
+  return `<header class="hero hero--nuit">${heroArt('moonStars')}${heroTop(state, ctx.date)}
+    <p class="hero-label">${who}Demain · à préparer ce soir</p>
+    <p class="hero-big">${range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`}</p>
+    <p class="hero-sub"><span>${esc(slots.length ? `${conditions(slots)} · ` : '')}${esc(outing)}</span></p>
+  </header>`;
+}
+
 function heroSortir(state, ctx) {
+  if (ctx.evening?.result.journee) return heroEvening(state, ctx);
   const M = state.bundle.messages;
   const { result, date, tomorrow } = ctx;
   const theme = sortirTheme(ctx);
@@ -276,8 +293,8 @@ function changeItem(state, item, sign) {
 }
 
 // La journée en couches : la tenue du matin, au plus deux changements, le sac, le geste de la nuque.
-// Au fil de la journée, l'étape en cours est marquée « maintenant ».
-function dayCard(state, ctx) {
+// Au fil de la journée, l'étape en cours est marquée « maintenant ». La veille au soir : « À préparer ce soir ».
+function dayCard(state, ctx, { evening = false } = {}) {
   const M = state.bundle.messages;
   const labels = M.labels;
   const j = ctx.result.journee;
@@ -303,7 +320,7 @@ function dayCard(state, ctx) {
   const check = M.messages[j.check];
   return `<section class="card day" aria-labelledby="t-jour">
     <div class="card-head">
-      <h2 class="card-title" id="t-jour">${icon('shirt', { size: 18 })}Habillez-le une fois</h2>
+      <h2 class="card-title" id="t-jour">${icon('shirt', { size: 18 })}${evening ? 'À préparer ce soir' : 'Habillez-le une fois'}</h2>
       <button class="icon-btn" data-action="share-fiche" aria-label="Envoyer la fiche du jour">${icon('share', { size: 18 })}</button>
     </div>
     ${modes(state, ctx.result.transport, state.profile.birth)}
@@ -390,28 +407,28 @@ function promoCard(state) {
 const foot = () => `<p class="foot"><span>Repères officiels relayés, pas d'avis médical. Urgence : 15 ou 112.</span>
   <span><a href="#apropos">Charte et sources</a> · Météo Open-Meteo · v${VERSION}</span></p>`;
 
-// Plus de sortie aujourd'hui : plutôt qu'un écran vide, la tenue de demain et la nuit qui vient.
-function laterCards(state, ctx) {
-  const next = ctx.next;
-  const w = next?.result.outing.window;
-  const tomorrow = next?.result.outfit
-    ? `<section class="card">
-      <div class="card-head"><h2 class="card-title">${icon('sun', { size: 18 })}Demain</h2>${w ? `<span class="tag blue">${hourFr(w.start)} – ${hourFr(w.end)} · ${Math.round(w.feels_c)}°</span>` : ''}</div>
-      ${bandTitle(state, next.result.outfit)}
-      ${dressList(state, next.result.outfit)}
-      <button class="btn soft" data-action="day" data-value="demain">Voir demain en détail</button>
-    </section>`
-    : '';
+// Ce soir, à côté de la journée de demain : la chambre, ce qu'on met sous la gigoteuse et son TOG.
+function tonightCard(state, ctx) {
   const n = ctx.result.night;
-  return `${tomorrow}<section class="card">
-      <div class="card-head"><h2 class="card-title">${icon('moon', { size: 18 })}Ce soir</h2></div>
-      <p class="hint">${n.room_assumed ? 'Chambre à 18-20 °C' : `Chambre à ${decimal(n.room_temp_c)} °C`} : ${esc(n.wear.map((i) => state.bundle.messages.labels.items_short[i]).join(' + '))}, gigoteuse ≈ ${esc(n.tog)} TOG.</p>
-      <button class="btn soft" data-action="tab" data-value="nuit">Préparer la nuit</button>
+  const labels = state.bundle.messages.labels;
+  const wear = drawingsOn(state)
+    ? `<ul class="dress small">${n.wear.map((item) => `<li><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 28 })}</span><span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}
+        <li><span class="dress-ico night">${drawingSvg('gigoteuse', { size: 28 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
+    : `<p>${esc(capitalize(n.wear.map((i) => labels.items_short[i]).join(' + ')))}, gigoteuse ≈ ${esc(n.tog)} TOG.</p>`;
+  return `<section class="card">
+      <div class="card-head"><h2 class="card-title">${icon('moon', { size: 18 })}Ce soir</h2>
+        <span class="tag">${n.room_assumed ? 'chambre 18-20 °C' : `chambre ${decimal(n.room_temp_c)} °C`}</span></div>
+      ${wear}
+      <button class="btn soft" data-action="tab" data-value="nuit">${n.room_assumed ? 'Noter la chambre' : 'Préparer la nuit'}</button>
     </section>`;
 }
 
 function sortirContent(state, ctx) {
-  if (!ctx.tomorrow && !ctx.result.outfit) return `${laterCards(state, ctx)}${promoCard(state)}${foot()}`;
+  // La veille au soir : la journée de demain à préparer, puis la nuit qui vient.
+  if (ctx.evening?.result.journee) {
+    return [dayCard(state, ctx.evening, { evening: true }), tonightCard(state, ctx), officialCard(state, ctx.evening.result.relays, ctx.evening.result.params), promoCard(state), foot()].join('');
+  }
+  if (!ctx.tomorrow && !ctx.result.outfit && !ctx.result.journee) return `${tonightCard(state, ctx)}${promoCard(state)}${foot()}`;
   return [
     ctx.result.journee ? dayCard(state, ctx) : outfitCard(state, ctx),
     hoursCard(state, ctx),
@@ -614,6 +631,7 @@ export function viewSettings(state) {
       <p class="group-note">Dans l'app et le widget : un petit dessin par vêtement, ou la liste écrite.</p>
     </section>
     ${homeScreenGroup(state)}
+    ${reminderGroup(state)}
     <section class="group"><h2 class="group-title">Application</h2>
       <div class="group-body">
         <button class="row" data-action="check-update"><span>${state.updateReady ? 'Installer la mise à jour' : 'Rechercher une mise à jour'}</span><span class="value">v${VERSION}</span></button>
@@ -701,6 +719,32 @@ function homeScreenGroup(state) {
   return `<section class="group"><h2 class="group-title">Écran d'accueil</h2><div class="group-body">${rows}</div>${note}</section>`;
 }
 
+// Rappel du soir : seulement si on l'active ; une notification par jour au plus, calculée sur le téléphone.
+// Il passe par l'app Android ou par le widget iPhone (Scriptable) ; ailleurs, on dit comment l'avoir.
+function reminderGroup(state) {
+  const title = '<h2 class="group-title">Rappel du soir</h2>';
+  if (!state.reminderHost) {
+    return `<section class="group">${title}<div class="group-body"><a class="row" href="#widget"><span>Avec le widget</span>${chev()}</a></div>
+      <p class="group-note">La veille au soir, une notification avec la tenue et le sac de demain, et la nuit. Elle passe par l'app Android ou par le widget iPhone (Scriptable).</p></section>`;
+  }
+  const r = state.reminder;
+  const times = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
+  const refused = state.host === 'android' && r.on && state.reminderState === 'refuse'
+    ? '<p class="error group-note">Notifications refusées : Réglages d\'Android, Applications, Superbébé, Notifications.</p>'
+    : '';
+  return `<section class="group">${title}
+    <div class="group-body">
+      <div class="row column"><span>La veille, la tenue et le sac de demain</span>
+        <div class="seg" role="radiogroup" aria-label="Rappel du soir">${[['off', 'Non'], ['on', 'Oui']].map(([v, l]) =>
+          `<button role="radio" aria-checked="${(r.on ? 'on' : 'off') === v}" data-action="reminder" data-value="${v}">${l}</button>`).join('')}</div>
+      </div>
+      ${r.on ? `<div class="row column"><span>Vers</span><select id="reminder-at" aria-label="Heure du rappel">${times.map((t) => `<option value="${t}"${r.at === t ? ' selected' : ''}>${hourFr(t)}</option>`).join('')}</select></div>` : ''}
+    </div>
+    ${refused}
+    <p class="group-note">Une notification par jour au plus, calculée sur ce téléphone, sans serveur.${state.host === 'scriptable' ? ' Scriptable demande l\'autorisation la première fois.' : ''}</p>
+  </section>`;
+}
+
 // App Android : un bouton par enfant (Android attache l'enfant au widget posé), ou un seul bouton pour un enfant.
 function androidWidgetRows(state, button) {
   const children = state.household.children;
@@ -743,7 +787,7 @@ function widgetHowTo() {
 
 // Assistant du widget : la plateforme du téléphone d'abord, une action par étape.
 export function viewWidget(state, ctx) {
-  const lines = ctx ? widgetLines(ctx.result, ctx.moment, state.bundle.messages, { drawings: drawingsOn(state) }) : [];
+  const lines = ctx ? widgetLines(ctx.result, ctx.moment, state.bundle.messages, { drawings: drawingsOn(state), tomorrow: ctx.evening?.result }) : [];
   const theme = ctx ? sortirTheme(ctx) : 'clair';
   const done = (n) => (state.steps.has(`${state.platform}-${n}`) ? ' done' : '');
   const num = (n) => `<span class="step-num">${state.steps.has(`${state.platform}-${n}`) ? icon('check', { size: 16 }) : n}</span>`;

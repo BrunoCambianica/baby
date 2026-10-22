@@ -1,5 +1,5 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
-import { addDays, ageMonths, clamp, displayMoment, evaluate, hourFr, momentOf, render, toMin } from '../../engine/engine.js';
+import { addDays, ageMonths, clamp, displayMoment, evaluate, hourFr, render, toMin } from '../../engine/engine.js';
 import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
@@ -28,6 +28,8 @@ function androidAtLeast(major, minor) {
   return Boolean(m) && (Number(m[1]) > major || (Number(m[1]) === major && Number(m[2]) >= minor));
 }
 const androidMulti = host === 'android' && androidAtLeast(0, 6);
+// Rappel du soir : app Android 0.8 et plus, ou widget iPhone (Scriptable) qui programme la notification.
+const reminderHost = host === 'scriptable' || (host === 'android' && androidAtLeast(0, 8));
 const widgetKids = () => (androidMulti ? ask(() => JSON.parse(android.widgetChildren()), {}) : {});
 
 // Foyer enregistré ; le profil à un seul enfant des versions précédentes devient le premier enfant.
@@ -56,7 +58,7 @@ const state = {
   error: null,
   updatedAt: '',
   today: parisNow().date,
-  tab: momentOf(parisNow().time) === 'soir' ? 'nuit' : 'sortir',
+  tab: 'sortir',
   day: 'aujourdhui',
   draft: null,
   results: [],
@@ -72,6 +74,9 @@ const state = {
   inBrowser: !host && !standalone && /Android|iPhone|iPod/i.test(navigator.userAgent),
   widgets: host === 'android' ? ask(() => android.widgets(), 0) : 0,
   widgetKids: widgetKids(),
+  reminder: store.reminder(),
+  reminderHost,
+  reminderState: reminderHost && host === 'android' ? ask(() => android.reminderState(), 'off') : null,
   steps: new Set(),
   androidLink: '',
   updateLink: '',
@@ -79,20 +84,12 @@ const state = {
   widgetReady: Boolean(store.widgetCopied()),
   confirmClear: false,
   updateReady: false,
-  // Onglet choisi par l'utilisateur : on ne bascule plus tout seul vers la nuit.
-  tabChosen: false,
 };
 
 function refreshProfile() {
   state.profile = state.household ? profileOf(state.household, store.currentChild()) : null;
 }
 refreshProfile();
-
-// Comme le widget : après la dernière sortie possible, l'app s'ouvre sur la nuit.
-function eveningTab() {
-  if (state.tabChosen || state.tab !== 'sortir' || currentView() !== 'app') return;
-  if (compute('aujourdhui')?.moment === 'soir') state.tab = 'nuit';
-}
 
 const route = () => location.hash.replace('#', '');
 
@@ -184,12 +181,14 @@ function paint() {
     state.androidLink = androidLink();
     // Le script à coller dans Scriptable, avec les réglages du moment.
     state.script = state.loader?.replace('__SB_CONFIG__', configText()) ?? null;
-    html = V.viewWidget(state, compute('aujourdhui'));
+    const ctx = compute('aujourdhui');
+    if (ctx?.moment === 'soir') ctx.evening = compute('demain');
+    html = V.viewWidget(state, ctx);
   } else if (view === 'apropos') html = V.viewAbout(state);
   else {
     const ctx = compute(state.tab === 'sortir' ? state.day : 'aujourdhui');
-    // Journée finie : l'onglet Sortir montre la tenue de demain.
-    if (ctx && state.tab === 'sortir' && !ctx.tomorrow && !ctx.result.outfit) ctx.next = compute('demain');
+    // La veille au soir, comme les widgets : la journée de demain, à préparer ce soir, et la nuit.
+    if (ctx && state.tab === 'sortir' && !ctx.tomorrow && ctx.moment === 'soir') ctx.evening = compute('demain');
     html = V.viewApp(state, ctx);
   }
   if (state.updateReady) {
@@ -218,6 +217,21 @@ function setThemeColor(view) {
   // Barres du système de l'app Android : ciel en haut, couleur de la barre d'onglets en bas.
   const bottom = view === 'app' ? (dark ? '#14171e' : '#fcfcfd') : dark ? '#0b0d11' : '#f2f3f7';
   if (host === 'android') ask(() => android.colors(color, bottom));
+}
+
+// Rappel du soir : réglé sur ce téléphone, transmis à l'app Android ou au widget iPhone, qui le programment.
+function setReminder(next) {
+  state.reminder = next;
+  store.saveReminder(next);
+  if (host === 'android') {
+    state.reminderState = ask(() => android.reminder(next.on, next.at), 'off');
+    if (state.reminderState === 'demande') toast('Autorisez les notifications de Superbébé.');
+  }
+  if (host === 'scriptable') {
+    syncHost();
+    if (next.on) toast(`Rappel vers ${hourFr(next.at)}. Scriptable demandera peut-être l'autorisation d'envoyer des notifications.`);
+  }
+  paint();
 }
 
 function saveHousehold() {
@@ -263,9 +277,10 @@ function syncHost() {
     return;
   }
   const config = h ? configText() : '';
-  // room= : le premier enfant, pour un widget iPhone dont le code n'est pas encore à jour.
+  // room= : le premier enfant, pour un widget iPhone dont le code n'est pas encore à jour ; rappel= : rappel du soir.
   const rooms = children.filter((c) => c.room).map((c) => `${c.id}:${c.room.value}@${c.room.at}`).join(',');
   const first = children[0]?.room;
+  const reminder = `&rappel=${h && state.reminder.on ? state.reminder.at : '0'}`;
   let frame = document.getElementById('sb-sync');
   if (!frame) {
     frame = document.createElement('iframe');
@@ -273,7 +288,7 @@ function syncHost() {
     frame.hidden = true;
     document.body.appendChild(frame);
   }
-  frame.src = `superbebe-sync:?config=${encodeURIComponent(config)}${rooms ? `&rooms=${rooms}` : ''}${first ? `&room=${first.value}@${first.at}` : ''}`;
+  frame.src = `superbebe-sync:?config=${encodeURIComponent(config)}${rooms ? `&rooms=${rooms}` : ''}${first ? `&room=${first.value}@${first.at}` : ''}${reminder}`;
 }
 
 // Foyer remplacé (configuration plus récente d'un widget, profils de l'autre parent) : météo à recharger si la commune change.
@@ -438,7 +453,6 @@ async function loadData({ force = false } = {}) {
     state.error = 'Météo indisponible pour le moment. Vérifiez la connexion.';
   }
   state.loading = false;
-  eveningTab();
   if (currentView() === 'app') paint();
   if (force && !state.error && !state.forecast?.offline) toast(`Météo à jour (${state.updatedAt})`);
   try {
@@ -468,7 +482,6 @@ const actions = {
   'apply-update': () => location.reload(),
   refresh: () => loadData({ force: true }),
   tab(el) {
-    state.tabChosen = true;
     state.tab = el.dataset.value;
     paint();
     window.scrollTo(0, 0);
@@ -498,6 +511,9 @@ const actions = {
   'outfit-view'(el) {
     updateHousehold({ outfit_view: el.dataset.value });
     paint();
+  },
+  reminder(el) {
+    setReminder({ ...state.reminder, on: el.dataset.value === 'on' });
   },
   // Fiche « Ajouter un enfant » : enregistré d'un coup, puis affiché.
   'child-add'() {
@@ -609,8 +625,10 @@ const actions = {
     paint();
   },
   // Fiche du jour pour la nounou, la crèche ou les grands-parents : image et lien (les données sont après le #).
+  // Le soir, celle de demain.
   async 'share-fiche'() {
-    const ctx = compute(state.day);
+    const today = compute(state.day);
+    const ctx = today && !today.tomorrow && today.moment === 'soir' ? compute('demain') : today;
     if (!ctx?.result.journee) return;
     const M = state.bundle.messages;
     const data = ficheData(ctx, state.profile.name);
@@ -834,6 +852,7 @@ document.addEventListener('change', (event) => {
     updateChild({ name: value.trim().slice(0, 24) }, d.child);
     paint();
   }
+  if (id === 'reminder-at' && /^\d{2}:\d{2}$/.test(value)) setReminder({ ...state.reminder, at: value });
   if ((id === 'from' || id === 'to') && currentView() === 'reglages') {
     const next = { ...state.profile.outing_window, [id]: value };
     if (toMin(next.to) - toMin(next.from) < state.profile.outing_duration_h * 60) {
@@ -912,6 +931,7 @@ document.addEventListener('visibilitychange', () => {
     // Retour de la fenêtre « Ajouter le widget » ou de l'écran d'accueil.
     state.widgets = ask(() => android.widgets(), state.widgets);
     state.widgetKids = widgetKids();
+    if (reminderHost) state.reminderState = ask(() => android.reminderState(), state.reminderState);
     if (currentView() !== 'onboarding') paint();
   }
   if (!state.household) return;
@@ -957,7 +977,6 @@ async function boot() {
     if (climate?.code === state.profile.commune.code) state.climate = climate.years;
     store.markDay(state.today);
     syncHost();
-    eveningTab();
   }
   paint();
   if (route() === 'widget') preloadLoader();

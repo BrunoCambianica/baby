@@ -77,4 +77,4 @@ La configuration (`SB1.` suivi d'un JSON en base64url) existe en deux versions :
 
 ## Données et vie privée
 
-Pas de compte ni de serveur : les réglages et les prénoms restent dans le téléphone. L'app interroge Open-Meteo avec les coordonnées du centre de la commune, et geo.api.gouv.fr pour trouver la commune. « Envoyer les profils » à l'autre parent produit un lien qui contient les prénoms ; il passe par la messagerie choisie, jamais par un serveur de Superbébé.
+Pas de compte ni de serveur : les réglages et les prénoms restent dans le téléphone. Le rappel du soir, s'il est activé, est une notification locale (app Android, ou Scriptable sur iPhone), calculée sur le téléphone. L'app interroge Open-Meteo avec les coordonnées du centre de la commune, et geo.api.gouv.fr pour trouver la commune. « Envoyer les profils » à l'autre parent produit un lien qui contient les prénoms ; il passe par la messagerie choisie, jamais par un serveur de Superbébé.

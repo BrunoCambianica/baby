@@ -246,7 +246,7 @@ await test('Widget iPhone : l\'app s\'ouvre sur l\'enfant du widget ; une config
   await page.click('[data-value="nuit"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   const src = await page.getAttribute('#sb-sync', 'src');
-  assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+$/.test(src), src);
+  assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+&rappel=0$/.test(src), src);
   const newer = encodeConfig(householdToConfig({ ...local, outing_duration_h: 2, updated: Date.now() + 60_000 }), toB64);
   await page.goto(`${APP}?hote=scriptable#import=${newer}`);
   await page.waitForSelector('.hero-big');
@@ -355,6 +355,53 @@ await test('Fiche du jour dans l\'app Android 0.7 : l\'image part par le pont, a
   await page.click('.day .btn[data-action="share-fiche"]');
   const calls = await page.evaluate(() => window.calls);
   assert(calls.length === 1 && calls[0][0] > 20000 && calls[0][1].includes('#f=F1.'), JSON.stringify(calls.map(([n, t]) => [n, t.slice(0, 40)])));
+});
+
+await test('La veille au soir : la journée de demain à préparer, et la nuit qui vient', async (use) => {
+  const page = use(await phone({ at: '2026-10-26T20:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  assert((await page.textContent('.hero-label')).includes('Demain · à préparer ce soir'), await page.textContent('.hero-label'));
+  assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '5°→19°', await page.textContent('.hero-big'));
+  assert(!(await page.isVisible('.days')), 'choix du jour affiché le soir');
+  assert((await page.textContent('#t-jour')).includes('À préparer ce soir'), await page.textContent('#t-jour'));
+  assert((await page.textContent('.day .change-time')).startsWith('Demain matin'), await page.textContent('.day .change-time'));
+  assert(await page.isVisible('text=Ce soir') && await page.isVisible('text=Gigoteuse 2,5 TOG'), 'carte de la nuit absente');
+  assert((await page.getAttribute('[data-value="sortir"]', 'aria-selected')) === 'true', 'l\'app doit rester sur Journée');
+  await shot(page, 'l3-veille-au-soir');
+  await page.goto(`${APP}#widget`);
+  await page.waitForSelector('.widget-demo');
+  assert((await page.textContent('.widget-demo')).includes('Demain 5° → 19°'), await page.textContent('.widget-demo'));
+});
+
+await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app Android, transmis au widget iPhone', async (use) => {
+  const page = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await page.goto(`${APP}#reglages`);
+  assert(await page.isVisible('text=Rappel du soir') && await page.isVisible('text=Avec le widget'), 'rappel non expliqué dans le navigateur');
+  await page.context().close();
+
+  const bridge = `window.calls = []; window.reminder = 'off'; window.SuperbebeAndroid = { sync() {}, colors() {}, widgets: () => 1, version: () => '0.8.0',
+    widgetChildren: () => '{}', reminderState: () => window.reminder,
+    reminder: (on, at) => { window.calls.push([on, at]); window.reminder = on ? 'refuse' : 'off'; return on ? 'demande' : 'off'; } };
+    if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }`;
+  const android = use(await phone({ init: bridge }));
+  await android.goto(`${APP}#reglages`);
+  await android.click('[data-action="reminder"][data-value="on"]');
+  await android.selectOption('#reminder-at', '21:00');
+  const calls = await android.evaluate(() => window.calls);
+  assert(JSON.stringify(calls) === '[[true,"20:00"],[true,"21:00"]]', JSON.stringify(calls));
+  await android.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await android.waitForSelector('text=Notifications refusées');
+  await shot(android, 'l3-rappel-android');
+  await android.context().close();
+
+  const iphone = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await iphone.goto(`${APP}?hote=scriptable#reglages`);
+  await iphone.click('[data-action="reminder"][data-value="on"]');
+  const src = await iphone.getAttribute('#sb-sync', 'src');
+  assert(src.endsWith('&rappel=20:00'), src);
+  await iphone.click('[data-action="reminder"][data-value="off"]');
+  assert((await iphone.getAttribute('#sb-sync', 'src')).endsWith('&rappel=0'), 'rappel non coupé');
 });
 
 await browser.close();

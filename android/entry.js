@@ -20,26 +20,27 @@ function sbBase64ToAscii(b64) {
 }
 
 // Rendu d'un enfant. `state.rooms` : relevé de la chambre par enfant ({ identifiant: degrés }) ;
-// `state.room` : relevé unique des versions à un seul enfant, pour le premier.
+// `state.room` : relevé unique des versions à un seul enfant, pour le premier ;
+// `state.reminder` : le rappel du soir est dû, calculer aussi la tenue de demain.
 function sbRenderChild(forecast, cfg, child, state, date, time) {
   const profile = configToProfile(cfg, child.id);
   profile.outfit_offset = clamp(profile.outfit_offset ?? 0, -2, 2);
   const rooms = state.rooms ?? {};
   const room = typeof rooms[child.id] === 'number' ? rooms[child.id] : child.id === configChildren(cfg)[0].id ? state.room : null;
   profile.room_temp_c = typeof room === 'number' ? room : null;
-  const input = buildInput({ forecast, profile, date, now: time, lat: cfg.la });
-  const result = evaluate(input, SB_RULES);
-  const moment = displayMoment(result, time);
+  // Le jour, la journée en couches ; le soir, la tenue et le sac de demain, à préparer, et la nuit.
+  const view = widgetView({ forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0, reminder: Boolean(state.reminder) });
   return {
     id: child.id,
     name: child.name,
     place: cfg.n || 'Superbébé',
     // Pied du widget : le geste pour vérifier qu'il n'a pas trop chaud (l'heure de la météo est ajoutée par l'app).
-    check: result.widget.check,
+    check: view.check,
     // Avec la tenue en dessins (réglage de l'app), certaines lignes sont des objets { drawings, text, label }.
-    lines: widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 }),
-    moment,
-    theme: skyTheme(result, moment),
+    lines: view.lines,
+    moment: view.moment,
+    theme: view.theme,
+    reminder: state.reminder ? view.reminder : null,
   };
 }
 
@@ -56,5 +57,10 @@ function sbAndroid(forecast, configText, state, date, time, childRef) {
 function sbAndroidAll(forecast, configText, state, date, time) {
   const cfg = decodeConfig(configText, sbBase64ToAscii);
   if (!cfg) return JSON.stringify({ error: 'configuration' });
-  return JSON.stringify({ children: configChildren(cfg).map((child) => sbRenderChild(forecast, cfg, child, state, date, time)) });
+  const children = configChildren(cfg).map((child) => sbRenderChild(forecast, cfg, child, state, date, time));
+  // Rappel du soir : une ligne par enfant (prénom devant s'il y en a plusieurs).
+  const reminder = state.reminder
+    ? children.filter((c) => c.reminder).map((c, k) => `${children.length > 1 ? `${c.name || `Enfant ${k + 1}`} : ` : ''}${c.reminder}`)
+    : [];
+  return JSON.stringify({ children, reminder: { title: render(SB_RULES.messages, 'evening.reminder', 'short'), lines: reminder } });
 }

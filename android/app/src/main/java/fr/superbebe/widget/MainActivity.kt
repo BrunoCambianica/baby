@@ -228,6 +228,11 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NOTIFICATIONS) {
+            SbReminder.schedule(this)
+            web.evaluateJavascript("document.dispatchEvent(new Event('visibilitychange'))", null)
+            return
+        }
         if (requestCode != REQUEST_LOCATION) return
         val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
         pendingLocation?.let { (origin, callback) -> callback.invoke(origin, granted, false) }
@@ -370,11 +375,30 @@ class MainActivity : Activity() {
             return true
         }
 
+        // Rappel du soir, activé ou coupé dans l'app ; Android 13 et plus demandent d'abord l'autorisation.
+        // Renvoie l'état : « on », « off », « refuse » (notifications refusées) ou « demande » (fenêtre d'Android ouverte).
+        @JavascriptInterface
+        fun reminder(on: Boolean, at: String): String {
+            if (!onApp) return SbReminder.state(this@MainActivity)
+            val context = this@MainActivity
+            SbStore.saveReminder(context, on, if (Regex("^\\d{2}:\\d{2}$").matches(at)) at else "20:00")
+            SbReminder.schedule(context)
+            if (on && !SbReminder.allowed(context)) {
+                runOnUiThread { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS) }
+                return "demande"
+            }
+            return SbReminder.state(context)
+        }
+
+        @JavascriptInterface
+        fun reminderState(): String = SbReminder.state(this@MainActivity)
+
         @JavascriptInterface
         fun version(): String = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
     }
 
     companion object {
         private const val REQUEST_LOCATION = 1
+        private const val REQUEST_NOTIFICATIONS = 2
     }
 }

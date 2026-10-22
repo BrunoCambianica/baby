@@ -1,6 +1,6 @@
 // Adaptateur Open-Meteo → entrée du moteur. Fonctions pures, partagées par l'app web et le widget iPhone.
 // N'utilise que du JavaScript standard (pas d'API du navigateur), pour tourner aussi dans Scriptable.
-import { addDays, mean, round1 } from './engine.js';
+import { addDays, displayMoment, evaluate, mean, reminderText, round1, skyTheme, widgetLines, widgetShort } from './engine.js';
 
 export const PARIS_TZ = 'Europe/Paris';
 export const FORECAST_DAYS = 16;
@@ -155,6 +155,27 @@ export function buildInput({ forecast, climate = [], profile, date, now, lat }) 
     // La vigilance Météo-France et les épisodes de pollution ne sont pas encore branchés (v0.1).
     alerts: { vigilance: [], air: null },
     outlook: weeklyOutlook({ forecast, climate, date, lat: lat ?? forecast.latitude }),
+  };
+}
+
+// Ce qu'affiche un widget pour un enfant, à une heure donnée. Le jour : la journée en couches. Le soir : la tenue
+// et le sac de demain, à préparer, avec la nuit. `reminder` : calcule aussi le rappel du soir (tenue de demain).
+export function widgetView({ forecast, profile, date, time, lat }, bundle, { drawings = true, reminder = false } = {}) {
+  const today = evaluate(buildInput({ forecast, profile, date, now: time, lat }), bundle);
+  const moment = displayMoment(today, time);
+  const tomorrow = moment === 'soir' || reminder
+    ? evaluate(buildInput({ forecast, profile: { ...profile, room_temp_c: null }, date: addDays(date, 1), now: '07:00', lat }), bundle)
+    : null;
+  return {
+    today,
+    tomorrow,
+    moment,
+    lines: widgetLines(today, moment, bundle.messages, { drawings, tomorrow: moment === 'soir' ? tomorrow : null }),
+    theme: skyTheme(today, moment),
+    short: widgetShort(today, moment),
+    check: today.widget.check,
+    check_tiny: today.widget.check_tiny,
+    reminder: tomorrow?.journee ? reminderText(today, tomorrow, bundle.messages) : null,
   };
 }
 

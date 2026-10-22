@@ -41,7 +41,7 @@ function fixedDate(iso) {
 // `navigations` : liens suivis par l'app pendant qu'elle est ouverte dans la vue web de Scriptable.
 async function run({
   family = 'medium', inWidget = true, param = CONFIG, query = {}, loaderConfig, navigations = [], webView = true,
-  offline = false, files = new Map(), at = '2026-10-21T07:30:00+02:00',
+  offline = false, files = new Map(), at = '2026-10-21T07:30:00+02:00', extra = {},
 } = {}) {
   const out = { widget: null, presented: null, completed: false, opened: [], view: null, alerts: [] };
   class ListWidget {
@@ -153,6 +153,7 @@ async function run({
     console,
   };
   if (webView) globals.WebView = WebView;
+  Object.assign(globals, extra);
   if (loaderConfig !== undefined) globals.SB_CONFIG_FROM_LOADER = loaderConfig;
   const context = vm.createContext(globals);
   const runSuperbebe = vm.runInContext(`(function () {\n${code}\nreturn runSuperbebe;\n})()`, context);
@@ -300,15 +301,15 @@ await test('Écran verrouillé en ligne et rond', async () => {
   assert(circular.texts.length === 1 && /( h|°)$/.test(circular.texts[0]), JSON.stringify(circular.texts));
 });
 
-await test('Le soir : ligne nuit et TOG selon le relevé de la chambre', async () => {
+await test('Le soir : demain à préparer (tenue en dessins, sac), et la nuit selon le relevé de la chambre', async () => {
   const files = new Map([['/doc/superbebe/etat.json', JSON.stringify({ room: { value: 21.5, at: Date.parse('2026-10-21T19:00:00+02:00') } })]]);
   const out = await run({ files, at: '2026-10-21T20:30:00+02:00' });
-  assert(out.texts[1].includes('21,5'), out.texts[1]);
-  const row = out.widget.rows[0];
+  assert(/^Demain -?\d+°/.test(out.texts[1]), out.texts[1]);
+  assert(out.widget.rows[0].images.length >= 3, `tenue de demain : ${out.widget.rows[0].images.length} dessins`);
   // Chambre à 21,5 °C : un pyjama léger sous une gigoteuse de 1 TOG.
-  assert(row.images.length === 2 && row.texts[0].text === '≈ 1 TOG', `${row.images.length} dessins, ${JSON.stringify(row.texts)}`);
+  assert(/nuit 21,5° : pyjama léger \+ 1 TOG/i.test(out.texts[2]), out.texts[2]);
   const texte = await run({ files, param: TEXTE, at: '2026-10-21T20:30:00+02:00' });
-  assert(texte.texts[2].includes('TOG'), texte.texts[2]);
+  assert(/^Body /.test(texte.texts[2]) && texte.texts[3].includes('1 TOG'), JSON.stringify(texte.texts));
 });
 
 await test('Sans réglages : message d\'aide', async () => {
@@ -368,7 +369,7 @@ await test('Ouverture depuis le widget : app en plein écran avec les réglages,
   const state = JSON.parse(files.get('/doc/superbebe/etat.json'));
   assert(state.config === PARIS && state.rooms?.['']?.value === 21.5, JSON.stringify(state));
   const after = await run({ files, at: '2026-10-21T20:40:00+02:00' });
-  assert(after.texts[0] === 'SUPERBÉBÉ · PARIS' && after.texts[1].includes('21,5'), JSON.stringify(after.texts));
+  assert(after.texts[0] === 'SUPERBÉBÉ · PARIS' && after.texts[2].includes('21,5'), JSON.stringify(after.texts));
 });
 
 await test('Sans vue web : l\'app s\'ouvre dans Safari avec les réglages', async () => {
@@ -480,21 +481,52 @@ await test('Plusieurs enfants : chambre de chacun, ouverture de l\'app sur l\'en
   assert(open.view?.url === `${APP}?hote=scriptable&enfant=zoe2#import=${FAMILLE}`, String(open.view?.url));
   const leo = await run({ files, param: 'Léo', loaderConfig: FAMILLE, at: '2026-10-21T20:40:00+02:00' });
   const zoe = await run({ files, param: 'Zoé', loaderConfig: FAMILLE, at: '2026-10-21T20:40:00+02:00' });
-  assert(leo.texts[1].includes('21,5') && zoe.texts[1].includes('18'), `${leo.texts[1]} / ${zoe.texts[1]}`);
+  assert(/nuit 21,5°/i.test(leo.texts[2]) && /nuit 18°/i.test(zoe.texts[2]), `${leo.texts[2]} / ${zoe.texts[2]}`);
 });
 
-await test('Android : le moteur embarqué renvoie le lieu et trois lignes', async () => {
+await test('Rappel du soir : programmé à l\'heure choisie avec la tenue de demain de chaque enfant, retiré quand on le coupe', async () => {
+  const files = new Map();
+  const scheduled = [];
+  const removed = [];
+  const Notification = class {
+    setTriggerDate(date) {
+      this.date = date;
+    }
+    async schedule() {
+      scheduled.push({ id: this.identifier, title: this.title, body: this.body, date: this.date });
+    }
+    static removePending(ids) {
+      removed.push(...ids);
+    }
+  };
+  // Activé depuis l'app (lien superbebe-sync:?…&rappel=20:00), puis le widget se met à jour à 7 h 30.
+  await run({ files, loaderConfig: FAMILLE, param: '', inWidget: false, query: { config: FAMILLE, rappel: '20:00' }, extra: { Notification } });
+  const morning = await run({ files, loaderConfig: FAMILLE, param: '', extra: { Notification } });
+  const last = scheduled.at(-1);
+  assert(morning.completed && last?.id === 'superbebe-rappel' && last.title === 'Demain, à préparer ce soir', JSON.stringify(last));
+  assert(last.body.split('\n').length === 2 && last.body.startsWith('Léo : ') && last.body.includes('\nZoé : ') && last.body.includes('nuit'), last.body);
+  assert(last.date.getHours() === 20 && last.date.getDate() === 21, String(last.date));
+  // Après 20 h, le prochain rappel est pour le lendemain soir.
+  await run({ files, loaderConfig: FAMILLE, param: '', at: '2026-10-21T20:30:00+02:00', extra: { Notification } });
+  assert(scheduled.at(-1).date.getDate() === 22, String(scheduled.at(-1).date));
+  await run({ files, loaderConfig: FAMILLE, param: '', inWidget: false, query: { rappel: '0' }, extra: { Notification } });
+  assert(removed.includes('superbebe-rappel'), 'rappel non retiré');
+  const count = scheduled.length;
+  await run({ files, loaderConfig: FAMILLE, param: '', extra: { Notification } });
+  assert(scheduled.length === count, 'rappel programmé alors qu\'il est coupé');
+});
+
+await test('Android : le moteur embarqué renvoie le lieu et trois lignes, le jour comme le soir', async () => {
   const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
   const call = `${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {"offset": 0, "room": 19}, "2026-10-21", "20:30");`;
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
-  assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit', JSON.stringify(out));
-  assert(out.lines.length === 3 && out.lines[0].includes('19'), JSON.stringify(out.lines));
-  assert(out.lines[1].drawings?.join() === 'body_ml,gigoteuse' && out.lines[1].text === '≈ 2,5 TOG', JSON.stringify(out.lines[1]));
-  assert(out.lines[1].label === 'Body ML + gigoteuse ≈ 2,5 TOG', out.lines[1].label);
+  assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit' && out.check === 'Touchez sa nuque, pas ses mains', JSON.stringify(out));
+  assert(out.lines.length === 3 && /^Demain /.test(out.lines[0]) && /nuit 19° : body ML \+ 2,5 TOG/i.test(out.lines[2]), JSON.stringify(out.lines));
+  assert(out.lines[1].drawings?.length >= 3 && out.lines[1].label.startsWith('Body ML'), JSON.stringify(out.lines[1]));
   const day = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {}, "2026-10-21", "07:30");`, vm.createContext({})));
-  assert(day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines[1]));
+  assert(/^Ce matin /.test(day.lines[0]) && day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines));
   const texte = JSON.parse(vm.runInContext(call.replace(JSON.stringify(CONFIG), JSON.stringify(TEXTE)), vm.createContext({})));
-  assert(texte.lines[1].includes('2,5 TOG'), JSON.stringify(texte.lines));
+  assert(/^Body ML · /.test(texte.lines[1]) && texte.lines[2].includes('2,5 TOG'), JSON.stringify(texte.lines));
   const bad = JSON.parse(vm.runInContext(`${android}\nsbAndroid({}, "SB1.@@", {}, "2026-10-21", "08:00");`, vm.createContext({})));
   assert(bad.error === 'configuration', JSON.stringify(bad));
 });
@@ -504,9 +536,12 @@ await test('Android : un rendu par enfant, avec la chambre de chacun', async () 
   const call = `${android}\nsbAndroidAll(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {"rooms": {"leo1": 21.5, "zoe2": 18}}, "2026-10-21", "20:30");`;
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
   assert(out.children.map((c) => `${c.id}:${c.name}`).join() === 'leo1:Léo,zoe2:Zoé', JSON.stringify(out.children.map((c) => c.id)));
-  assert(out.children[0].lines[0].includes('21,5') && out.children[1].lines[0].includes('18'), JSON.stringify(out.children.map((c) => c.lines[0])));
+  assert(/nuit 21,5°/i.test(out.children[0].lines[2]) && /nuit 18°/i.test(out.children[1].lines[2]), JSON.stringify(out.children.map((c) => c.lines[2])));
   const one = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {}, "2026-10-21", "07:30", "zoe2");`, vm.createContext({})));
   assert(one.name === 'Zoé' && !one.lines[1].drawings.includes('body_ml'), JSON.stringify(one));
+  const due = JSON.parse(vm.runInContext(`${android}\nsbAndroidAll(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {"reminder": true}, "2026-10-21", "20:00");`, vm.createContext({})));
+  assert(due.reminder.title === 'Demain, à préparer ce soir' && due.reminder.lines.length === 2 && due.reminder.lines[1].startsWith('Zoé : '), JSON.stringify(due.reminder));
+  assert(JSON.parse(vm.runInContext(call, vm.createContext({}))).reminder.lines.length === 0, 'rappel calculé sans être dû');
 });
 
 console.log(`\n${failed ? `${failed} test(s) en échec` : 'Widgets iPhone et Android : tous les tests OK'}`);

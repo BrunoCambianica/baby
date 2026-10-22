@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.7)
+# Tester Superbébé (version 0.8)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -13,8 +13,10 @@ Au premier lancement, trois questions : votre commune, le mois de naissance de v
 
 L'app a trois onglets :
 - **Journée** : habillez-le une fois le matin. La tenue du matin en petits dessins (ou en texte : Réglages, Affichage, Tenues), puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus) et le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. La journée suit la plage horaire des réglages ; la sortie idéale est rappelée en haut. **Envoyer la fiche du jour** partage une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse) ;
-- **Nuit** : quoi mettre sous la gigoteuse et quel TOG, selon la température de la chambre, et les repères pour dormir. Après la dernière sortie possible de la journée, l'app et le widget passent d'eux-mêmes à la nuit ;
+- **Nuit** : quoi mettre sous la gigoteuse et quel TOG, selon la température de la chambre, et les repères pour dormir ;
 - **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
+
+**La veille au soir**, après la dernière sortie possible de la journée, l'onglet Journée et le widget montrent la tenue et le sac de demain, « à préparer ce soir », à côté de la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).
 
 ## 2. Ajouter le widget sur iPhone (5 minutes)
 
@@ -55,7 +57,7 @@ Réglages, **Envoyer les profils** : un lien part par la messagerie de votre cho
 - À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à cinq questions :
   1. Si l'app disparaissait demain, ce serait : très embêtant, un peu embêtant, ou pas grave ?
   2. Les tenues proposées étaient-elles justes : presque toujours, souvent, ou rarement ? Et les changements de la journée (− et +) ?
-  3. Le matin, le widget suffisait-il à savoir quoi mettre, quoi enlever plus tard et quoi prendre dans le sac ?
+  3. Le matin, le widget suffisait-il à savoir quoi mettre, quoi enlever plus tard et quoi prendre dans le sac ? Et le soir, à savoir quoi préparer sans ouvrir l'app ?
   4. Qu'est-ce qui vous a été le plus utile ?
   5. Qu'est-ce qui manque, ou vous a agacé ?
 

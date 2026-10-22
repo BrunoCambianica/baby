@@ -355,6 +355,25 @@
       "text": "Dans le sac : {items}.",
       "short": "sac : {items}"
     },
+    "evening.tomorrow": {
+      "kind": "meteo",
+      "text": "Demain, à préparer ce soir : de {first} à {extreme} °C ressentis{rain}.",
+      "short": "Demain {range}{rain}"
+    },
+    "evening.night": {
+      "kind": "fabricant",
+      "sources": [
+        "ergopouch-what-to-wear",
+        "fabricants-tog"
+      ],
+      "text": "Cette nuit : {wear} sous une gigoteuse d'environ {tog} TOG (repère des fabricants).",
+      "short": "nuit{room} : {wear} + {tog} TOG"
+    },
+    "evening.reminder": {
+      "kind": "pratique",
+      "text": "{outfit}{bag} · {night}",
+      "short": "Demain, à préparer ce soir"
+    },
     "night.room": {
       "kind": "meteo",
       "text": "Chambre à {room} °C ce soir (repère officiel : 18 à 20 °C).",

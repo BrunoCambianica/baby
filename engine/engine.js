@@ -566,14 +566,51 @@ export function journeePlanLine(journee, now, M) {
   return parts.length ? capitalize(parts.join(' · ')) : null;
 }
 
-// Les trois lignes du widget pour le moment voulu : « jour » (la journée en couches) ou « soir » (nuit et achats).
+// La veille au soir : « Demain 3° → 12° · pluie vers 15 h ».
+export function eveningTitle(tomorrow, M) {
+  const j = tomorrow.journee;
+  const range = journeeRange(j, j.from);
+  const rain = j.bag.find((b) => b.reason === 'pluie');
+  return render(M, 'evening.tomorrow', 'short', {
+    range: range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`,
+    rain: rain ? ` · pluie vers ${hourFr(rain.time)}` : '',
+  });
+}
+
+// La nuit en quelques mots : « nuit : body ML + 2,5 TOG », « nuit 21,5° : pyjama léger + 1 TOG » avec un relevé.
+export const eveningNight = (night, M) => render(M, 'evening.night', 'short', {
+  wear: night.wear.map((i) => M.labels.items_short[i] ?? i).join(' + '),
+  tog: night.tog,
+  room: night.room_temp_c === null ? '' : ` ${frNumber(night.room_temp_c)}°`,
+});
+
+// Le rappel du soir : la tenue de demain matin, le sac, la nuit.
+export function reminderText(today, tomorrow, M) {
+  const j = tomorrow.journee;
+  const labels = M.labels;
+  return render(M, 'evening.reminder', 'text', {
+    outfit: capitalize(j.morning.map((i) => labels.items_short[i] ?? i).join(', ')),
+    bag: j.bag.length ? ` · ${render(M, 'journee.bag', 'short', { items: shortList(j.bag.map((b) => b.item), labels) })}` : '',
+    night: eveningNight(today.night, M),
+  });
+}
+
+// Les trois lignes du widget pour le moment voulu : « jour » (la journée en couches) ou « soir » : avec `tomorrow`
+// (résultat du lendemain), la tenue et le sac de demain à préparer, et la nuit ; sinon la nuit et les achats.
 // Avec `drawings`, la tenue (le jour) et la gigoteuse (le soir) deviennent des dessins :
 // { drawings: [identifiants de engine/drawings.js], text, label }, `label` gardant le texte pour les petits formats.
-export function widgetLines(result, moment, M, { drawings = false } = {}) {
+export function widgetLines(result, moment, M, { drawings = false, tomorrow = null } = {}) {
   const labels = M.labels;
   const lines = [];
   const j = result.journee;
-  if (moment === 'jour' && j) {
+  if (moment === 'soir' && tomorrow?.journee) {
+    const next = tomorrow.journee;
+    lines.push(eveningTitle(tomorrow, M));
+    const label = capitalize(next.morning.map((i) => labels.items_short[i] ?? i).join(' · '));
+    lines.push(drawings ? { drawings: next.morning.map((i) => ITEM_DRAWINGS[i]).filter(Boolean), text: '', label } : label);
+    const bag = next.bag.length ? render(M, 'journee.bag', 'short', { items: shortList(next.bag.map((b) => b.item), labels) }) : '';
+    lines.push(capitalize([bag, result.night.tog ? eveningNight(result.night, M) : ''].filter(Boolean).join(' · ')));
+  } else if (moment === 'jour' && j) {
     // Le jour : le ressenti, la tenue du moment, puis le prochain changement et le sac (une alerte officielle passe avant).
     const now = result.now ?? '08:00';
     const vigilance = result.outing.reason === 'vigilance';

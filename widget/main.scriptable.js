@@ -1,7 +1,7 @@
 // Partie propre au widget iPhone (Scriptable).
 // tools/build-widget.js la concatène après engine/engine.js et engine/adapter.js, avec les règles embarquées.
 /* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Script, Safari, WebView, DrawContext, Alert,
-   Path, Rect, Size, config, args, SB_BASE_URL, SB_CONFIG_LOADER, SB_RULES */
+   Path, Rect, Size, Notification, config, args, SB_BASE_URL, SB_CONFIG_LOADER, SB_RULES */
 
 const SB_APP_URL = `${SB_BASE_URL}app/`;
 const SB_ROOM_TTL_MS = 16 * 3600 * 1000;
@@ -63,10 +63,15 @@ function sbRoom(state, childId, text) {
 }
 
 // Réglages et relevés des chambres envoyés par l'app : config=SB1.… et rooms=enfant:valeur@horodatage,…
-// (room=valeur@horodatage pour le premier enfant, dans les versions à un seul enfant).
+// (room=valeur@horodatage pour le premier enfant, dans les versions à un seul enfant) ;
+// rappel=HH:MM (rappel du soir activé dans l'app) ou rappel=0.
 function sbApply(state, params) {
   const config = String(params.config ?? '');
   if (sbValid(config)) state.config = config;
+  if (params.rappel !== undefined) {
+    const at = String(params.rappel);
+    state.reminder = /^\d{2}:\d{2}$/.test(at) ? { on: true, at } : { on: false };
+  }
   const cfg = decodeConfig(state.config ?? '', sbDecode);
   if (params.room && cfg) sbRoom(state, configChildren(cfg)[0].id, params.room);
   for (const part of String(params.rooms ?? '').split(',')) {
@@ -271,6 +276,43 @@ function sbDraw(family, lines, info) {
   return w;
 }
 
+// Rappel du soir, s'il a été activé dans l'app : une notification par jour au plus, à l'heure choisie, avec la tenue
+// et le sac de demain de chaque enfant, et la nuit. Reprogrammée à chaque lancement avec les dernières prévisions ;
+// sans réseau ni accord pour les notifications, rien ne se passe.
+const SB_REMINDER_ID = 'superbebe-rappel';
+async function sbScheduleReminder(state, cfg, forecast, date, time) {
+  if (typeof Notification === 'undefined') return;
+  try {
+    if (!state.reminder?.on) {
+      if (state.reminderScheduled) Notification.removePending([SB_REMINDER_ID]);
+      state.reminderScheduled = false;
+      return;
+    }
+    const at = state.reminder.at;
+    const day = toMin(time) < toMin(at) ? date : addDays(date, 1);
+    const children = configChildren(cfg);
+    const lines = children.map((child, k) => {
+      const profile = configToProfile(cfg, child.id);
+      profile.room_temp_c = sbFreshRoom(state, child.id, k === 0);
+      const view = widgetView({ forecast, profile, date: day, time: at, lat: cfg.la }, SB_RULES, { reminder: true });
+      return view.reminder && `${children.length > 1 ? `${child.name || `Enfant ${k + 1}`} : ` : ''}${view.reminder}`;
+    }).filter(Boolean);
+    if (!lines.length) return;
+    const notification = new Notification();
+    notification.identifier = SB_REMINDER_ID;
+    notification.threadIdentifier = 'superbebe';
+    notification.title = render(SB_RULES.messages, 'evening.reminder', 'short');
+    notification.body = lines.join('\n');
+    notification.openURL = `scriptable:///run/${encodeURIComponent(Script.name())}?ouvrir=app`;
+    const [y, m, d] = day.split('-').map(Number);
+    notification.setTriggerDate(new Date(y, m - 1, d, Number(at.slice(0, 2)), Number(at.slice(3, 5))));
+    await notification.schedule();
+    state.reminderScheduled = true;
+  } catch (e) {
+    // Notifications indisponibles (widget, autorisation refusée) : le widget reste à jour sans rappel.
+  }
+}
+
 async function sbFinish(widget, inWidget) {
   if (inWidget) Script.setWidget(widget);
   else await widget.presentMedium();
@@ -325,22 +367,22 @@ async function runSuperbebe() {
   const { date, time } = parisNow();
   const profile = configToProfile(cfg, child.id);
   profile.room_temp_c = sbFreshRoom(state, child.id, child.id === configChildren(cfg)[0].id);
-  const input = buildInput({ forecast: cache.forecast, profile, date, now: time, lat: cfg.la });
-  const result = evaluate(input, SB_RULES);
-  const moment = displayMoment(result, time);
-  const lines = widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 });
+  // Le jour, la journée en couches ; le soir, la tenue et le sac de demain, à préparer, et la nuit.
+  const view = widgetView({ forecast: cache.forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0 });
+  await sbScheduleReminder(state, cfg, cache.forecast, date, time);
+  files.write('etat.json', state);
   // Pied du widget : le geste pour vérifier qu'il n'a pas trop chaud, et l'heure de la météo.
   const updated = hourFr(parisNow(new Date(cache.at)).time);
   const offlineText = offline ? 'Hors ligne · ' : '';
   const info = {
     name: child.name,
     place: cfg.n || 'Superbébé',
-    theme: skyTheme(result, moment),
-    footer: `${offlineText}${result.widget.check} · ${updated}`,
-    footerSmall: `${offlineText}${result.widget.check_tiny} · ${updated}`,
-    short: result.widget.short,
+    theme: view.theme,
+    footer: `${offlineText}${view.check} · ${updated}`,
+    footerSmall: `${offlineText}${view.check_tiny} · ${updated}`,
+    short: view.short,
   };
-  const widget = sbDraw(family, lines, info);
+  const widget = sbDraw(family, view.lines, info);
   widget.url = sbTapUrl(child.id);
   return sbFinish(widget, inWidget);
 }

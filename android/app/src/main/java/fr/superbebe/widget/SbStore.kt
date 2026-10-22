@@ -42,7 +42,7 @@ object SbStore {
     /** Oublie les réglages (« Effacer mes données » dans l'app) ; true s'il y en avait. */
     fun clearConfig(context: Context): Boolean {
         if (config(context) == null) return false
-        prefs(context).edit().remove("config").remove("room").remove("room_at").remove("rooms").apply()
+        prefs(context).edit().remove("config").remove("room").remove("room_at").remove("rooms").remove("reminder_on").apply()
         return true
     }
 
@@ -112,6 +112,22 @@ object SbStore {
         }
         if (changed) prefs(context).edit().putString("rooms", all.toString()).apply()
         return changed
+    }
+
+    /** Rappel du soir : activé dans l'app, à l'heure choisie (« 20:00 »), au plus une fois par jour. */
+    data class Reminder(val on: Boolean, val at: String, val sentFor: String?)
+
+    fun reminder(context: Context): Reminder {
+        val p = prefs(context)
+        return Reminder(p.getBoolean("reminder_on", false), p.getString("reminder_at", null) ?: "20:00", p.getString("reminder_sent", null))
+    }
+
+    fun saveReminder(context: Context, on: Boolean, at: String) {
+        prefs(context).edit().putBoolean("reminder_on", on).putString("reminder_at", at).apply()
+    }
+
+    fun markReminderSent(context: Context, day: String) {
+        prefs(context).edit().putString("reminder_sent", day).apply()
     }
 
     /** Enfant affiché par un widget (le premier enfant si rien n'a été choisi). */

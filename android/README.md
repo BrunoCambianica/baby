@@ -21,6 +21,7 @@ tools/compiler-apk.sh      # compile, puis copie l'APK dans dist/superbebe-andro
 | `SbWorker.kt` | Toutes les 30 minutes : météo Open-Meteo, appel du moteur pour chaque enfant (`sbAndroidAll`), enregistrement des lignes |
 | `SbEngine.kt` | Exécute le moteur JavaScript dans le bac à sable |
 | `SbWidget.kt` | Widget Glance : affiche les lignes de son enfant sur un ciel assorti à la météo (`res/drawable/widget_bg_*`), la tenue en dessins ; le toucher ouvre l'app sur cet enfant (`superbebe://enfant/…`). `SbPinReceiver` attache l'enfant au widget posé depuis l'app |
+| `SbReminder.kt` | Rappel du soir activé dans l'app : autorisation des notifications (Android 13 et plus), calcul à l'heure choisie, une notification par jour au plus avec la tenue et le sac de demain de chaque enfant, et la nuit |
 | `SbWidgetConfigure.kt` | Choix de l'enfant d'un widget : à la pose avant Android 12, ou appui long, « Modifier le widget » ; rien à choisir avec un seul enfant |
 | `SbDrawings.kt`, `res/drawable/drawing_*.xml` | Dessins des vêtements, générés par `npm run build` (tools/make-drawings.js) à partir de `engine/drawings.js` : ne pas modifier à la main |
 | `SbStore.kt` | État local (préférences) et lecture de la configuration |

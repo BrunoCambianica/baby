@@ -9,6 +9,8 @@ const KEYS = {
   hidden: 'sb.masques',
   widget: 'sb.widget',
   promo: 'sb.promo',
+  // Rappel du soir, propre à ce téléphone : { on, at: 'HH:MM' }.
+  reminder: 'sb.rappel',
 };
 
 function read(key, fallback) {
@@ -50,6 +52,8 @@ export const store = {
   adoptHidden: (childId) => write(KEYS.hidden, read(KEYS.hidden, []).map((key) => (key.includes('|') ? key : `${childId}|${key}`))),
   widgetCopied: () => read(KEYS.widget, null),
   markWidgetCopied: () => write(KEYS.widget, { at: Date.now() }),
+  reminder: () => read(KEYS.reminder, { on: false, at: '20:00' }),
+  saveReminder: (value) => write(KEYS.reminder, value),
   promoHidden: () => read(KEYS.promo, false),
   hidePromo: () => write(KEYS.promo, true),
   clear() {

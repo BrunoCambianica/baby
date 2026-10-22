@@ -53,7 +53,8 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val updated = Instant.ofEpochMilli(SbStore.forecastAt(c)).atZone(PARIS)
         val time = if (updated.minute == 0) "${updated.hour} h" else String.format(Locale.FRANCE, "%d h %02d", updated.hour, updated.minute)
         val footer = (if (offline) "Hors ligne · " else "") + time
-        val state = JSONObject().put("rooms", SbStore.rooms(c)).put("room", SbStore.room(c) ?: JSONObject.NULL)
+        val reminderDue = SbReminder.due(c, now)
+        val state = JSONObject().put("rooms", SbStore.rooms(c)).put("room", SbStore.room(c) ?: JSONObject.NULL).put("reminder", reminderDue)
         try {
             val out = SbEngine.compute(
                 c, forecast, config, state,
@@ -62,6 +63,14 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
             )
             if (out.has("error")) throw IllegalStateException("configuration invalide")
             // Pied : « Touchez sa nuque, pas ses mains · 7 h 30 » (« Hors ligne · » devant, sans réseau).
+            if (reminderDue) {
+                val reminder = out.optJSONObject("reminder")
+                val lines = reminder?.optJSONArray("lines")
+                SbReminder.post(
+                    c, reminder?.optString("title") ?: "Superbébé",
+                    (0 until (lines?.length() ?: 0)).map { lines!!.getString(it) }, now.toLocalDate().toString(),
+                )
+            }
             val children = out.getJSONArray("children")
             SbStore.saveRenders(c, (0 until children.length()).map {
                 val child = children.getJSONObject(it)
@@ -76,6 +85,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
             SbStore.saveMessage(c, place.name, "Calcul impossible pour le moment. ${e.message ?: ""}".trim(), footer)
         }
         SbWidget().updateAll(c)
+        SbReminder.schedule(c)
         return Result.success()
     }
 

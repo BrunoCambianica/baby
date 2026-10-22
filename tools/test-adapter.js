@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { evaluate } from '../engine/engine.js';
 import {
   buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
-  householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, weeklyOutlook,
+  householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, weeklyOutlook, widgetView,
 } from '../engine/adapter.js';
 import { loadRules, readJSON, ROOT } from './load-rules.js';
 
@@ -94,6 +94,25 @@ test('De bout en bout : une vraie journée donne un créneau, une tenue et trois
   assert(result.widget.lines.length === 3, JSON.stringify(result.widget.lines));
   assert(result.outing.slots.length === 9, `${result.outing.slots.length} heures dans la plage`);
   assert(result.night.tog === '2,5', `TOG ${result.night.tog}`);
+});
+
+test('Widget le soir : la tenue et le sac de demain, à préparer, et la nuit ; le rappel du soir', () => {
+  const profile = {
+    commune: { nom: 'Lyon', lat: 45.758, lon: 4.8351 }, birth: '2026-05', transport: 'poussette',
+    outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_offset: 0, room_temp_c: 19, inventory: {},
+  };
+  const evening = widgetView({ forecast, profile, date: '2026-10-26', time: '20:30', lat: 45.758 }, bundle, { drawings: true });
+  assert(evening.moment === 'soir' && evening.theme === 'nuit' && evening.tomorrow?.date === '2026-10-27', `${evening.moment} ${evening.tomorrow?.date}`);
+  assert(evening.lines[0] === 'Demain 5° → 19°', evening.lines[0]);
+  assert(evening.lines[1].drawings.includes('combi_chaude'), JSON.stringify(evening.lines[1]));
+  assert(evening.lines[2] === 'Sac : gilet · nuit 19° : body ML + 2,5 TOG', evening.lines[2]);
+  const rainy = widgetView({ forecast, profile, date: '2026-10-24', time: '20:30', lat: 45.758 }, bundle);
+  assert(rainy.lines[0] === 'Demain 8° → 14° · pluie vers 8 h' && rainy.lines[2].startsWith('Sac : habillage pluie'), JSON.stringify(rainy.lines));
+  assert(evening.reminder.startsWith('Body ML, pyjama, pull, combi pilote') && evening.reminder.endsWith('nuit 19° : body ML + 2,5 TOG'), evening.reminder);
+  const morning = widgetView({ forecast, profile, date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle);
+  assert(morning.moment === 'jour' && morning.tomorrow === null && morning.reminder === null && morning.lines[0] === 'Ce matin 5° → 19°', JSON.stringify(morning.lines));
+  const early = widgetView({ forecast, profile, date: '2026-10-27', time: '16:00', lat: 45.758 }, bundle, { reminder: true });
+  assert(early.moment === 'jour' && early.reminder?.startsWith('Body MC, pyjama léger') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
 });
 
 test('Configuration du widget : aller-retour avec accents', () => {
