@@ -1,6 +1,8 @@
 // Parcours de l'app dans Chromium (Playwright) : le site est servi en local, la météo et les communes sont simulées
 // à partir des réponses enregistrées dans tools/fixtures, l'heure est figée.
 // Prérequis : tools/e2e/installer.sh. Usage : npm run e2e   (captures d'écran dans tools/e2e/captures/)
+// Sur le site en ligne plutôt qu'en local : SB_SITE=https://brunocambianica.github.io/baby/ npm run e2e
+// Un seul parcours : npm run e2e -- « début du nom »
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -10,7 +12,7 @@ import { encodeConfig, householdToConfig } from '../../engine/adapter.js';
 import { readJSON, ROOT } from '../load-rules.js';
 
 const PORT = 8000 + Math.floor(Math.random() * 900);
-const BASE = `http://localhost:${PORT}/baby/`;
+const BASE = process.env.SB_SITE ?? `http://localhost:${PORT}/baby/`;
 const APP = `${BASE}app/`;
 const CAPTURES = join(ROOT, 'tools', 'e2e', 'captures');
 const FIX = join(ROOT, 'tools', 'fixtures');
@@ -25,8 +27,8 @@ const LIBS = join(homedir(), '.local', 'share', 'superbebe', 'libs', 'usr', 'lib
 const env = existsSync(LIBS) ? { ...process.env, LD_LIBRARY_PATH: `${LIBS}:${process.env.LD_LIBRARY_PATH ?? ''}` } : process.env;
 
 mkdirSync(CAPTURES, { recursive: true });
-const server = spawn(process.execPath, [join(ROOT, 'tools', 'serve.js')], { env: { ...process.env, PORT: String(PORT) }, stdio: 'pipe' });
-await new Promise((resolve) => server.stdout.once('data', resolve));
+const server = process.env.SB_SITE ? null : spawn(process.execPath, [join(ROOT, 'tools', 'serve.js')], { env: { ...process.env, PORT: String(PORT) }, stdio: 'pipe' });
+if (server) await new Promise((resolve) => server.stdout.once('data', resolve));
 const browser = await chromium.launch({ env });
 
 // Un téléphone : 390 × 844, heure de Paris figée, météo et communes simulées, erreurs de la page relevées.
@@ -284,6 +286,6 @@ await test('Assistant du widget iPhone : un widget par enfant, choisi par son pr
 });
 
 await browser.close();
-server.kill();
+server?.kill();
 console.log(`\n${failed ? `${failed} parcours en échec` : 'Parcours : tous OK'} (captures : tools/e2e/captures/)`);
 process.exit(failed ? 1 : 0);
