@@ -38,7 +38,7 @@ async function run({
   family = 'medium', inWidget = true, param = CONFIG, query = {}, loaderConfig, navigations = [], webView = true,
   offline = false, files = new Map(), at = '2026-10-21T07:30:00+02:00',
 } = {}) {
-  const out = { widget: null, presented: null, completed: false, opened: [], view: null };
+  const out = { widget: null, presented: null, completed: false, opened: [], view: null, alerts: [] };
   class ListWidget {
     constructor() {
       this.texts = [];
@@ -114,6 +114,13 @@ async function run({
     readString: (p) => files.get(p),
     writeString: (p, s) => files.set(p, s),
   };
+  class Alert {
+    addAction() {}
+    async presentAlert() {
+      out.alerts.push({ title: this.title, message: this.message });
+      return 0;
+    }
+  }
   class WebView {
     constructor() {
       out.view = this;
@@ -130,7 +137,7 @@ async function run({
   }
   const accessory = family.startsWith('accessory');
   const globals = {
-    ListWidget, Color, Font, Request, LinearGradient, Point, ...drawingMocks(),
+    ListWidget, Color, Font, Request, LinearGradient, Point, Alert, ...drawingMocks(),
     FileManager: { local: () => fm },
     Data: { fromBase64String: (b64) => ({ toRawString: () => Buffer.from(b64, 'base64').toString('binary') }) },
     Script: { setWidget: (w) => { out.widget = w; }, complete: () => { out.completed = true; }, name: () => 'Superbébé' },
@@ -291,7 +298,8 @@ await test('Le soir : ligne nuit et TOG selon le relevé de la chambre', async (
   const out = await run({ files, at: '2026-10-21T20:30:00+02:00' });
   assert(out.texts[1].includes('21,5'), out.texts[1]);
   const row = out.widget.rows[0];
-  assert(row.images.length === 1 && row.texts[0].text === '≈ 1 TOG', JSON.stringify(row.texts));
+  // Chambre à 21,5 °C : body manches courtes et pyjama léger sous une gigoteuse de 1 TOG.
+  assert(row.images.length === 3 && row.texts[0].text === '≈ 1 TOG', `${row.images.length} dessins, ${JSON.stringify(row.texts)}`);
   const texte = await run({ files, param: TEXTE, at: '2026-10-21T20:30:00+02:00' });
   assert(texte.texts[2].includes('TOG'), texte.texts[2]);
 });
@@ -361,9 +369,14 @@ await test('Sans vue web : l\'app s\'ouvre dans Safari avec les réglages', asyn
   assert(out.opened[0] === `${APP}?hote=scriptable#import=${CONFIG}`, JSON.stringify(out.opened));
 });
 
-await test('Lancé à la main dans Scriptable : aperçu du widget', async () => {
-  const out = await run({ inWidget: false });
+await test('Lancé à la main dans Scriptable : la dernière étape une fois, puis l\'aperçu', async () => {
+  const files = new Map();
+  const out = await run({ inWidget: false, files });
   assert(out.presented && out.texts[0] === 'SUPERBÉBÉ · LYON', JSON.stringify(out.texts));
+  assert(out.alerts.length === 1 && out.alerts[0].message.includes('Modifier le widget, Script : « Superbébé »'), JSON.stringify(out.alerts));
+  assert(!out.alerts[0].message.includes('renommez'), 'conseil de renommage inutile');
+  const again = await run({ inWidget: false, files });
+  assert(again.alerts.length === 0, 'accueil répété');
 });
 
 await test('Fond en dégradé selon le moment : nuit le soir', async () => {
@@ -441,7 +454,8 @@ await test('Android : le moteur embarqué renvoie le lieu et trois lignes', asyn
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
   assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit', JSON.stringify(out));
   assert(out.lines.length === 3 && out.lines[0].includes('19'), JSON.stringify(out.lines));
-  assert(out.lines[1].drawings?.[0] === 'gigoteuse' && out.lines[1].text === '≈ 2,5 TOG' && out.lines[1].label.includes('2,5 TOG'), JSON.stringify(out.lines[1]));
+  assert(out.lines[1].drawings?.join() === 'body_ml,pyjama,gigoteuse' && out.lines[1].text === '≈ 2,5 TOG', JSON.stringify(out.lines[1]));
+  assert(out.lines[1].label === 'Body ML + pyjama + gigoteuse ≈ 2,5 TOG', out.lines[1].label);
   const day = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {}, "2026-10-21", "07:30");`, vm.createContext({})));
   assert(day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines[1]));
   const texte = JSON.parse(vm.runInContext(call.replace(JSON.stringify(CONFIG), JSON.stringify(TEXTE)), vm.createContext({})));

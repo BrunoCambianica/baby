@@ -173,6 +173,15 @@
       "text": "Température de la chambre recommandée : entre 18 et 20 °C.",
       "short": "Chambre entre 18 et 20 °C"
     },
+    "relay.sleep.check_temp": {
+      "kind": "officiel",
+      "verbatim": false,
+      "sources": [
+        "nhs-sids"
+      ],
+      "text": "Pour savoir s'il a trop chaud, touchez sa poitrine ou sa nuque : des mains ou des pieds frais, c'est normal. Peau chaude ou moite : retirez une couche.",
+      "short": "Touchez sa nuque, pas ses mains : moite, une couche de moins"
+    },
     "relay.sleep.season_thickness": {
       "kind": "officiel",
       "verbatim": false,
@@ -241,6 +250,15 @@
       ],
       "text": "Chambre à {room} °C : environ {tog} TOG selon les tableaux habituels des fabricants. L'étiquette de votre gigoteuse fait foi.",
       "short": "Gigoteuse ≈ {tog} TOG (indicatif fabricants)"
+    },
+    "fabricant.night_wear": {
+      "kind": "fabricant",
+      "sources": [
+        "ergopouch-what-to-wear",
+        "fabricants-tog"
+      ],
+      "text": "Sous la gigoteuse : {wear}. Repère des fabricants, à adapter à bébé ; l'étiquette de la gigoteuse fait foi.",
+      "short": "{wear} + gigoteuse ≈ {tog} TOG"
     },
     "fabricant.sleepbag.norm": {
       "kind": "fabricant",
@@ -354,7 +372,7 @@
       "body_ml": "body ML",
       "tenue_ample_claire": "habits amples et clairs",
       "tenue_legere": "tenue légère",
-      "pyjama_leger": "ensemble léger",
+      "pyjama_leger": "pyjama léger",
       "pyjama": "pyjama",
       "pyjama_chaud": "pyjama chaud",
       "gilet_fin": "gilet fin",

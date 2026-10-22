@@ -4,7 +4,7 @@ import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.4.1';
+export const VERSION = '0.5.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -319,7 +319,7 @@ function laterCards(state, ctx) {
   const n = ctx.result.night;
   return `${tomorrow}<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('moon', { size: 18 })}Ce soir</h2></div>
-      <p class="hint">${n.tog ? `Chambre à ${decimal(n.room_temp_c)} °C : gigoteuse ≈ ${esc(n.tog)} TOG.` : 'Notez la température de la chambre pour choisir la gigoteuse.'}</p>
+      <p class="hint">${n.room_assumed ? 'Chambre à 18-20 °C' : `Chambre à ${decimal(n.room_temp_c)} °C`} : ${esc(n.wear.map((i) => state.bundle.messages.labels.items_short[i]).join(' + '))}, gigoteuse ≈ ${esc(n.tog)} TOG.</p>
       <button class="btn soft" data-action="tab" data-value="nuit">Préparer la nuit</button>
     </section>`;
 }
@@ -364,22 +364,31 @@ function nuitContent(state, ctx) {
   const basics = M.messages['relay.sleep.basics'];
   const facts = [...(basics.list ?? [basics.short]), ...n.relays.filter((id) => id !== 'relay.sleep.basics').map((id) => render(M, id, 'short'))];
   const sources = [...new Set(n.relays.flatMap((id) => M.messages[id]?.sources ?? []))];
-  const togText = `<p class="big-value">≈ ${esc(n.tog)} TOG</p><p class="hint">Pour une chambre à ${decimal(n.room_temp_c)} °C. Indication des fabricants : l'étiquette de la gigoteuse fait foi.</p>`;
-  const tog = !n.tog
-    ? '<p class="hint">Notez la température de la chambre ci-dessus pour une indication.</p>'
-    : drawingsOn(state)
-      ? `<div class="tog-row"><span class="dress-ico">${drawingSvg('gigoteuse', { size: 34 })}</span><div>${togText}</div></div>`
-      : togText;
-  return `<section class="card">
-      <div class="card-head"><h2 class="card-title">${icon('bed', { size: 18 })}Gigoteuse</h2><span class="tag amber">fabricants</span></div>
-      ${tog}
-    </section>
+  return `${nightWearCard(state, n)}
     <section class="card">
       <div class="card-head"><h2 class="card-title">${icon('shield', { size: 18 })}Pour bien dormir</h2><span class="tag green">officiel</span></div>
       <ul class="facts">${facts.map((f) => `<li>${icon('check', { size: 18 })}<span>${esc(capitalize(f))}</span></li>`).join('')}</ul>
       <p class="source">Sources : ${sourceLinks(state, sources)}</p>
     </section>
     ${foot()}`;
+}
+
+// Tenue de nuit : ce qu'on met sous la gigoteuse et son TOG, pour la chambre relevée ou, sans relevé, pour le repère officiel.
+function nightWearCard(state, n) {
+  const labels = state.bundle.messages.labels;
+  const range = state.bundle.rules.night.room_range_c;
+  const room = n.room_assumed ? `Chambre à ${range.min}-${range.max} °C, le repère officiel` : `Chambre à ${decimal(n.room_temp_c)} °C`;
+  const wear = drawingsOn(state)
+    ? `<ul class="dress">${n.wear.map((item) => `<li><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span>
+        <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}
+        <li><span class="dress-ico night">${drawingSvg('gigoteuse', { size: 34 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
+    : `<p>Sous la gigoteuse : ${esc(n.wear.map((item) => labels.items[item]).join(' et '))}.</p>`;
+  return `<section class="card">
+      <div class="card-head"><h2 class="card-title">${icon('bed', { size: 18 })}Pour la nuit</h2><span class="tag amber">fabricants</span></div>
+      <p class="band"><strong>≈ ${esc(n.tog)} TOG</strong><span>${room}</span></p>
+      ${wear}
+      <p class="hint">Repère des fabricants, à adapter à bébé : l'étiquette de la gigoteuse fait foi.${n.room_assumed ? ' Notez la température de la chambre ci-dessus pour l\'ajuster.' : ''}</p>
+    </section>`;
 }
 
 // Une seule échéance par achat : utile tout de suite, à avoir pour une date proche, ou à prévoir avant une date.
@@ -537,21 +546,46 @@ function homeScreenGroup(state) {
   return `<section class="group"><h2 class="group-title">Écran d'accueil</h2><div class="group-body">${rows}</div>${note}</section>`;
 }
 
+// Pose du widget sur iPhone en trois vignettes : les écrans tels qu'on les voit, l'endroit à toucher en bleu.
+function widgetHowTo() {
+  const phone = (inner) => `<svg viewBox="0 0 120 210" aria-hidden="true"><rect class="ph" x="3" y="3" width="114" height="204" rx="20"/>${inner}</svg>`;
+  const apps = Array.from({ length: 12 }, (_, i) => `<rect class="soft" x="${16 + (i % 4) * 24}" y="${44 + Math.floor(i / 4) * 26}" width="16" height="16" rx="5"/>`).join('');
+  const shots = [
+    ['Appui long sur l\'écran d\'accueil, puis <strong>Modifier</strong> et <strong>Ajouter un widget</strong>',
+      phone(`<rect class="acc" x="10" y="15" width="48" height="16" rx="8"/><text x="34" y="26" class="on">Modifier</text>${apps}
+        <circle class="tap" cx="60" cy="150" r="13"/><circle class="acc" cx="60" cy="150" r="5"/>`)],
+    ['<strong>Scriptable</strong>, taille moyenne, puis <strong>Ajouter le widget</strong>',
+      phone(`<rect class="sheet" x="3" y="62" width="114" height="145" rx="18"/><rect class="soft" x="14" y="74" width="92" height="12" rx="6"/>
+        <rect class="soft" x="14" y="94" width="14" height="14" rx="4"/><text x="34" y="105" class="label">Scriptable</text>
+        <rect class="sky" x="14" y="118" width="92" height="42" rx="10"/><rect class="acc" x="24" y="172" width="72" height="18" rx="9"/><text x="60" y="184" class="on">Ajouter</text>`)],
+    ['Appui long sur le widget, <strong>Modifier le widget</strong>, Script : <strong>Superbébé</strong>',
+      phone(`<rect class="sky" x="12" y="24" width="96" height="46" rx="12"/><rect class="sheet" x="12" y="80" width="96" height="58" rx="12"/>
+        <rect class="acc" x="14" y="86" width="92" height="18" rx="7"/><text x="60" y="98" class="on small">Modifier le widget</text>
+        <rect class="soft" x="14" y="110" width="92" height="20" rx="7"/><text x="60" y="123" class="label mid small">Script : Superbébé</text>`)],
+  ];
+  return `<ol class="how">${shots.map(([caption, svg], i) => `<li>${svg}<span><b>${i + 1}</b> ${caption}</span></li>`).join('')}</ol>`;
+}
+
 // Assistant du widget : la plateforme du téléphone d'abord, une action par étape.
 export function viewWidget(state, ctx) {
   const lines = ctx ? widgetLines(ctx.result, ctx.moment, state.bundle.messages, { drawings: drawingsOn(state) }) : [];
   const theme = ctx ? sortirTheme(ctx) : 'clair';
   const done = (n) => (state.steps.has(`${state.platform}-${n}`) ? ' done' : '');
   const num = (n) => `<span class="step-num">${state.steps.has(`${state.platform}-${n}`) ? icon('check', { size: 16 }) : n}</span>`;
+  // iPhone : quatre gestes, un bouton par étape ; l'étape à faire est mise en avant.
+  const next = [1, 2, 3, 4].find((n) => !state.steps.has(`ios-${n}`)) ?? 0;
+  const at = (n) => `${done(n)}${n === next ? ' current' : ''}`;
   const ios = `
-    <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Installer Scriptable</h3><p>Une app gratuite qui affiche le widget.</p>
+    <li class="step${at(1)}">${num(1)}<div class="step-body"><h3>Installer Scriptable</h3><p>L'app gratuite qui affiche le widget.</p>
       <a class="btn small tint" href="${SCRIPTABLE_URL}" target="_blank" rel="noopener" data-step="1">Ouvrir l'App Store</a></div></li>
-    <li class="step${done(2)}">${num(2)}<div class="step-body"><h3>Copier le script</h3>
-      <button class="btn small tint" data-action="copy-loader" data-step="2"${state.script ? '' : ' disabled'}>Copier le script</button>
-      <p>Il contient vos réglages. Dans Scriptable : <strong>+</strong> en haut à droite, collez, nommez-le <strong>Superbébé</strong> (touchez le titre), puis ▶ en bas à droite.</p></div></li>
-    <li class="step${done(3)}">${num(3)}<div class="step-body"><h3>Poser le widget</h3>
-      <p>Appui long sur l'écran d'accueil, <strong>Modifier</strong> en haut à gauche, puis <strong>Ajouter un widget</strong>. Choisissez Scriptable, taille moyenne.</p>
-      <p>Touchez le widget pendant que les icônes bougent, puis Script : <strong>Superbébé</strong>. C'est tout.</p>
+    <li class="step${at(2)}">${num(2)}<div class="step-body"><h3>Copier le script</h3><p>Il contient déjà vos réglages.</p>
+      <button class="btn small tint" data-action="copy-loader" data-step="2"${state.script ? '' : ' disabled'}>Copier le script</button></div></li>
+    <li class="step${at(3)}">${num(3)}<div class="step-body"><h3>Le coller dans Scriptable</h3>
+      <a class="btn small tint" href="scriptable:///add" data-step="3">Ouvrir Scriptable</a>
+      <p>Un script vide s'ouvre : appui long dedans, <strong>Coller</strong>, puis <strong>▶</strong> en bas à droite. Scriptable affiche alors la suite.</p></div></li>
+    <li class="step${at(4)}">${num(4)}<div class="step-body"><h3>Poser le widget</h3>
+      ${widgetHowTo()}
+      <button class="btn small soft" data-step="4">C'est fait</button>
       <p class="fine">Toucher le widget ouvre ensuite Superbébé en plein écran. Écran verrouillé : appui long dessus, Personnaliser, puis un widget Scriptable.</p></div></li>`;
   const android = `
     <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Télécharger l'app Superbébé</h3>

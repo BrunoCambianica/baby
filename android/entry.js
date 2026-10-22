@@ -28,7 +28,7 @@ function sbAndroid(forecast, configText, state, date, time) {
   profile.room_temp_c = typeof state.room === 'number' ? state.room : null;
   const input = buildInput({ forecast, profile, date, now: time, lat: cfg.la });
   const result = evaluate(input, SB_RULES);
-  const moment = momentOf(time);
+  const moment = displayMoment(result, time);
   return JSON.stringify({
     place: cfg.n || 'Superbébé',
     // Avec la tenue en dessins (réglage de l'app), certaines lignes sont des objets { drawings, text, label }.

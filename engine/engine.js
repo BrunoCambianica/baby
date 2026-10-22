@@ -199,20 +199,28 @@ function dayRelays(input, R, age, plan, outfit, params) {
   return sortByPriority(relays, R.relay_priority);
 }
 
+// Gigoteuse (TOG) et tenue dessous selon la chambre ; sans relevé, pour le repère officiel (milieu de 18-20 °C), en le disant.
 function planNight(input, R, heat) {
   const n = R.night;
   const room = input.profile.room_temp_c ?? null;
   const relays = [...n.always];
   let status = 'unknown';
-  let tog = null;
   if (room !== null) {
     status = room < n.room_range_c.min ? 'below' : room > n.room_range_c.max ? 'above' : 'in_range';
-    const t = n.tog_hint.round_room_temp ? Math.round(room) : room;
-    tog = n.tog_hint.bins.find((b) => b.max_c === null || t <= b.max_c).tog;
     relays.push(...n.when_room_known);
   }
+  const ref = room ?? (n.room_range_c.min + n.room_range_c.max) / 2;
+  const t = n.tog_hint.round_room_temp ? Math.round(ref) : ref;
+  const bin = n.tog_hint.bins.find((b) => b.max_c === null || t <= b.max_c);
   if (heat || (room !== null && room >= n.heat_room_c_at_least)) relays.push('relay.heat.shutters');
-  return { room_temp_c: room, room_status: status, tog, relays: sortByPriority(relays, R.relay_priority) };
+  return {
+    room_temp_c: room,
+    room_status: status,
+    room_assumed: room === null,
+    tog: bin.tog,
+    wear: [...(bin.wear ?? [])],
+    relays: sortByPriority(relays, R.relay_priority),
+  };
 }
 
 function needMet(need, week, band, transport) {
@@ -305,9 +313,10 @@ export function widgetLines(result, moment, M, { drawings = false } = {}) {
         ? render(M, 'night.room_unknown', 'short')
         : render(M, 'night.room', 'short', { room: frNumber(n.room_temp_c) }),
     );
+    // Tenue de nuit : ce qu'on met sous la gigoteuse, puis la gigoteuse et son TOG.
     if (n.tog) {
-      const label = render(M, 'fabricant.tog', 'short', { tog: n.tog });
-      lines.push(drawings ? { drawings: ['gigoteuse'], text: `≈ ${n.tog} TOG`, label } : label);
+      const label = render(M, 'fabricant.night_wear', 'short', { wear: capitalize(n.wear.map((i) => labels.items_short[i] ?? i).join(' + ')), tog: n.tog });
+      lines.push(drawings ? { drawings: [...n.wear.map((i) => ITEM_DRAWINGS[i]).filter(Boolean), 'gigoteuse'], text: `≈ ${n.tog} TOG`, label } : label);
     }
     const p = result.purchases[0];
     lines.push(
@@ -323,6 +332,8 @@ export function widgetLines(result, moment, M, { drawings = false } = {}) {
 }
 
 export const momentOf = (now) => (toMin(now ?? '08:00') < toMin('18:00') ? 'jour' : 'soir');
+// Ce qu'affichent l'app et les widgets : le soir dès 18 h, ou dès que la dernière sortie possible de la journée est passée.
+export const displayMoment = (result, now) => (momentOf(now) === 'soir' || result.outing.reason === 'journee_terminee' ? 'soir' : 'jour');
 
 // Ambiance du ciel (app et widgets) : le soir, la nuit ; en journée, le temps qu'il fera au créneau conseillé.
 export function skyTheme(result, moment) {
@@ -371,7 +382,7 @@ export function evaluate(input, bundle) {
     night: planNight(input, R, plan.heat),
     purchases: planPurchases(input, R),
   };
-  result.widget = { lines: widgetLines(result, momentOf(input.now), bundle.messages) };
+  result.widget = { lines: widgetLines(result, displayMoment(result, input.now), bundle.messages) };
   if (input.check_product) result.product = checkProduct(input.check_product, age, R);
   return result;
 }
@@ -420,6 +431,10 @@ export function lint(bundle) {
     if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!M.labels.layers[M.labels.item_layers[item]]) errors.push(`couche inconnue pour : ${item}`);
+    if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
+  }
+  for (const item of R.night.tog_hint.bins.flatMap((b) => b.wear ?? [])) {
+    if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
   }
   for (const cat of R.purchases.categories) {

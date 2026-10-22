@@ -1,5 +1,5 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
-import { addDays, clamp, evaluate, hourFr, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
+import { addDays, clamp, displayMoment, evaluate, hourFr, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
 import { buildInput, decodeConfig, encodeConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { dayLong, dayShort } from './format.js';
@@ -55,7 +55,15 @@ const state = {
   widgetReady: Boolean(store.widgetCopied()),
   confirmClear: false,
   updateReady: false,
+  // Onglet choisi par l'utilisateur : on ne bascule plus tout seul vers la nuit.
+  tabChosen: false,
 };
+
+// Comme le widget : après la dernière sortie possible, l'app s'ouvre sur la nuit.
+function eveningTab() {
+  if (state.tabChosen || state.tab !== 'sortir' || currentView() !== 'app') return;
+  if (compute('aujourdhui', { pick: false })?.moment === 'soir') state.tab = 'nuit';
+}
 
 const route = () => location.hash.replace('#', '');
 
@@ -98,7 +106,7 @@ function compute(day, { pick = true } = {}) {
   const hidden = store.hidden();
   result.purchases = result.purchases.filter((x) => !hidden.includes(x.key));
   const picked = pick && state.pickedHour ? outfitAt(input, state.bundle, state.pickedHour) : null;
-  return { input, result, date, moment: tomorrow ? 'jour' : momentOf(time), picked, tomorrow, forecast: state.forecast };
+  return { input, result, date, moment: tomorrow ? 'jour' : displayMoment(result, time), picked, tomorrow, forecast: state.forecast };
 }
 
 function newDraft(profile) {
@@ -338,6 +346,7 @@ async function loadData({ force = false } = {}) {
     state.error = 'Météo indisponible pour le moment. Vérifiez la connexion.';
   }
   state.loading = false;
+  eveningTab();
   if (currentView() === 'app') paint();
   if (force && !state.error && !state.forecast?.offline) toast(`Météo à jour (${state.updatedAt})`);
   try {
@@ -367,6 +376,7 @@ const actions = {
   'apply-update': () => location.reload(),
   refresh: () => loadData({ force: true }),
   tab(el) {
+    state.tabChosen = true;
     state.tab = el.dataset.value;
     state.pickedHour = null;
     paint();
@@ -527,7 +537,7 @@ const actions = {
     if (state.script && (await copy(state.script))) {
       store.markWidgetCopied();
       state.widgetReady = true;
-      toast('Script copié avec vos réglages : collez-le dans Scriptable.');
+      toast('Script copié. Étape suivante : Ouvrir Scriptable.');
     }
     paint();
   },
@@ -729,6 +739,7 @@ async function boot() {
     if (climate?.code === state.profile.commune.code) state.climate = climate.years;
     store.markDay(state.today);
     syncHost();
+    eveningTab();
   }
   paint();
   if (route() === 'widget') preloadLoader();

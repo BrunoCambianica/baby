@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.4)
+# Tester Superbébé (version 0.5)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -11,18 +11,19 @@ Au premier lancement, trois questions : votre commune, le mois de naissance de b
 
 L'app a trois onglets :
 - **Sortir** : le meilleur moment pour sortir aujourd'hui ou demain, et comment habiller bébé, en petits dessins (ou en texte : Réglages, Affichage, Tenues) ;
-- **Nuit** : la température de la chambre et les repères pour dormir ;
+- **Nuit** : quoi mettre sous la gigoteuse et quel TOG, selon la température de la chambre, et les repères pour dormir. Après la dernière sortie possible de la journée, l'app et le widget passent d'eux-mêmes à la nuit ;
 - **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
 
 ## 2. Ajouter le widget sur iPhone (5 minutes)
 
 C'est le cœur du test : la réponse s'affiche sans ouvrir l'app, même sur l'écran verrouillé.
 
-Dans Superbébé : **Réglages**, puis **Ajouter le widget**. L'app vous guide en trois étapes :
+Dans Superbébé : **Réglages**, puis **Ajouter le widget**. L'app vous guide en quatre étapes, un bouton par étape :
 
-1. Installer **Scriptable** (gratuit) depuis l'App Store.
-2. **Copier le script** (il contient vos réglages), puis dans Scriptable : **+** en haut à droite, coller, nommer le script « Superbébé », ▶ en bas à droite.
-3. Poser le widget : appui long sur l'écran d'accueil, **Modifier** en haut à gauche, **Ajouter un widget**, Scriptable, taille moyenne. Touchez ensuite le widget pendant que les icônes bougent et choisissez le script **Superbébé**. Rien à coller.
+1. **Installer Scriptable** (gratuit) depuis l'App Store.
+2. **Copier le script** : il contient déjà vos réglages.
+3. **Ouvrir Scriptable** : un script vide s'ouvre ; appui long dedans, **Coller**, puis ▶ en bas à droite. Scriptable affiche la dernière étape.
+4. **Poser le widget** : appui long sur l'écran d'accueil, **Modifier**, **Ajouter un widget**, Scriptable, taille moyenne ; puis appui long sur le widget, **Modifier le widget**, Script : Superbébé. Des vignettes montrent chaque écran.
 
 Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chambre du soir, réglages) part dans le widget. Après un changement fait dans l'app de l'écran d'accueil : Réglages, **Envoyer mes réglages au widget**.
 

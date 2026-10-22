@@ -1,6 +1,6 @@
 // Partie propre au widget iPhone (Scriptable).
 // tools/build-widget.js la concatène après engine/engine.js et engine/adapter.js, avec les règles embarquées.
-/* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Script, Safari, WebView, DrawContext,
+/* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Script, Safari, WebView, DrawContext, Alert,
    Path, Rect, Size, config, args, SB_BASE_URL, SB_CONFIG_LOADER, SB_RULES */
 
 const SB_APP_URL = `${SB_BASE_URL}app/`;
@@ -95,6 +95,22 @@ async function sbOpenApp(state, configText) {
   } catch (e) {
     Safari.open(url);
   }
+}
+
+// Premier lancement à la main (après le collage du script) : la dernière étape, dite dans Scriptable même.
+async function sbWelcome() {
+  const name = Script.name();
+  const alert = new Alert();
+  alert.title = 'Superbébé est prêt';
+  alert.message = [
+    'Dernière étape : poser le widget.',
+    "1. Écran d'accueil : appui long sur un espace vide, Modifier, puis Ajouter un widget.",
+    '2. Scriptable, taille moyenne, Ajouter le widget.',
+    `3. Appui long sur le widget, Modifier le widget, Script : « ${name} ».`,
+    name === 'Superbébé' ? '' : "Astuce : renommez ce script « Superbébé » (touchez son nom en haut) pour que l'app puisse lui envoyer vos réglages.",
+  ].filter(Boolean).join('\n\n');
+  alert.addAction('Compris');
+  await alert.presentAlert();
 }
 
 // Dessins des vêtements (engine/drawings.js) tracés en blanc : commandes absolues M, L, Q, C et Z.
@@ -265,6 +281,10 @@ async function runSuperbebe() {
     files.write('etat.json', state);
     return Script.complete();
   }
+  if (!inWidget && !query.config && !state.welcomed) {
+    await sbWelcome();
+    state.welcomed = true;
+  }
   files.write('etat.json', state);
 
   let cache = files.read('meteo.json');
@@ -288,7 +308,7 @@ async function runSuperbebe() {
   profile.room_temp_c = sbFreshRoom(state);
   const input = buildInput({ forecast: cache.forecast, profile, date, now: time, lat: cfg.la });
   const result = evaluate(input, SB_RULES);
-  const moment = momentOf(time);
+  const moment = displayMoment(result, time);
   const lines = widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 });
   const updated = parisNow(new Date(cache.at)).time.replace(':', ' h ');
   const window = result.outing.window;
