@@ -163,6 +163,10 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .dress-ico { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: var(--blue-soft); color: var(--blue); flex: none; }
 .dress .extra .dress-ico { background: var(--fill); color: var(--ink-2); }
 .dress-name { font-size: 0.76rem; font-weight: 600; line-height: 1.25; color: var(--ink-2); overflow-wrap: anywhere; }
+.dress-hint { font-size: 0.7rem; color: var(--ink-3); margin-top: -4px; }
+.band { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.band strong { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
+.band span { font-size: 0.88rem; color: var(--ink-3); }
 .tog-row { display: flex; gap: 14px; align-items: center; }
 .tips { list-style: none; display: grid; gap: 8px; margin: 0; background: var(--fill); border-radius: 14px; padding: 10px 12px; font-size: 0.92rem; color: var(--ink-2); }
 .tips li { display: flex; gap: 10px; align-items: flex-start; }
@@ -213,8 +217,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 /* Nuit */
 .stepper { display: flex; align-items: center; gap: 18px; margin-top: 10px; position: relative; }
-.stepper .glass-btn { width: 52px; height: 52px; }
-.stepper .hero-big { margin: 0; min-width: 4.3em; text-align: center; }
+.stepper .glass-btn { width: 52px; height: 52px; flex: none; }
+.stepper .hero-big { margin: 0; flex: 1; min-width: 0; text-align: center; }
 .hero-big.pending { opacity: 0.6; }
 .status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 0.95rem; margin-top: 14px; position: relative; }
 .big-value { font-family: var(--display); font-size: 2.6rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
@@ -378,6 +382,8 @@ select, input[type="search"] {
 }
 .update { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18); font-weight: 600; font-size: 0.92rem; white-space: nowrap; }
 .foot { text-align: center; font-size: 0.8rem; color: var(--ink-3); padding: 6px 12px 0; display: grid; gap: 4px; }
+/* Sans carte au-dessus, le pied de page ne doit pas remonter sur le ciel. */
+.content > .foot:first-child { padding-top: 46px; }
 .foot a { color: var(--ink-2); }
 
 @media (prefers-reduced-motion: no-preference) {

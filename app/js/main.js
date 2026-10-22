@@ -70,7 +70,8 @@ const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute
   .format(new Date(ms)).replace(':', ' h ');
 
 // Les onglets Nuit et Prévoir parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Sortir.
-function compute(day) {
+// `pick` : tenue à l'heure choisie dans la frise (pas pour l'aperçu de demain).
+function compute(day, { pick = true } = {}) {
   if (!state.forecast || !state.bundle) return null;
   const now = parisNow();
   const tomorrow = day === 'demain';
@@ -96,7 +97,7 @@ function compute(day) {
   const result = evaluate(input, state.bundle);
   const hidden = store.hidden();
   result.purchases = result.purchases.filter((x) => !hidden.includes(x.key));
-  const picked = state.pickedHour ? outfitAt(input, state.bundle, state.pickedHour) : null;
+  const picked = pick && state.pickedHour ? outfitAt(input, state.bundle, state.pickedHour) : null;
   return { input, result, date, moment: tomorrow ? 'jour' : momentOf(time), picked, tomorrow, forecast: state.forecast };
 }
 
@@ -132,7 +133,12 @@ function paint() {
     state.script = state.loader?.replace('__SB_CONFIG__', configText()) ?? null;
     html = V.viewWidget(state, compute('aujourdhui'));
   } else if (view === 'apropos') html = V.viewAbout(state);
-  else html = V.viewApp(state, compute(state.tab === 'sortir' ? state.day : 'aujourdhui'));
+  else {
+    const ctx = compute(state.tab === 'sortir' ? state.day : 'aujourdhui');
+    // Journée finie : l'onglet Sortir montre la tenue de demain.
+    if (ctx && state.tab === 'sortir' && !ctx.tomorrow && !ctx.result.outfit) ctx.next = compute('demain', { pick: false });
+    html = V.viewApp(state, ctx);
+  }
   if (state.updateReady) {
     html += '<div class="update" role="status">Nouvelle version prête<button class="btn small" data-action="apply-update">Recharger</button></div>';
   }

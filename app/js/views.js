@@ -4,7 +4,7 @@ import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.1';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -180,14 +180,27 @@ function modes(current) {
     `<button role="radio" aria-checked="${current === v}" data-action="transport" data-value="${v}">${icon(i, { size: 22 })}${l}</button>`).join('')}</div>`;
 }
 
-function outfitCard(state, ctx) {
-  const M = state.bundle.messages;
-  const { result, picked } = ctx;
-  const outfit = picked ?? result.outfit;
-  if (!outfit) return '';
-  const labels = M.labels;
+// Tranche de ressenti en titre, comme sur les guides par température : « Frais · 14 à 18 °C ».
+function bandTitle(state, outfit) {
+  const bands = state.bundle.rules.outfit.bands;
+  const i = bands.findIndex((b) => b.id === outfit.base_band);
+  if (i < 0) return '';
+  const min = bands[i].min_feels_c;
+  const above = bands[i - 1]?.min_feels_c;
+  const range = min === null ? `moins de ${above} °C` : above === undefined ? `${min} °C et plus` : `${min} à ${above} °C`;
+  return `<p class="band"><strong>${esc(state.bundle.messages.labels.bands[outfit.base_band])}</strong><span>${range} ressentis</span></p>`;
+}
+
+// La tenue : tuiles dessinées (de la peau vers le dessus, accessoires à la fin) ou liste écrite par couches.
+function dressList(state, outfit) {
+  const labels = state.bundle.messages.labels;
   const layered = outfit.items.filter((i) => labels.item_layers[i] !== 'accessoire');
   const extras = outfit.items.filter((i) => labels.item_layers[i] === 'accessoire');
+  if (drawingsOn(state)) {
+    return `<ul class="dress">${[...layered, ...extras].map((item) => `<li${labels.item_layers[item] === 'accessoire' ? ' class="extra"' : ''}>
+        <span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span><span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span>
+        ${labels.item_hints?.[item] ? `<span class="dress-hint">${esc(labels.item_hints[item])}</span>` : ''}</li>`).join('')}</ul>`;
+  }
   let previous = null;
   const rows = layered.map((item) => {
     const layer = labels.item_layers[item];
@@ -195,18 +208,21 @@ function outfitCard(state, ctx) {
     previous = layer;
     return `<li class="layer"><span class="layer-dot"></span><div>${name}<p class="layer-items">${esc(capitalize(labels.items[item]))}</p></div></li>`;
   }).join('');
+  return `<ol class="layers">${rows}</ol>
+    ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}`;
+}
+
+function outfitCard(state, ctx) {
+  const M = state.bundle.messages;
+  const { result, picked } = ctx;
+  const outfit = picked ?? result.outfit;
+  if (!outfit) return '';
   const params = picked ? picked.params : result.params;
   const tips = outfit.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', params))}</span></li>`).join('');
   const pickedBar = picked
     ? `<div class="picked"><span>À ${hourFr(state.pickedHour)} · ${Math.round(picked.feels_c)}° ressentis${picked.reasons.length ? ` · ${esc(picked.reasons.map((r) => SLOT_FLAG[r] ?? r).join(', '))}` : ''}</span>
         <button class="icon-btn" data-action="pick-hour" data-hour="${state.pickedHour}" aria-label="Revenir au créneau idéal">${icon('x', { size: 18 })}</button></div>`
     : '';
-  // En dessins : une tuile par vêtement, de la peau vers le dessus, accessoires à la fin.
-  const dress = drawingsOn(state)
-    ? `<ul class="dress">${[...layered, ...extras].map((item) => `<li${labels.item_layers[item] === 'accessoire' ? ' class="extra"' : ''}>
-        <span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span><span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}</ul>`
-    : `<ol class="layers">${rows}</ol>
-    ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}`;
   return `<section class="card" aria-labelledby="t-tenue">
     <div class="card-head">
       <h2 class="card-title" id="t-tenue">${icon('shirt', { size: 18 })}${picked ? 'Tenue à cette heure' : "Comment l'habiller"}</h2>
@@ -214,7 +230,8 @@ function outfitCard(state, ctx) {
     </div>
     ${pickedBar}
     ${modes(state.profile.transport)}
-    ${dress}
+    ${bandTitle(state, outfit)}
+    ${dressList(state, outfit)}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
   </section>`;
 }
@@ -287,7 +304,28 @@ function promoCard(state) {
 const foot = () => `<p class="foot"><span>Repères officiels relayés, pas d'avis médical. Urgence : 15 ou 112.</span>
   <span><a href="#apropos">Charte et sources</a> · Météo Open-Meteo · v${VERSION}</span></p>`;
 
+// Plus de sortie aujourd'hui : plutôt qu'un écran vide, la tenue de demain et la nuit qui vient.
+function laterCards(state, ctx) {
+  const next = ctx.next;
+  const w = next?.result.outing.window;
+  const tomorrow = next?.result.outfit
+    ? `<section class="card">
+      <div class="card-head"><h2 class="card-title">${icon('sun', { size: 18 })}Demain</h2>${w ? `<span class="tag blue">${hourFr(w.start)} – ${hourFr(w.end)} · ${Math.round(w.feels_c)}°</span>` : ''}</div>
+      ${bandTitle(state, next.result.outfit)}
+      ${dressList(state, next.result.outfit)}
+      <button class="btn soft" data-action="day" data-value="demain">Voir demain en détail</button>
+    </section>`
+    : '';
+  const n = ctx.result.night;
+  return `${tomorrow}<section class="card">
+      <div class="card-head"><h2 class="card-title">${icon('moon', { size: 18 })}Ce soir</h2></div>
+      <p class="hint">${n.tog ? `Chambre à ${decimal(n.room_temp_c)} °C : gigoteuse ≈ ${esc(n.tog)} TOG.` : 'Notez la température de la chambre pour choisir la gigoteuse.'}</p>
+      <button class="btn soft" data-action="tab" data-value="nuit">Préparer la nuit</button>
+    </section>`;
+}
+
 function sortirContent(state, ctx) {
+  if (!ctx.tomorrow && !ctx.result.outfit) return `${laterCards(state, ctx)}${promoCard(state)}${foot()}`;
   return [
     outfitCard(state, ctx),
     hoursCard(state, ctx),
