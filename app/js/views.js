@@ -3,7 +3,7 @@ import { hourFr, render, skyTheme, widgetLines } from '../../engine/engine.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { icon, weatherIcon } from './icons.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -29,10 +29,14 @@ const SCRIPTABLE_URL = 'https://apps.apple.com/fr/app/scriptable/id1405459188';
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 const chev = (size = 18) => `<span class="chev">${icon('chevronRight', { size })}</span>`;
 const heroArt = (name) => `<div class="hero-art">${icon(name, { size: 150, stroke: 1.2 })}</div>`;
+// Nom court dans le texte, nom complet et titre au survol ; la liste complète est dans « Charte et sources ».
+const sourceName = (s) => s?.short ?? s?.publisher ?? '';
 const sourceLinks = (state, ids) => ids
   .map((sid) => state.sourcesById.get(sid))
   .filter(Boolean)
-  .map((s) => (s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.publisher)}</a>` : esc(s.publisher)))
+  .map((s) => (s.url
+    ? `<a href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(`${s.publisher} : ${s.title}`)}">${esc(sourceName(s))}</a>`
+    : esc(sourceName(s))))
   .join(' · ');
 
 export const loading = () => '<p class="boot">Chargement…</p>';
@@ -189,7 +193,7 @@ function outfitCard(state, ctx) {
     return `<li class="layer"><span class="layer-dot"></span><div>${name}<p class="layer-items">${esc(capitalize(labels.items[item]))}</p></div></li>`;
   }).join('');
   const params = picked ? picked.params : result.params;
-  const tips = outfit.notes.map((n) => `<p class="tip">${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', params))}</span></p>`).join('');
+  const tips = outfit.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', params))}</span></li>`).join('');
   const pickedBar = picked
     ? `<div class="picked"><span>À ${hourFr(state.pickedHour)} · ${Math.round(picked.feels_c)}° ressentis${picked.reasons.length ? ` · ${esc(picked.reasons.map((r) => SLOT_FLAG[r] ?? r).join(', '))}` : ''}</span>
         <button class="icon-btn" data-action="pick-hour" data-hour="${state.pickedHour}" aria-label="Revenir au créneau idéal">${icon('x', { size: 18 })}</button></div>`
@@ -203,7 +207,7 @@ function outfitCard(state, ctx) {
     ${modes(state.profile.transport)}
     <ol class="layers">${rows}</ol>
     ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}
-    ${tips}
+    ${tips ? `<ul class="tips">${tips}</ul>` : ''}
   </section>`;
 }
 
@@ -236,12 +240,12 @@ function officialCard(state, ids, params) {
   const M = state.bundle.messages;
   const [first, ...others] = ids;
   const firstMsg = M.messages[first];
-  const publisher = state.sourcesById.get(firstMsg.sources?.[0])?.publisher ?? '';
+  const publisher = sourceName(state.sourcesById.get(firstMsg.sources?.[0]));
   const more = others.map((id) => `<p><strong>${esc(render(M, id, 'short', params))}</strong><span>${esc(render(M, id, 'text', params))}</span><span class="source">Source : ${sourceLinks(state, M.messages[id].sources ?? [])}</span></p>`).join('');
   return `<details class="card official">
     <summary>
       <span class="official-badge">${icon('shield', { size: 20 })}</span>
-      <span><p class="official-text">${esc(render(M, first, 'short', params))}</p><p class="official-src">Repère officiel · ${esc(publisher.split(' (')[0])}${others.length ? ` · ${others.length} autre${others.length > 1 ? 's' : ''}` : ''}</p></span>
+      <span><p class="official-text">${esc(render(M, first, 'short', params))}</p><p class="official-src">Repère officiel · ${esc(publisher)}${others.length ? ` · ${others.length} autre${others.length > 1 ? 's' : ''}` : ''}</p></span>
       ${chev()}
     </summary>
     <div class="official-body">
@@ -318,12 +322,18 @@ function nuitContent(state, ctx) {
     ${foot()}`;
 }
 
+// Une seule échéance par achat : utile tout de suite, à avoir pour une date proche, ou à prévoir avant une date.
+function buyWhen(x, date) {
+  if (x.needed_from <= date) return { text: 'Dès maintenant', urgent: true };
+  if (x.order_by <= date) return { text: `Utile dès le ${dayShort(x.needed_from)}`, urgent: true };
+  return { text: `Avant le ${dayShort(x.order_by)}`, urgent: false };
+}
+
 function heroPrevoir(state, ctx) {
   const list = ctx.result.purchases;
   const first = list[0];
-  const sub = first
-    ? first.needed_from <= ctx.date ? 'Le premier dès maintenant' : `Le premier avant le ${esc(dayShort(first.order_by))}`
-    : 'Sur les 6 prochaines semaines';
+  const when = first && buyWhen(first, ctx.date).text;
+  const sub = first ? `Le premier ${esc(when[0].toLowerCase() + when.slice(1))}` : 'Sur les 6 prochaines semaines';
   return `<header class="hero hero--prevoir">${heroArt('bag')}${heroTop(state, ctx.date)}
     <p class="hero-label">À prévoir</p>
     <p class="hero-big${list.length ? '' : ' words'}">${list.length ? `${list.length} achat${list.length > 1 ? 's' : ''}` : 'Rien à prévoir'}</p>
@@ -337,11 +347,12 @@ function prevoirContent(state, ctx) {
   const inv = state.profile.inventory ?? {};
   const owned = Object.values(inv).reduce((a, sizes) => a + sizes.length, 0);
   const items = ctx.result.purchases.map((x) => {
-    const when = x.needed_from <= ctx.date ? 'Dès maintenant' : `Avant le ${dayShort(x.order_by)}`;
+    const when = buyWhen(x, ctx.date);
+    const why = x.reasons.map((r) => M.labels.reasons[r] ?? r).join(' · ');
     const official = x.relays.find((id) => M.messages[id]?.kind === 'officiel');
     return `<article class="buy">
       <div class="buy-head"><h3>${esc(capitalize(M.labels.categories[x.category]))}</h3>${x.size === 'unique' ? '' : `<span class="tag blue">${esc(x.size_label)}</span>`}</div>
-      <div class="buy-meta"><span class="tag${x.needed_from <= ctx.date ? ' amber' : ''}">${esc(when)}</span>${x.reasons.map((r) => `<span class="tag">${esc(M.labels.reasons[r] ?? r)}</span>`).join('')}</div>
+      <div class="buy-meta"><span class="tag${when.urgent ? ' amber' : ''}">${esc(when.text)}</span><span class="buy-why">${esc(capitalize(why))}</span></div>
       ${official ? `<p class="source">${esc(render(M, official, 'short'))} · ${sourceLinks(state, M.messages[official].sources ?? [])}</p>` : ''}
       <div class="buy-actions">
         <button class="btn small tint" data-action="own" data-cat="${x.category}" data-size="${x.size}">${icon('check', { size: 18 })}Je l'ai déjà</button>

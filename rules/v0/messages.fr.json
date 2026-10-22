@@ -129,10 +129,10 @@
       "kind": "pratique", "text": "Vent soutenu : le ressenti est plus froid, protégez du vent.", "short": "Vent : ressenti plus froid"
     },
     "practical.carrier.body_heat": {
-      "kind": "pratique", "text": "En porte-bébé, la chaleur du porteur réchauffe bébé : en général une couche de moins qu'en poussette.", "short": "Porte-bébé : une couche de moins"
+      "kind": "pratique", "text": "En porte-bébé, votre chaleur réchauffe bébé : une couche de moins qu'en poussette.", "short": "Porte-bébé : une couche de moins"
     },
     "practical.carrier.no_footed": {
-      "kind": "pratique", "text": "En porte-bébé, préférez un pantalon sans pieds et des chaussettes : les pyjamas à pieds intégrés tirent sur les pieds quand les jambes sont repliées.", "short": "Porte-bébé : pas de pyjama à pieds"
+      "kind": "pratique", "text": "Pas de pyjama à pieds en porte-bébé : il tire sur les pieds quand les jambes sont repliées.", "short": "Porte-bébé : pas de pyjama à pieds"
     },
     "fabricant.tog": {
       "kind": "fabricant", "sources": ["fabricants-tog"],
