@@ -44,10 +44,11 @@ Toucher le widget ouvre son app : température de la chambre, et proposition de 
 - Le soir, notez la température de la chambre (onglet Nuit, boutons − et +).
 - Dans l'onglet Prévoir, indiquez ce que vous avez déjà dans « Ma garde-robe ».
 - Si bébé a souvent trop chaud ou trop froid avec les tenues proposées, réglez « Tendance de bébé » dans les Réglages.
-- À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à trois questions :
+- À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à quatre questions :
   1. Si l'app disparaissait demain, ce serait : très embêtant, un peu embêtant, ou pas grave ?
-  2. Qu'est-ce qui vous a été le plus utile ?
-  3. Qu'est-ce qui manque, ou vous a agacé ?
+  2. Les tenues proposées étaient-elles justes : presque toujours, souvent, ou rarement ?
+  3. Qu'est-ce qui vous a été le plus utile ?
+  4. Qu'est-ce qui manque, ou vous a agacé ?
 
 ## Bon à savoir
 
