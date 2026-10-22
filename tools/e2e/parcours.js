@@ -407,7 +407,8 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
 await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app Android, transmis au widget iPhone', async (use) => {
   const page = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await page.goto(`${APP}#reglages`);
-  assert(await page.isVisible('text=Rappel du soir') && await page.isVisible('text=Avec le widget'), 'rappel non expliqué dans le navigateur');
+  await page.waitForSelector('text=Rappel du soir');
+  assert(await page.isVisible('text=Avec le widget'), 'rappel non expliqué dans le navigateur');
   await page.context().close();
 
   const bridge = `window.calls = []; window.reminder = 'off'; window.SuperbebeAndroid = { sync() {}, colors() {}, widgets: () => 1, version: () => '0.8.0',
