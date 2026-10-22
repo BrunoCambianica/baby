@@ -267,7 +267,7 @@ function sbDraw(family, lines, info) {
     if (k < shown.length - 1) w.addSpacer(small ? 3 : 5);
   });
   w.addSpacer();
-  sbText(w, info.footer, 9, { color: new Color('#ffffff', 0.7) });
+  sbText(w, small ? info.footerSmall : info.footer, 9, { color: new Color('#ffffff', 0.7) });
   return w;
 }
 
@@ -329,16 +329,16 @@ async function runSuperbebe() {
   const result = evaluate(input, SB_RULES);
   const moment = displayMoment(result, time);
   const lines = widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 });
-  const updated = parisNow(new Date(cache.at)).time.replace(':', ' h ');
-  const window = result.outing.window;
+  // Pied du widget : le geste pour vérifier qu'il n'a pas trop chaud, et l'heure de la météo.
+  const updated = hourFr(parisNow(new Date(cache.at)).time);
+  const offlineText = offline ? 'Hors ligne · ' : '';
   const info = {
     name: child.name,
     place: cfg.n || 'Superbébé',
     theme: skyTheme(result, moment),
-    footer: `${offline ? 'Hors ligne · ' : ''}Mis à jour à ${updated} · Open-Meteo`,
-    short: moment === 'jour'
-      ? window ? hourFr(window.start) : '—'
-      : result.night.tog ? `${result.night.tog}` : '—',
+    footer: `${offlineText}${result.widget.check} · ${updated}`,
+    footerSmall: `${offlineText}${result.widget.check_tiny} · ${updated}`,
+    short: result.widget.short,
   };
   const widget = sbDraw(family, lines, info);
   widget.url = sbTapUrl(child.id);

@@ -182,6 +182,18 @@
       "text": "Pour savoir s'il a trop chaud, touchez sa poitrine ou sa nuque : des mains ou des pieds frais, c'est normal. Peau chaude ou moite : retirez une couche.",
       "short": "Touchez sa nuque, pas ses mains : moite, une couche de moins"
     },
+    "relay.check_neck": {
+      "kind": "officiel",
+      "verbatim": false,
+      "sources": [
+        "inspq-chaleur-froid",
+        "nhs-sids"
+      ],
+      "text": "Pour vérifier s'il a trop chaud, « touchez sa nuque : elle ne doit pas être mouillée » (Mieux vivre, Québec). Des mains ou des pieds frais, c'est normal (NHS).",
+      "short": "Touchez sa nuque, pas ses mains",
+      "tiny": "Touchez sa nuque",
+      "card": "Touchez sa nuque, pas ses mains : nuque moite, une couche de moins (Mieux vivre, Québec ; NHS)."
+    },
     "relay.sleep.season_thickness": {
       "kind": "officiel",
       "verbatim": false,
@@ -327,6 +339,21 @@
       "kind": "meteo",
       "text": "Pas de créneau de jour dans votre plage horaire.",
       "short": "Pas de créneau de jour"
+    },
+    "journee.range": {
+      "kind": "meteo",
+      "text": "{when}, de {first} à {extreme} °C ressentis.",
+      "short": "{when} {first}° → {extreme}°"
+    },
+    "journee.stable": {
+      "kind": "meteo",
+      "text": "{when}, autour de {first} °C ressentis.",
+      "short": "{when} {first}°"
+    },
+    "journee.bag": {
+      "kind": "pratique",
+      "text": "Dans le sac : {items}.",
+      "short": "sac : {items}"
     },
     "night.room": {
       "kind": "meteo",

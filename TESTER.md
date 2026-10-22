@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.6)
+# Tester Superbébé (version 0.7)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -12,13 +12,13 @@ Au premier lancement, trois questions : votre commune, le mois de naissance de v
 **Plusieurs enfants ?** Réglages, **Ajouter un enfant**. Chacun a son mode de sortie, sa tendance, sa garde-robe et sa chambre ; des pastilles en haut de l'écran passent de l'un à l'autre. À partir de 2 ans, les tenues changent (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière) et les tailles passent en années.
 
 L'app a trois onglets :
-- **Sortir** : le meilleur moment pour sortir aujourd'hui ou demain, et comment habiller bébé, en petits dessins (ou en texte : Réglages, Affichage, Tenues) ;
+- **Journée** : habillez-le une fois le matin. La tenue du matin en petits dessins (ou en texte : Réglages, Affichage, Tenues), puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus) et le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. La journée suit la plage horaire des réglages ; la sortie idéale est rappelée en haut. **Envoyer la fiche du jour** partage une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse) ;
 - **Nuit** : quoi mettre sous la gigoteuse et quel TOG, selon la température de la chambre, et les repères pour dormir. Après la dernière sortie possible de la journée, l'app et le widget passent d'eux-mêmes à la nuit ;
 - **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
 
 ## 2. Ajouter le widget sur iPhone (5 minutes)
 
-C'est le cœur du test : la réponse s'affiche sans ouvrir l'app, même sur l'écran verrouillé.
+C'est le cœur du test : la réponse s'affiche sans ouvrir l'app, même sur l'écran verrouillé. Le matin : « Ce matin 6° → 17° », la tenue en dessins, puis le prochain changement et le sac (« 12 h : − combi pilote · sac : gilet »).
 
 Dans Superbébé : **Réglages**, puis **Ajouter le widget**. L'app vous guide en quatre étapes, un bouton par étape :
 
@@ -52,11 +52,12 @@ Réglages, **Envoyer les profils** : un lien part par la messagerie de votre cho
 - Le soir, notez la température de la chambre (onglet Nuit, boutons − et +).
 - Dans l'onglet Prévoir, indiquez ce que vous avez déjà dans « Ma garde-robe ».
 - Si bébé a souvent trop chaud ou trop froid avec les tenues proposées, réglez « Tendance de bébé » dans les Réglages.
-- À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à quatre questions :
+- À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à cinq questions :
   1. Si l'app disparaissait demain, ce serait : très embêtant, un peu embêtant, ou pas grave ?
-  2. Les tenues proposées étaient-elles justes : presque toujours, souvent, ou rarement ?
-  3. Qu'est-ce qui vous a été le plus utile ?
-  4. Qu'est-ce qui manque, ou vous a agacé ?
+  2. Les tenues proposées étaient-elles justes : presque toujours, souvent, ou rarement ? Et les changements de la journée (− et +) ?
+  3. Le matin, le widget suffisait-il à savoir quoi mettre, quoi enlever plus tard et quoi prendre dans le sac ?
+  4. Qu'est-ce qui vous a été le plus utile ?
+  5. Qu'est-ce qui manque, ou vous a agacé ?
 
 ## Bon à savoir
 

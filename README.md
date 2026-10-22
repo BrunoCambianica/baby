@@ -11,6 +11,7 @@ App web installable et widgets iPhone et Android : quand sortir avec bébé, com
 | Dossier | Contenu |
 |---|---|
 | `app/` | App web installable (PWA) : page, styles, modules JS, service worker, icônes |
+| `fiche/` | Page de la fiche du jour envoyée à la nounou, à la crèche ou aux grands-parents : les données sont dans le lien, après le `#` |
 | `engine/` | Moteur de règles, adaptateur Open-Meteo et dessins des vêtements (`drawings.js`), partagés par l'app et les widgets |
 | `rules/` | Règles v0 en JSON, textes, registre des sources, cas de test |
 | `widget/` | Widget iPhone pour Scriptable : chargeur, source, fichiers générés |

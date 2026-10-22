@@ -43,6 +43,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Image de la fiche du jour, prêtée le temps du partage (cache de l'app). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="fr.superbebe.widget.fichiers"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/fichiers" />
+        </provider>
+
         <!-- Réponse d'Android quand un widget est posé depuis l'app. -->
         <receiver
             android:name=".SbPinReceiver"

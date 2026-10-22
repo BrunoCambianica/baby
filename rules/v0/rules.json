@@ -114,6 +114,7 @@
       {
         "id": "enfant",
         "from_months": 24,
+        "base_max_drop": 0,
         "bands": {
           "tres_chaud": ["tenue_ample_claire", "chapeau"],
           "chaud": ["tenue_legere", "chapeau_si_soleil"],
@@ -131,6 +132,59 @@
       "rain_later_prob_at_least": 50,
       "wind_gust_kmh_at_least": 40
     }
+  },
+  "journee": {
+    "min_hold_h": 2,
+    "max_changes": 2,
+    "base_max_drop": 1,
+    "base_max_drop_under_dessus": 2,
+    "over_weight": 1.5,
+    "under_weight": 1,
+    "change_cost": 1,
+    "slots": {
+      "peau": ["body_leger", "body_mc", "body_ml", "tshirt", "haut_ml"],
+      "corps": [
+        "tenue_ample_claire", "tenue_legere", "pyjama_leger", "pyjama", "pyjama_chaud",
+        "pantalon_leger", "pantalon", "pantalon_chaud", "chaussettes", "chaussettes_chaudes"
+      ],
+      "dessus": [
+        "combi_legere", "veste", "couverture_portage", "couverture_harnais",
+        "combi_pilote", "manteau_chaud", "manteau_portage", "combi_pilote_doublee", "combi_ski"
+      ],
+      "haut": ["gilet_fin", "gilet", "gilet_chaud", "pull"],
+      "tete": ["chapeau_si_soleil", "chapeau", "bonnet_fin", "bonnet"],
+      "mains": ["moufles"],
+      "pieds": ["chaussons"],
+      "poussette": ["chanceliere"]
+    },
+    "fixed_slots": ["peau", "corps"],
+    "sun_hats": ["chapeau", "chapeau_si_soleil"],
+    "remove_order": ["dessus", "mains", "poussette", "tete", "pieds", "haut"],
+    "extremities": ["tete", "mains", "pieds", "poussette"],
+    "add_order": ["dessus", "tete", "mains", "pieds", "poussette", "haut"],
+    "warmth_over_tolerance": 0.5,
+    "warmth_under_tolerance": 1.5,
+    "swap_cost": 1,
+    "warmth": {
+      "body_leger": 0.5, "body_mc": 1, "body_ml": 1.5, "tshirt": 1, "haut_ml": 1.5,
+      "tenue_ample_claire": 0.5, "tenue_legere": 1, "pyjama_leger": 1.5, "pyjama": 2, "pyjama_chaud": 3,
+      "pantalon_leger": 1, "pantalon": 1.5, "pantalon_chaud": 2.5, "chaussettes": 0.3, "chaussettes_chaudes": 0.5,
+      "gilet_fin": 1, "gilet": 1.5, "gilet_chaud": 2, "pull": 2.5,
+      "combi_legere": 2.5, "veste": 2.5, "couverture_portage": 2, "couverture_harnais": 2,
+      "combi_pilote": 4, "manteau_chaud": 4, "manteau_portage": 3, "combi_pilote_doublee": 5, "combi_ski": 5,
+      "chapeau_si_soleil": 0, "chapeau": 0, "bonnet_fin": 0.5, "bonnet": 1,
+      "moufles": 0.5, "chaussons": 0.5, "chanceliere": 1.5
+    },
+    "carry_dessus_for": ["a_pied", "voiture"],
+    "bag": {
+      "max_items": 3,
+      "rain_prob_at_least": 50,
+      "sun_feels_c_at_least": 22
+    },
+    "check": "relay.check_neck",
+    "widget_urgent_relays": [
+      "relay.vigilance.active", "relay.cold.avoid_outings", "relay.heat.outing_hours", "relay.cold.stroller_rather_than_carrier"
+    ]
   },
   "relay_triggers": {
     "cold_layers_bands": ["froid", "tres_froid"],

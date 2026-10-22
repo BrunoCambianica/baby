@@ -141,22 +141,33 @@ export function transportFor(profile, age, R) {
 // Tenues propres à un âge (à partir de 2 ans : haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison).
 const ageVariant = (R, age) => (R.outfit.age_variants ?? []).filter((v) => age >= v.from_months).at(-1) ?? null;
 
-function chooseOutfit(feels, profile, R, age) {
-  const { bands, transport } = R.outfit;
-  const mode = transportFor(profile, age, R);
-  const t = transport[mode];
-  const variant = ageVariant(R, age);
+// Vêtements d'une tranche, pour un âge et un mode de sortie. Certains modes remplacent des vêtements
+// (porte-bébé : pas de pyjama à pieds ni de combinaison ; voiture : couverture par-dessus le harnais).
+function bandItems(idx, mode, variant, R) {
+  const band = R.outfit.bands[idx];
+  const t = R.outfit.transport[mode];
+  const items = (variant?.bands[band.id] ?? band.items).flatMap((item) => t.replace_items?.[item] ?? [item]);
+  return [...new Set(items)].filter((item) => !t.remove_items.includes(item));
+}
+
+// Tranche portée pour un ressenti : celle du ressenti, décalée par la tendance et par le mode de sortie.
+function wornBand(feels, profile, R, mode) {
+  const bands = R.outfit.bands;
   const base = bandIndex(bands, feels);
-  const idx = clamp(base + (profile.outfit_offset ?? 0) + t.band_shift, 0, bands.length - 1);
-  // Certains modes de transport remplacent des vêtements (porte-bébé : pas de pyjama à pieds ni de combinaison).
-  const items = (variant?.bands[bands[idx].id] ?? bands[idx].items).flatMap((item) => t.replace_items?.[item] ?? [item]);
+  const idx = clamp(base + (profile.outfit_offset ?? 0) + R.outfit.transport[mode].band_shift, 0, bands.length - 1);
+  return { base, idx };
+}
+
+function chooseOutfit(feels, profile, R, age) {
+  const mode = transportFor(profile, age, R);
+  const { base, idx } = wornBand(feels, profile, R, mode);
   return {
-    band: bands[idx].id,
-    base_band: bands[base].id,
+    band: R.outfit.bands[idx].id,
+    base_band: R.outfit.bands[base].id,
     feels_c: feels,
     transport: mode,
-    items: [...new Set(items)].filter((item) => !t.remove_items.includes(item)),
-    notes: [...t.notes],
+    items: bandItems(idx, mode, ageVariant(R, age), R),
+    notes: [...R.outfit.transport[mode].notes],
   };
 }
 
@@ -220,6 +231,211 @@ function dayRelays(input, R, age, plan, outfit, params) {
   }
   if (input.alerts?.air?.episode) relays.push(plan.ozone ? 'relay.air.ozone' : 'relay.air.particles');
   return sortByPriority(relays, R.relay_priority);
+}
+
+// ——— La journée en couches ———
+// Habillé une fois le matin pour la journée dehors : au plus deux changements (« − » on enlève, « + » on remet),
+// seulement quand la tranche de ressenti change pour au moins deux heures, et un sac de trois objets au plus.
+
+const slotOf = (J, item) => Object.keys(J.slots).find((slot) => J.slots[slot].includes(item)) ?? null;
+
+// Découpe la journée en au plus trois périodes d'au moins min_hold_h heures, chacune avec sa tranche :
+// une heure trop couverte pèse plus qu'une heure pas assez couverte (une couche de moins, et elle est dans le sac),
+// chaque changement coûte, et à coût égal on garde le moins de changements. Au départ du matin, jamais trop peu couvert.
+function segmentDay(needs, J) {
+  const n = needs.length;
+  const segment = (from, to) => {
+    const part = needs.slice(from, to);
+    let best = null;
+    for (let band = from === 0 ? part[0] : Math.min(...part); band <= Math.max(...part); band++) {
+      const cost = part.reduce((sum, need) => sum + (band > need ? J.over_weight * (band - need) : J.under_weight * (need - band)), 0);
+      if (!best || cost < best.cost - 1e-9) best = { from, to, band, cost };
+    }
+    return best;
+  };
+  const hold = J.min_hold_h;
+  const cuts = [[]];
+  for (let k1 = hold; k1 <= n - hold; k1++) cuts.push([k1]);
+  if (J.max_changes >= 2) {
+    for (let k1 = hold; k1 <= n - hold; k1++) for (let k2 = k1 + hold; k2 <= n - hold; k2++) cuts.push([k1, k2]);
+  }
+  let best = null;
+  for (const cut of cuts) {
+    const bounds = [0, ...cut, n];
+    const segs = cut.concat(n).map((to, i) => segment(bounds[i], to));
+    if (segs.some((sg, i) => i > 0 && sg.band === segs[i - 1].band)) continue;
+    const total = segs.reduce((sum, sg) => sum + sg.cost, 0) + J.change_cost * cut.length;
+    if (!best || total < best.total - 1e-9) best = { segs, total };
+  }
+  return best.segs;
+}
+
+function planJournee(input, R, age, plan) {
+  const J = R.journee;
+  const { profile } = input;
+  const bands = R.outfit.bands;
+  const mode = transportFor(profile, age, R);
+  const t = R.outfit.transport[mode];
+  const variant = ageVariant(R, age);
+  const win = profile.outing_window ?? R.outing.default_window;
+  const hours = plan.slots.filter((sl) => sl.start >= toMin(win.from) && sl.end <= toMin(win.to));
+  if (!hours.length) return null;
+  const needs = hours.map((sl) => wornBand(sl.feels_c, profile, R, mode).idx);
+  const segs = segmentDay(needs, J);
+  const b0 = segs[0].band;
+  const isFixed = (item) => J.fixed_slots.includes(slotOf(J, item));
+  const layers = (idx) => new Map(bandItems(idx, mode, variant, R).filter((i) => !isFixed(i)).map((i) => [slotOf(J, i), i]));
+
+  // Body et pyjama (ou haut et pantalon) ne changent pas dans la journée : ceux de la période la plus douce,
+  // au plus base_max_drop tranche sous ceux du matin (deux sous une combinaison, qui couvre tout).
+  // La chaleur du matin vient des couches qu'on enlève. Après 2 ans, le pantalon du matin reste : le manteau ne couvre pas les jambes.
+  const worn = layers(b0);
+  const drop = variant?.base_max_drop ?? (worn.has('dessus') ? J.base_max_drop_under_dessus : J.base_max_drop);
+  const baseIdx = Math.max(Math.min(...segs.map((sg) => sg.band)), b0 - drop);
+  const base = bandItems(baseIdx, mode, variant, R).filter(isFixed);
+  const morning = [...base, ...worn.values()];
+
+  // Changements. Tête, mains et pieds suivent la tranche : bonnet, moufles, chaussons et chancelière restent tant
+  // qu'elle les demande (au soleil, le bonnet devient un chapeau). Combinaison, pull et gilet suivent la chaleur
+  // des vêtements (journee.warmth), avec le même équilibre que le découpage : trop couvert pèse plus que pas assez.
+  // En se réchauffant, on enlève la combinaison, puis le pull (ou il devient un gilet), sans trop découvrir ;
+  // en se refroidissant, on remet des couches, d'abord celles enlevées plus tôt, qu'on a sous la main.
+  const warmthOf = (items) => items.reduce((sum, item) => sum + (J.warmth[item] ?? 0), 0);
+  const w = (item) => J.warmth[item] ?? 0;
+  const sun = (item) => J.sun_hats.includes(item);
+  const removed = new Map();
+  const states = [new Map(worn)];
+  const changes = segs.slice(1).map((sg, i) => {
+    const warmer = sg.band < segs[i].band;
+    const target = layers(sg.band);
+    const goal = warmthOf(bandItems(sg.band, mode, variant, R));
+    const cost = (heat) => (heat > goal ? J.over_weight * (heat - goal) : J.under_weight * (goal - heat));
+    const allowed = (heat) => heat >= goal - J.warmth_under_tolerance;
+    let heat = warmthOf([...base, ...worn.values()]);
+    const remove = [];
+    const add = [];
+    const take = (slot) => {
+      const c = worn.get(slot);
+      remove.push(c);
+      removed.set(slot, c);
+      worn.delete(slot);
+      heat -= w(c);
+    };
+    const put = (slot, item) => {
+      add.push(item);
+      worn.set(slot, item);
+      heat += w(item);
+    };
+    if (warmer) {
+      for (const slot of J.remove_order) {
+        const c = worn.get(slot);
+        const want = target.get(slot);
+        if (slot === 'tete' && want && sun(want) && !(c && sun(c))) {
+          if (c) take(slot);
+          put(slot, want);
+          continue;
+        }
+        if (!c || sun(c)) continue;
+        if (J.extremities.includes(slot)) {
+          if (!want) take(slot);
+          continue;
+        }
+        // Garder, enlever, ou échanger le pull contre un gilet plus léger (qui doit alors être dans le sac : swap_cost).
+        const options = [{ heat, cost: cost(heat) }, { heat: heat - w(c), cost: cost(heat - w(c)), take: true }];
+        if (slot === 'haut' && want && w(want) < w(c)) {
+          options.push({ heat: heat - w(c) + w(want), cost: cost(heat - w(c) + w(want)) + J.swap_cost, take: true, swap: true });
+        }
+        const best = options.filter((o) => !o.take || allowed(o.heat)).reduce((a, b) => (b.cost < a.cost - 1e-9 ? b : a));
+        if (!best.take) continue;
+        take(slot);
+        if (best.swap) put(slot, want);
+      }
+    } else {
+      for (const slot of J.add_order) {
+        const want = target.get(slot);
+        if (!want || worn.has(slot)) continue;
+        const earlier = removed.get(slot);
+        const item = earlier && sun(earlier) === sun(want) ? earlier : want;
+        if (J.extremities.includes(slot) || cost(heat + w(item)) < cost(heat) - 1e-9) put(slot, item);
+      }
+    }
+    states.push(new Map(worn));
+    return { time: fmtMin(hours[sg.from].start), from: sg.from, band: bands[sg.band].id, remove, add };
+  });
+  const wornAt = (k) => states[segs.findLastIndex((sg) => sg.from <= k)];
+
+  // Le sac, trois objets au plus : la couche à remettre plus tard (la plus chaude d'abord) ; à pied ou en voiture,
+  // la couche qu'il porterait en poussette ; la protection contre la pluie ; un chapeau au soleil ;
+  // puis les autres couches à remettre, et celles qui manqueraient aux heures plus fraîches.
+  const slots = Object.keys(J.slots);
+  const start = new Set(morning);
+  const later = changes.flatMap((ch) => ch.add.map((item) => ({ item, reason: 'plus_tard', time: ch.time })))
+    .filter((x) => !start.has(x.item))
+    .sort((x, y) => slots.indexOf(slotOf(J, x.item)) - slots.indexOf(slotOf(J, y.item)));
+  const bag = [];
+  if (later[0]) bag.push(later[0]);
+  if (J.carry_dessus_for.includes(mode)) {
+    const plain = bandItems(clamp(b0 - t.band_shift, 0, bands.length - 1), 'poussette', variant, R).find((i) => slotOf(J, i) === 'dessus');
+    if (plain && !start.has(plain)) bag.push({ item: plain, reason: mode === 'voiture' ? 'voiture' : 'pause' });
+  }
+  const rainy = hours.find((sl) => sl.precip_prob >= J.bag.rain_prob_at_least);
+  if (rainy) bag.push({ item: t.rain_gear, reason: 'pluie', time: fmtMin(rainy.start) });
+  const sunny = hours.findIndex((sl, k) => sl.uv >= R.relay_triggers.uv_at_least && sl.feels_c >= J.bag.sun_feels_c_at_least
+    && ![...wornAt(k).values()].some(sun));
+  if (sunny >= 0) bag.push({ item: 'chapeau', reason: 'soleil', time: fmtMin(hours[sunny].start) });
+  bag.push(...later.slice(1));
+  // Ce qui manquerait à une heure plus fraîche que prévu : le bonnet, les moufles ou les chaussons que la tranche
+  // demande, et une couche du dessus si la chaleur manque au-delà de la tolérance ; sauf ce qui a été enlevé plus tôt.
+  needs.forEach((need, k) => {
+    const now = wornAt(k);
+    const target = layers(need);
+    const handy = (sl) => changes.some((ch) => ch.from <= k && ch.remove.some((r) => slotOf(J, r) === sl));
+    const missing = (sl) => target.has(sl) && !now.has(sl) && !sun(target.get(sl)) && !handy(sl);
+    const short = warmthOf([...base, ...now.values()]) < warmthOf(bandItems(need, mode, variant, R)) - J.warmth_under_tolerance;
+    const torso = short ? J.add_order.find((sl) => !J.extremities.includes(sl) && missing(sl)) : null;
+    for (const sl of [torso, ...J.extremities.filter(missing)].filter(Boolean)) {
+      bag.push({ item: target.get(sl), reason: 'si_frais', time: fmtMin(hours[k].start) });
+    }
+  });
+  const packed = bag.filter((x, i) => bag.findIndex((y) => y.item === x.item) === i).slice(0, J.bag.max_items);
+
+  // On ne remet que ce qu'on a sous la main : porté le matin, ou dans le sac.
+  const handy = new Set([...morning, ...packed.map((x) => x.item)]);
+  const kept = changes
+    .map((ch) => ({ ...ch, add: ch.add.filter((item) => handy.has(item)) }))
+    .filter((ch) => ch.remove.length || ch.add.length);
+  const feels = hours.map((sl) => sl.feels_c);
+  const first = feels[0];
+  const extreme = Math.max(...feels) - first >= first - Math.min(...feels) ? Math.max(...feels) : Math.min(...feels);
+  return {
+    from: fmtMin(hours[0].start),
+    to: fmtMin(hours.at(-1).end),
+    feels: { first: Math.round(first), extreme: Math.round(extreme) },
+    band: bands[b0].id,
+    base_band: bands[baseIdx].id,
+    transport: mode,
+    morning,
+    changes: kept.map(({ from, ...ch }) => ch),
+    bag: packed,
+    hours: hours.map((sl) => ({ time: fmtMin(sl.start), feels_c: sl.feels_c, precip_prob: sl.precip_prob, uv: sl.uv })),
+    notes: [...t.notes],
+    check: J.check,
+  };
+}
+
+// Tenue portée à une heure donnée du plan de la journée : celle du matin, avec les changements déjà passés.
+export function journeeAt(journee, hhmm) {
+  const items = [...journee.morning];
+  let next = null;
+  for (const ch of journee.changes) {
+    if (toMin(ch.time) > toMin(hhmm)) {
+      next = ch;
+      break;
+    }
+    for (const item of ch.remove) items.splice(items.indexOf(item), 1);
+    items.push(...ch.add.filter((item) => !items.includes(item)));
+  }
+  return { items, next };
 }
 
 // Gigoteuse (TOG) et tenue dessous selon la chambre ; sans relevé, pour le repère officiel (milieu de 18-20 °C), en le disant.
@@ -312,13 +528,61 @@ export function render(M, id, variant, params = {}) {
 
 export const frNumber = (x) => String(x).replace('.', ',');
 
-// Les trois lignes du widget pour le moment voulu : « jour » (créneau) ou « soir » (nuit et achats).
+const shortList = (items, labels) => items.map((i) => labels.items_short[i] ?? i).join(', ');
+
+// Un changement en quelques mots : « 12 h : − combi pilote… + gilet » (le premier vêtement de chaque sens).
+export function changeLine(ch, labels, { full = false } = {}) {
+  const part = (sign, items) => {
+    if (!items.length) return '';
+    return `${sign} ${full ? shortList(items, labels) : `${labels.items_short[items[0]] ?? items[0]}${items.length > 1 ? '…' : ''}`}`;
+  };
+  return `${hourFr(ch.time)} : ${[part('−', ch.remove), part('+', ch.add)].filter(Boolean).join(' ')}`;
+}
+
+// Ressenti du reste de la journée, depuis l'heure qu'il est : le premier, et le plus éloigné (« 6° → 17° »).
+export function journeeRange(journee, now) {
+  const rest = journee.hours.filter((h) => toMin(h.time) + 60 > toMin(now));
+  const hours = rest.length ? rest : journee.hours;
+  const first = Math.round(hours[0].feels_c);
+  const feels = hours.map((h) => Math.round(h.feels_c));
+  const up = Math.max(...feels);
+  const down = Math.min(...feels);
+  const extreme = up - first >= first - down ? up : down;
+  return { when: toMin(now) < toMin('12:00') ? 'Ce matin' : 'Cet après-midi', first, extreme, stable: Math.abs(extreme - first) < 2 };
+}
+
+// « Ce matin 6° → 17° », « Cet après-midi 15° → 11° », « Ce matin 6° ».
+export function journeeFeels(journee, now, M) {
+  const range = journeeRange(journee, now);
+  return render(M, range.stable ? 'journee.stable' : 'journee.range', 'short', range);
+}
+
+// Ce qui suit dans la journée : le prochain changement, le sac, puis le changement d'après.
+export function journeePlanLine(journee, now, M) {
+  const labels = M.labels;
+  const next = journee.changes.filter((ch) => toMin(ch.time) > toMin(now));
+  const bag = journee.bag.length ? render(M, 'journee.bag', 'short', { items: shortList(journee.bag.map((b) => b.item), labels) }) : '';
+  const parts = [next[0] && changeLine(next[0], labels), bag, next[1] && changeLine(next[1], labels)].filter(Boolean);
+  return parts.length ? capitalize(parts.join(' · ')) : null;
+}
+
+// Les trois lignes du widget pour le moment voulu : « jour » (la journée en couches) ou « soir » (nuit et achats).
 // Avec `drawings`, la tenue (le jour) et la gigoteuse (le soir) deviennent des dessins :
 // { drawings: [identifiants de engine/drawings.js], text, label }, `label` gardant le texte pour les petits formats.
 export function widgetLines(result, moment, M, { drawings = false } = {}) {
   const labels = M.labels;
   const lines = [];
-  if (moment === 'jour') {
+  const j = result.journee;
+  if (moment === 'jour' && j) {
+    // Le jour : le ressenti, la tenue du moment, puis le prochain changement et le sac (une alerte officielle passe avant).
+    const now = result.now ?? '08:00';
+    const vigilance = result.outing.reason === 'vigilance';
+    lines.push(vigilance ? render(M, 'outing.none.vigilance', 'short') : journeeFeels(j, now, M));
+    const { items } = journeeAt(j, now);
+    const label = capitalize(items.map((i) => labels.items_short[i] ?? i).join(' · '));
+    lines.push(drawings ? { drawings: items.map((i) => ITEM_DRAWINGS[i]).filter(Boolean), text: '', label } : label);
+    lines.push(j.alert ? render(M, j.alert, 'short', result.params) : journeePlanLine(j, now, M) ?? render(M, result.relays[0] ?? j.check, 'short', result.params));
+  } else if (moment === 'jour') {
     const w = result.outing.window;
     lines.push(
       w
@@ -356,6 +620,15 @@ export function widgetLines(result, moment, M, { drawings = false } = {}) {
   return lines.filter(Boolean).slice(0, 3);
 }
 
+// Le plus court (widget rond de l'écran verrouillé) : l'heure du prochain changement, le ressenti, ou le TOG le soir.
+export function widgetShort(result, moment) {
+  if (moment === 'soir') return result.night.tog ?? '—';
+  const j = result.journee;
+  if (!j) return result.outing.window ? hourFr(result.outing.window.start) : '—';
+  const next = j.changes.find((ch) => toMin(ch.time) > toMin(result.now ?? '08:00'));
+  return next ? hourFr(next.time) : `${j.feels.first}°`;
+}
+
 export const momentOf = (now) => (toMin(now ?? '08:00') < toMin('18:00') ? 'jour' : 'soir');
 // Ce qu'affichent l'app et les widgets : le soir dès 18 h, ou dès que la dernière sortie possible de la journée est passée.
 export const displayMoment = (result, now) => (momentOf(now) === 'soir' || result.outing.reason === 'journee_terminee' ? 'soir' : 'jour');
@@ -386,6 +659,8 @@ export function evaluate(input, bundle) {
     : chooseOutfit(round1(mean(ref.map((sl) => sl.feels_c))), input.profile, R, age);
   if (outfit) addOverlays(outfit, plan, ref, R, params, bundle.messages.labels);
   const result = {
+    date: input.date,
+    now: input.now ?? null,
     age_months: round1(age),
     transport: transportFor(input.profile, age, R),
     outing: {
@@ -405,10 +680,19 @@ export function evaluate(input, bundle) {
     outfit,
     relays: dayRelays(input, R, age, plan, outfit, params),
     params,
+    journee: planJournee(input, R, age, plan),
     night: planNight(input, R, plan.heat, age),
     purchases: planPurchases(input, R),
   };
-  result.widget = { lines: widgetLines(result, displayMoment(result, input.now), bundle.messages) };
+  // Alerte officielle qui passe avant le plan de la journée dans le widget (vigilance, grand froid, chaleur…).
+  if (result.journee) result.journee.alert = result.relays.find((id) => R.journee.widget_urgent_relays.includes(id)) ?? null;
+  const moment = displayMoment(result, input.now);
+  result.widget = {
+    lines: widgetLines(result, moment, bundle.messages),
+    check: render(bundle.messages, R.journee.check, 'short'),
+    check_tiny: render(bundle.messages, R.journee.check, 'tiny'),
+    short: widgetShort(result, moment),
+  };
   if (input.check_product) result.product = checkProduct(input.check_product, age, R);
   return result;
 }
@@ -440,6 +724,8 @@ export function lint(bundle) {
     if (msg.kind === 'fabricant' && !levels.includes('C')) errors.push(`${id} : indication fabricant sans source produit`);
   }
   const referenced = [
+    R.journee.check,
+    ...R.journee.widget_urgent_relays,
     ...R.relay_priority,
     ...R.night.always,
     ...R.night.when_room_known,
@@ -463,6 +749,9 @@ export function lint(bundle) {
     if (!M.labels.rain_gear[t.rain_gear]) errors.push(`protection de pluie sans libellé : ${t.rain_gear}`);
   }
   for (const item of items) {
+    const slot = slotOf(R.journee, item);
+    if (!slot && !Object.values(R.outfit.transport).some((t) => t.rain_gear === item)) errors.push(`vêtement sans emplacement (journee.slots) : ${item}`);
+    if (slot && R.journee.warmth[item] === undefined) errors.push(`vêtement sans chaleur (journee.warmth) : ${item}`);
     if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!M.labels.layers[M.labels.item_layers[item]]) errors.push(`couche inconnue pour : ${item}`);

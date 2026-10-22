@@ -36,7 +36,7 @@
         "relays.include": ["relay.cold.layers"],
         "relays.exclude": ["relay.sun.under_1y"],
         "widget.lines.length": 3,
-        "widget.lines.0.contains": "13 h"
+        "widget.lines.0": "Ce matin 4° → 8°"
       }
     },
     {
@@ -62,7 +62,8 @@
         "outing.window": null,
         "outing.reason": "pluie",
         "outfit.notes.include": ["practical.rain.cover"],
-        "widget.lines.0.contains": "Pas de créneau sec"
+        "widget.lines.0": "Ce matin 6°",
+        "widget.lines.2": "Sac : habillage pluie"
       }
     },
     {
@@ -677,6 +678,156 @@
       "description": "24 °C et averses possibles en poussette : l'habillage pluie seulement pendant l'averse",
       "input": { "date": "2026-06-10", "forecast": { "hourly": { "base": { "feels_c": 24, "precip_prob": 40 } } } },
       "expect": { "outfit.notes.include": ["practical.rain.cover_warm"], "outfit.notes.exclude": ["practical.rain.cover"] }
+    },
+    {
+      "id": "journee-se-rechauffe",
+      "description": "5 °C le matin, 15 °C à partir de midi : habillé une fois, la combinaison et le pull partent vers 12 h, un gilet dans le sac",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "07:00-12:00": { "feels_c": 5 } } } } },
+      "expect": {
+        "journee.band": "froid",
+        "journee.base_band": "frais",
+        "journee.morning": ["body_ml", "pyjama", "pull", "combi_pilote", "bonnet", "chaussons"],
+        "journee.changes": [{ "time": "12:00", "remove": ["combi_pilote", "bonnet", "chaussons", "pull"], "add": ["gilet"] }],
+        "journee.bag.*.item": ["gilet"],
+        "widget.lines.0": "Ce matin 5° → 15°",
+        "widget.lines.2": "12 h : − combi pilote… + gilet · sac : gilet"
+      }
+    },
+    {
+      "id": "journee-stable",
+      "description": "6 °C toute la journée : la tenue du matin suffit, rien dans le sac",
+      "input": {},
+      "expect": { "journee.changes": [], "journee.bag": [], "journee.morning.include": ["combi_pilote", "bonnet"] }
+    },
+    {
+      "id": "journee-heure-isolee",
+      "description": "Une heure plus douce à 13 h : pas de changement pour une heure",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 5 }, "overrides": { "13:00": { "feels_c": 11 } } } } },
+      "expect": { "journee.changes": [] }
+    },
+    {
+      "id": "journee-se-refroidit",
+      "description": "15 °C jusqu'à 15 h, puis 5 °C : on remet combinaison, bonnet et chaussons, tous dans le sac",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "15:00-22:00": { "feels_c": 5 } } } } },
+      "expect": {
+        "journee.morning": ["body_ml", "pyjama", "gilet"],
+        "journee.changes": [{ "time": "15:00", "remove": [], "add": ["combi_pilote", "bonnet", "chaussons"] }],
+        "journee.bag.*.item": ["combi_pilote", "bonnet", "chaussons"]
+      }
+    },
+    {
+      "id": "journee-deux-changements-au-plus",
+      "description": "Froid, doux, puis froid : deux changements au plus, la combinaison enlevée est remise, pas une autre",
+      "input": {
+        "forecast": { "hourly": { "base": { "feels_c": 5 }, "overrides": { "11:00-15:00": { "feels_c": 12 }, "13:00-15:00": { "feels_c": 16 } } } }
+      },
+      "expect": {
+        "journee.changes.length": 2,
+        "journee.changes.0.remove.include": ["combi_pilote"],
+        "journee.changes.1.add.include": ["combi_pilote"],
+        "journee.bag.*.item.exclude": ["combi_pilote", "combi_legere"]
+      }
+    },
+    {
+      "id": "journee-depart-froid",
+      "description": "2 °C au départ, 8 °C ensuite : bien couvert au départ, moufles et chancelière enlevées vers 11 h",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 8 }, "overrides": { "07:00-11:00": { "feels_c": 2 } } } } },
+      "expect": {
+        "journee.band": "tres_froid",
+        "journee.changes": [{ "time": "11:00", "remove": ["moufles", "chanceliere"], "add": [] }]
+      }
+    },
+    {
+      "id": "journee-soleil",
+      "description": "12 °C le matin puis 24 °C au soleil : bonnet le matin, chapeau à 11 h, pris dans le sac",
+      "input": {
+        "date": "2026-05-20",
+        "profile": { "birth": "2025-09-10" },
+        "forecast": { "daylight": { "sunrise": "06:00", "sunset": "21:20" }, "hourly": { "base": { "feels_c": 24, "uv": 5 }, "overrides": { "07:00-11:00": { "feels_c": 12, "uv": 1 } } } }
+      },
+      "expect": {
+        "journee.morning.include": ["bonnet_fin", "combi_legere", "body_mc"],
+        "journee.changes.0.time": "11:00",
+        "journee.changes.0.add": ["chapeau_si_soleil"],
+        "journee.changes.0.remove.include": ["bonnet_fin", "combi_legere"],
+        "journee.bag.*.item": ["chapeau_si_soleil"]
+      }
+    },
+    {
+      "id": "journee-pluie-sac",
+      "description": "Averses à partir de 14 h : l'habillage pluie dans le sac",
+      "input": { "forecast": { "hourly": { "overrides": { "14:00-17:00": { "precip_prob": 70, "precip_mm": 0.3 } } } } },
+      "expect": { "journee.bag": [{ "item": "habillage_pluie", "reason": "pluie", "time": "14:00" }] }
+    },
+    {
+      "id": "journee-chapeau-sans-changement",
+      "description": "Journée douce, une heure à 23 °C au soleil : pas de changement, un chapeau dans le sac",
+      "input": {
+        "date": "2026-05-20",
+        "profile": { "birth": "2025-09-10" },
+        "forecast": { "daylight": { "sunrise": "06:00", "sunset": "21:20" }, "hourly": { "base": { "feels_c": 20, "uv": 4 }, "overrides": { "14:00": { "feels_c": 23 } } } }
+      },
+      "expect": { "journee.changes": [], "journee.bag": [{ "item": "chapeau", "reason": "soleil", "time": "14:00" }] }
+    },
+    {
+      "id": "journee-a-pied",
+      "description": "Enfant à pied à 12 °C : une couche de moins, la veste dans le sac pour les pauses",
+      "input": { "profile": { "birth": "2024-03-15", "transport": "a_pied" }, "forecast": { "hourly": { "base": { "feels_c": 12 } } } },
+      "expect": {
+        "journee.morning": ["haut_ml", "pantalon", "gilet"],
+        "journee.bag": [{ "item": "veste", "reason": "pause" }]
+      }
+    },
+    {
+      "id": "journee-voiture",
+      "description": "En voiture à 5 °C : couverture par-dessus le harnais, la combinaison dans le sac pour la sortie de la voiture",
+      "input": { "profile": { "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
+      "expect": {
+        "journee.morning.include": ["couverture_harnais"],
+        "journee.bag": [{ "item": "combi_pilote", "reason": "voiture" }]
+      }
+    },
+    {
+      "id": "journee-sac-trois-objets",
+      "description": "Refroidissement et pluie : trois objets au plus, la pluie avant les chaussons, qui ne sont pas remis",
+      "input": {
+        "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "15:00-22:00": { "feels_c": 5, "precip_prob": 60, "precip_mm": 0.6 } } } }
+      },
+      "expect": {
+        "journee.bag.*.item": ["combi_pilote", "habillage_pluie", "bonnet"],
+        "journee.changes.0.add": ["combi_pilote", "bonnet"]
+      }
+    },
+    {
+      "id": "journee-enfant-garde-son-pantalon",
+      "description": "Enfant de 2 ans et demi, 5 °C puis 15 °C : le pantalon chaud du matin reste, le manteau part",
+      "input": { "profile": { "birth": "2024-03-15" }, "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "07:00-12:00": { "feels_c": 5 } } } } },
+      "expect": {
+        "journee.morning": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes", "pull", "manteau_chaud", "bonnet"],
+        "journee.changes.0.remove.include": ["manteau_chaud", "bonnet"]
+      }
+    },
+    {
+      "id": "journee-fin-de-journee-fraiche",
+      "description": "Seulement la dernière heure plus fraîche : pas de changement pour une heure, la couche qui manquerait dans le sac",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "17:00-22:00": { "feels_c": 11 } } } } },
+      "expect": { "journee.changes": [], "journee.bag.*.item": ["combi_legere", "bonnet_fin"] }
+    },
+    {
+      "id": "journee-widget-apres-midi",
+      "description": "À 14 h, après le changement de midi : la tenue du moment, plus de changement à venir, le sac",
+      "input": { "now": "14:00", "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "07:00-12:00": { "feels_c": 5 } } } } },
+      "expect": {
+        "widget.lines.0": "Cet après-midi 15°",
+        "widget.lines.2": "Sac : gilet",
+        "widget.check": "Touchez sa nuque, pas ses mains"
+      }
+    },
+    {
+      "id": "journee-alerte-officielle",
+      "description": "Grand froid : le relais officiel passe avant le plan de la journée dans le widget",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": -7 } } } },
+      "expect": { "widget.lines.2.contains": "Grand froid" }
     },
     {
       "id": "produit-tour-de-lit",

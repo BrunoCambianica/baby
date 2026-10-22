@@ -249,14 +249,16 @@ function assert(cond, message) {
   if (!cond) throw new Error(message);
 }
 
-await test('Widget moyen : en-tête, créneau du jour, tenue en dessins, pied de page', async () => {
+await test('Widget moyen : en-tête, ressenti de la journée, tenue du matin en dessins, geste de la nuque en pied', async () => {
   const out = await run();
   assert(out.completed, 'Script.complete() non appelé');
   assert(out.texts[0] === 'SUPERBÉBÉ · LYON', out.texts[0]);
-  assert(/^(Sortie idéale \d+ h – \d+ h · -?\d+°|Pas de |Plus de )/.test(out.texts[1]), out.texts[1]);
+  assert(/^Ce matin -?\d+°( → -?\d+°)?$/.test(out.texts[1]), out.texts[1]);
   const row = out.widget.rows[0];
   assert(row && row.images.length >= 3 && row.images.every((i) => i.imageSize?.width === 24), `rangée de dessins : ${JSON.stringify(row?.images.length)}`);
-  assert(out.texts.at(-1) === 'Mis à jour à 07 h 30 · Open-Meteo', out.texts.at(-1));
+  assert(out.texts.at(-1) === 'Touchez sa nuque, pas ses mains · 7 h 30', out.texts.at(-1));
+  const small = await run({ family: 'small' });
+  assert(small.texts.at(-1) === 'Touchez sa nuque · 7 h 30', small.texts.at(-1));
 });
 
 await test('Réglage « Texte » : la tenue reste écrite', async () => {
@@ -295,7 +297,7 @@ await test('Écran verrouillé en ligne et rond', async () => {
   const inline = await run({ family: 'accessoryInline' });
   assert(inline.texts.length === 1, JSON.stringify(inline.texts));
   const circular = await run({ family: 'accessoryCircular' });
-  assert(circular.texts.length === 1 && /( h|—)$/.test(circular.texts[0]), JSON.stringify(circular.texts));
+  assert(circular.texts.length === 1 && /( h|°)$/.test(circular.texts[0]), JSON.stringify(circular.texts));
 });
 
 await test('Le soir : ligne nuit et TOG selon le relevé de la chambre', async () => {
@@ -338,7 +340,7 @@ await test('Hors ligne avec météo en cache : widget affiché, mention hors lig
   const files = new Map();
   await run({ files });
   const out = await run({ files, offline: true, at: '2026-10-21T09:00:00+02:00' });
-  assert(out.texts.at(-1).startsWith('Hors ligne · Mis à jour à 07 h 30'), out.texts.at(-1));
+  assert(out.texts.at(-1).startsWith('Hors ligne · Touchez sa nuque') && out.texts.at(-1).endsWith('7 h 30'), out.texts.at(-1));
 });
 
 await test('Hors ligne sans cache : message clair', async () => {

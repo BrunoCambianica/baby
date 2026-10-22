@@ -17,7 +17,7 @@ tools/compiler-apk.sh      # compile, puis copie l'APK dans dist/superbebe-andro
 
 | Fichier | Rôle |
 |---|---|
-| `MainActivity.kt` | Affiche l'app web en plein écran et lui offre le pont `SuperbebeAndroid` : réglages et relevé de la chambre vers le widget, couleurs des barres du système, pose du widget, partage. Reprend la configuration envoyée depuis Chrome (lien `superbebe://config/SB1.…`). Propose l'APK publié s'il est plus récent (`dist/android-version.json`) |
+| `MainActivity.kt` | Affiche l'app web en plein écran et lui offre le pont `SuperbebeAndroid` : réglages et relevés des chambres vers les widgets, couleurs des barres du système, pose d'un widget par enfant, partage d'un texte ou de l'image de la fiche du jour (`FileProvider`, cache de l'app). Reprend la configuration envoyée depuis Chrome (lien `superbebe://config/SB1.…`). Propose l'APK publié s'il est plus récent (`dist/android-version.json`) |
 | `SbWorker.kt` | Toutes les 30 minutes : météo Open-Meteo, appel du moteur pour chaque enfant (`sbAndroidAll`), enregistrement des lignes |
 | `SbEngine.kt` | Exécute le moteur JavaScript dans le bac à sable |
 | `SbWidget.kt` | Widget Glance : affiche les lignes de son enfant sur un ciel assorti à la météo (`res/drawable/widget_bg_*`), la tenue en dessins ; le toucher ouvre l'app sur cet enfant (`superbebe://enfant/…`). `SbPinReceiver` attache l'enfant au widget posé depuis l'app |

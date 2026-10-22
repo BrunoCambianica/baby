@@ -1,7 +1,8 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
-import { addDays, ageMonths, clamp, displayMoment, evaluate, hourFr, momentOf, outfitAt, render, toMin } from '../../engine/engine.js';
+import { addDays, ageMonths, clamp, displayMoment, evaluate, hourFr, momentOf, render, toMin } from '../../engine/engine.js';
 import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
+import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
 import { dayLong, dayShort } from './format.js';
 import { ageLabel, fromConfig, isNewer, migrate, newChild, profileOf } from './household.js';
 import { store } from './storage.js';
@@ -57,7 +58,6 @@ const state = {
   today: parisNow().date,
   tab: momentOf(parisNow().time) === 'soir' ? 'nuit' : 'sortir',
   day: 'aujourdhui',
-  pickedHour: null,
   draft: null,
   results: [],
   open: new Set(),
@@ -91,7 +91,7 @@ refreshProfile();
 // Comme le widget : après la dernière sortie possible, l'app s'ouvre sur la nuit.
 function eveningTab() {
   if (state.tabChosen || state.tab !== 'sortir' || currentView() !== 'app') return;
-  if (compute('aujourdhui', { pick: false })?.moment === 'soir') state.tab = 'nuit';
+  if (compute('aujourdhui')?.moment === 'soir') state.tab = 'nuit';
 }
 
 const route = () => location.hash.replace('#', '');
@@ -108,9 +108,8 @@ const freshRoom = (profile) => (profile.room && Date.now() - profile.room.at < R
 const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
   .format(new Date(ms)).replace(':', ' h ');
 
-// Les onglets Nuit et Prévoir parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Sortir.
-// `pick` : tenue à l'heure choisie dans la frise (pas pour l'aperçu de demain).
-function compute(day, { pick = true } = {}) {
+// Les onglets Nuit et Prévoir parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Journée.
+function compute(day) {
   if (!state.forecast || !state.bundle) return null;
   const now = parisNow();
   const tomorrow = day === 'demain';
@@ -136,8 +135,7 @@ function compute(day, { pick = true } = {}) {
   const result = evaluate(input, state.bundle);
   const hidden = store.hidden();
   result.purchases = result.purchases.filter((x) => !hidden.includes(`${p.id}|${x.key}`));
-  const picked = pick && state.pickedHour ? outfitAt(input, state.bundle, state.pickedHour) : null;
-  return { input, result, date, moment: tomorrow ? 'jour' : displayMoment(result, time), picked, tomorrow, forecast: state.forecast };
+  return { input, result, date, moment: tomorrow ? 'jour' : displayMoment(result, time), tomorrow, forecast: state.forecast };
 }
 
 // Brouillon d'un écran de saisie : premier lancement, réglages (commune), fiche d'un enfant (#enfant/identifiant ou nouveau).
@@ -191,7 +189,7 @@ function paint() {
   else {
     const ctx = compute(state.tab === 'sortir' ? state.day : 'aujourdhui');
     // Journée finie : l'onglet Sortir montre la tenue de demain.
-    if (ctx && state.tab === 'sortir' && !ctx.tomorrow && !ctx.result.outfit) ctx.next = compute('demain', { pick: false });
+    if (ctx && state.tab === 'sortir' && !ctx.tomorrow && !ctx.result.outfit) ctx.next = compute('demain');
     html = V.viewApp(state, ctx);
   }
   if (state.updateReady) {
@@ -244,7 +242,6 @@ function updateChild(patch, id = state.profile.id) {
 function showChild(id) {
   store.setCurrentChild(id);
   refreshProfile();
-  state.pickedHour = null;
 }
 
 // Le widget suit l'app : réglages et relevés des chambres lui sont transmis à chaque changement.
@@ -473,18 +470,12 @@ const actions = {
   tab(el) {
     state.tabChosen = true;
     state.tab = el.dataset.value;
-    state.pickedHour = null;
     paint();
     window.scrollTo(0, 0);
   },
   day(el) {
     state.day = el.dataset.value;
     state.tab = 'sortir';
-    state.pickedHour = null;
-    paint();
-  },
-  'pick-hour'(el) {
-    state.pickedHour = state.pickedHour === el.dataset.hour ? null : el.dataset.hour;
     paint();
   },
   kid(el) {
@@ -616,6 +607,41 @@ const actions = {
     inventory[el.dataset.cat] = [...sizes];
     updateChild({ inventory });
     paint();
+  },
+  // Fiche du jour pour la nounou, la crèche ou les grands-parents : image et lien (les données sont après le #).
+  async 'share-fiche'() {
+    const ctx = compute(state.day);
+    if (!ctx?.result.journee) return;
+    const M = state.bundle.messages;
+    const data = ficheData(ctx, state.profile.name);
+    const link = `${new URL('../fiche/', location.href).href}#f=${encodeFiche(data, (x) => btoa(x))}`;
+    const text = `${ficheText(data, M, dayLong(ctx.date))}\n${link}`;
+    // Dans Scriptable, le lien s'ouvre dans Safari, qui sait partager la fiche.
+    if (host === 'scriptable') {
+      location.href = link;
+      return;
+    }
+    const canvas = ficheCanvas(data, M, dayLong(ctx.date));
+    if (host === 'android') {
+      const png = canvas.toDataURL('image/png').split(',')[1];
+      if (androidAtLeast(0, 7) && ask(() => android.shareImage(png, text), false)) return;
+      if (ask(() => android.share(text), false) !== false) return;
+    }
+    try {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      const file = blob && new File([blob], `superbebe-${ctx.date}.png`, { type: 'image/png' });
+      if (file && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+        return;
+      }
+      if (navigator.share) {
+        await navigator.share({ title: 'Superbébé', text });
+        return;
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+    if (await copy(text)) toast('Fiche copiée : collez-la dans votre messagerie.');
   },
   async share() {
     const ctx = compute(state.day);
@@ -893,7 +919,6 @@ document.addEventListener('visibilitychange', () => {
   if (today !== state.today) {
     state.today = today;
     state.day = 'aujourdhui';
-    state.pickedHour = null;
   }
   store.markDay(today);
   loadData();

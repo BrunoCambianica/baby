@@ -1,8 +1,8 @@
-// Superbébé 0.6.0, widget iPhone pour Scriptable.
+// Superbébé 0.7.0, widget iPhone pour Scriptable.
 
 // Fichier généré par tools/build-widget.js à partir de engine/ et widget/main.scriptable.js : ne pas modifier à la main.
 
-const SB_VERSION = "0.6.0";
+const SB_VERSION = "0.7.0";
 
 // Le chargeur fournit l'adresse réelle du site ; sinon, adresse par défaut (champ homepage de package.json).
 
@@ -12,7 +12,7 @@ const SB_BASE_URL = (typeof SB_BASE_FROM_LOADER === 'string' && SB_BASE_FROM_LOA
 
 const SB_CONFIG_LOADER = typeof SB_CONFIG_FROM_LOADER === 'string' ? SB_CONFIG_FROM_LOADER : '';
 
-const SB_RULES = {"rules":{"id":"baby-rules","version":"0.1.0","status":"brouillon, à relire avant toute diffusion","updated":"2026-10-22","locale":"fr-FR","policy":{"medical_advice":false,"official_message_levels":["A","A-etranger"],"kinds":{"officiel":"Repère officiel, cité avec sa source","pratique":"Suggestion pratique, sans portée sanitaire","fabricant":"Indication des fabricants ou d'une norme produit","meteo":"Donnée météo"},"out_of_scope":["fièvre, maladie, symptômes, médicaments","diagnostic, triage ou réassurance sur l'état de santé de l'enfant","promesse de sécurité ou de prévention de la mort inattendue du nourrisson","produits présentés comme protégeant la santé"]},"outing":{"default_window":{"from":"09:00","to":"18:00"},"default_duration_h":1,"vigilance":{"block_all_from_color":"rouge","block_all_if_orange_for":["vent-violent","orages","pluie-inondation","crues","neige-verglas","avalanches","vagues-submersion","grand-froid"],"source":"meteofrance-vigilance"},"heat":{"trigger_vigilance_canicule_from":"jaune","trigger_tmax_c_at_least":30,"blocked_hours":{"from":"11:00","to":"21:00"},"source":"spf-fortes-chaleurs-bebes"},"ozone_episode_blocked_hours":{"from":"12:00","to":"18:00","source":"santefr-pollution"},"slot_exclusions":{"feels_c_at_most":-5,"precip_prob_at_least":60,"precip_mm_at_least":0.5,"gust_kmh_at_least":60},"scoring":{"base":100,"rain_prob_free":20,"rain_prob_weight":1,"comfort_low_c":15,"comfort_low_weight":2,"comfort_high_c":24,"comfort_high_weight":3,"gust_free_kmh":30,"gust_weight":0.5,"uv_free":2,"uv_weight":10,"uv_weight_under_12m":20},"none_reason_priority":["canicule_heures_chaudes","ozone_apres_midi","froid_extreme","vent","pluie","duree"]},"outfit":{"bands":[{"id":"tres_chaud","min_feels_c":27,"items":["body_leger","tenue_ample_claire","chapeau"]},{"id":"chaud","min_feels_c":22,"items":["body_mc","tenue_legere","chapeau_si_soleil"]},{"id":"doux","min_feels_c":18,"items":["body_mc","pyjama_leger","gilet_fin"]},{"id":"frais","min_feels_c":14,"items":["body_ml","pyjama","gilet"]},{"id":"froid_modere","min_feels_c":9,"items":["body_ml","pyjama","gilet_chaud","combi_legere","bonnet_fin"]},{"id":"froid","min_feels_c":3,"items":["body_ml","pyjama_chaud","pull","combi_pilote","bonnet","chaussons"]},{"id":"tres_froid","min_feels_c":null,"items":["body_ml","pyjama_chaud","pull","combi_pilote_doublee","bonnet","moufles","chaussons","chanceliere"]}],"transport":{"poussette":{"band_shift":0,"remove_items":[],"notes":[],"rain_gear":"habillage_pluie"},"porte_bebe":{"band_shift":-1,"remove_items":["chanceliere"],"replace_items":{"pyjama_leger":["pantalon_leger","chaussettes"],"pyjama":["pantalon","chaussettes"],"pyjama_chaud":["pantalon_chaud","chaussettes_chaudes"],"combi_legere":["couverture_portage"],"combi_pilote":["manteau_portage"],"combi_pilote_doublee":["manteau_portage"]},"notes":["practical.carrier.body_heat","practical.carrier.no_footed"],"rain_gear":"cape_pluie"},"a_pied":{"band_shift":-1,"min_age_m":24,"remove_items":["chanceliere"],"notes":["practical.walk.body_heat"],"rain_gear":"impermeable"},"voiture":{"band_shift":0,"remove_items":["chanceliere"],"replace_items":{"combi_legere":["couverture_harnais"],"combi_pilote":["couverture_harnais"],"combi_pilote_doublee":["couverture_harnais"],"veste":["couverture_harnais"],"manteau_chaud":["couverture_harnais"],"combi_ski":["couverture_harnais"]},"notes":[],"rain_gear":"capuche"}},"age_variants":[{"id":"enfant","from_months":24,"bands":{"tres_chaud":["tenue_ample_claire","chapeau"],"chaud":["tenue_legere","chapeau_si_soleil"],"doux":["tshirt","pantalon_leger","gilet_fin"],"frais":["haut_ml","pantalon","gilet"],"froid_modere":["haut_ml","pantalon","gilet_chaud","veste","bonnet_fin"],"froid":["haut_ml","pantalon_chaud","pull","manteau_chaud","bonnet","chaussettes_chaudes"],"tres_froid":["haut_ml","pantalon_chaud","pull","combi_ski","bonnet","moufles","chaussettes_chaudes"]}}],"overlays":{"rain_cover_prob_at_least":30,"rain_cover_warm_feels_c_at_least":22,"rain_later_prob_at_least":50,"wind_gust_kmh_at_least":40}},"relay_triggers":{"cold_layers_bands":["froid","tres_froid"],"carrier_cold_feels_c_at_most":0,"car_coat_bands":["froid_modere","froid","tres_froid"],"uv_at_least":3,"uv_source":"oms-indice-uv","under_1y_months":12},"night":{"room_range_c":{"min":18,"max":20,"source":"carnet-1000-jours"},"always":["relay.sleep.basics","relay.sleep.room_range","relay.sleep.check_temp"],"baby_only":["relay.sleep.basics"],"baby_until_months":24,"when_room_known":["relay.sleep.season_thickness"],"heat_room_c_at_least":26,"tog_hint":{"source":"fabricants-tog","round_room_temp":true,"bins":[{"max_c":15,"tog":"3,5","wear":["body_leger","pyjama_chaud"]},{"max_c":17,"tog":"2,5","wear":["body_leger","pyjama"]},{"max_c":20,"tog":"2,5","wear":["body_ml"]},{"max_c":24,"tog":"1","wear":["pyjama_leger"]},{"max_c":27,"tog":"0,5","wear":["body_mc"]},{"max_c":null,"tog":"0,2","wear":["body_leger"]}]}},"purchases":{"horizon_weeks":6,"lead_days":14,"size_lookahead_days":28,"max_suggestions":3,"size_systems":{"vetement":[{"code":"1m","label":"1 mois","max_age_m":2},{"code":"3m","label":"3 mois","max_age_m":4},{"code":"6m","label":"6 mois","max_age_m":7},{"code":"9m","label":"9 mois","max_age_m":10},{"code":"12m","label":"12 mois","max_age_m":13},{"code":"18m","label":"18 mois","max_age_m":19},{"code":"24m","label":"24 mois","max_age_m":25},{"code":"36m","label":"3 ans","max_age_m":37},{"code":"4a","label":"4 ans","max_age_m":49},{"code":"5a","label":"5 ans","max_age_m":61},{"code":"6a","label":"6 ans","max_age_m":73}],"gigoteuse":[{"code":"0-6m","label":"0-6 mois","max_age_m":6},{"code":"6-18m","label":"6-18 mois","max_age_m":18},{"code":"18-36m","label":"18-36 mois","max_age_m":36}],"accessoire":[{"code":"0-6m","label":"0-6 mois","max_age_m":6},{"code":"6-12m","label":"6-12 mois","max_age_m":12},{"code":"12-24m","label":"12-24 mois","max_age_m":24},{"code":"24-36m","label":"2-3 ans","max_age_m":36},{"code":"3-6a","label":"3-6 ans","max_age_m":72}],"unique":[{"code":"unique","label":"taille unique","max_age_m":999}]},"size_note":"Correspondance âge/taille indicative (convention des étiquettes) ; la taille réellement portée, saisie par le parent, prime.","categories":[{"id":"gigoteuse_hiver","size_system":"gigoteuse","priority":1,"max_age_m":36,"need_if":{"week_tmean_below":15},"reason":"nuits_fraiches","relays":["relay.sleep.size_adapted","fabricant.sleepbag.norm"]},{"id":"gigoteuse_ete","size_system":"gigoteuse","priority":2,"max_age_m":36,"need_if":{"week_tmax_at_least":27},"reason":"nuits_chaudes","relays":["relay.sleep.size_adapted","fabricant.sleepbag.norm"]},{"id":"combi_pilote","size_system":"vetement","priority":1,"max_age_m":24,"need_if":{"week_band_in":["froid","tres_froid"]},"reason":"froid","relays":["relay.cold.layers"]},{"id":"manteau_hiver","size_system":"vetement","priority":1,"min_age_m":24,"need_if":{"week_band_in":["froid","tres_froid"]},"reason":"froid","relays":["relay.cold.layers"]},{"id":"accessoires_hiver","size_system":"accessoire","priority":2,"need_if":{"week_band_in":["froid_modere","froid","tres_froid"]},"reason":"froid","relays":["relay.cold.layers"]},{"id":"chanceliere","size_system":"unique","priority":3,"max_age_m":24,"need_if":{"week_band_in":["froid","tres_froid"],"transport_in":["poussette"]},"reason":"froid","relays":[]},{"id":"habillage_pluie","size_system":"unique","priority":3,"need_if":{"week_rainy_days_at_least":3,"transport_in":["poussette"]},"reason":"pluie","relays":[]},{"id":"chapeau_soleil","size_system":"accessoire","priority":1,"need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":18},"reason":"soleil","relays":[],"relays_under_12m":["relay.sun.under_1y"],"relays_from_12m":["relay.sun.protect"]},{"id":"vetements_longs_legers","size_system":"vetement","priority":2,"need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":22},"reason":"soleil","relays":[],"relays_under_12m":["relay.sun.under_1y"],"relays_from_12m":["relay.sun.protect"]},{"id":"lunettes_soleil","size_system":"accessoire","priority":3,"min_age_m":12,"under_min_age_relay":"relay.sun.under_1y","need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":18},"reason":"soleil","relays":["relay.sun.protect"]},{"id":"creme_solaire_enfant","size_system":"unique","priority":4,"min_age_m":12,"under_min_age_relay":"relay.sun.under_1y","need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":18},"reason":"soleil","relays":["relay.sun.protect"]}],"never_suggest":[{"id":"tour_de_lit","relay":"relay.sleep.basics"},{"id":"couverture_couette_oreiller","relay":"relay.sleep.basics"},{"id":"cale_bebe","relay":"relay.sleep.no_positioners"},{"id":"reducteur_de_lit","relay":"relay.sleep.no_positioners"}]},"relay_priority":["relay.vigilance.active","relay.cold.avoid_outings","relay.heat.outing_hours","relay.heat.protect","relay.heat.vehicle","relay.heat.stroller_sun","relay.sun.under_1y","relay.sun.hours","relay.sun.protect","relay.air.ozone","relay.air.particles","relay.cold.stroller_rather_than_carrier","relay.car.coat","relay.cold.layers","relay.heat.shutters","relay.heat.info_line","relay.sleep.basics","relay.sleep.room_range","relay.sleep.check_temp","relay.sleep.season_thickness","relay.sleep.size_adapted","relay.sleep.no_positioners","relay.emergency"]},"messages":{"locale":"fr-FR","version":"0.1.0","disclaimer":"Cette application relaie des recommandations publiques et propose des suggestions pratiques. Elle ne remplace pas l'avis d'un professionnel de santé. En cas d'urgence : 15 ou 112.","messages":{"relay.vigilance.active":{"kind":"officiel","verbatim":false,"sources":["meteofrance-vigilance"],"text":"Vigilance {color} ({phenomena}) : suivez les conseils de comportement des pouvoirs publics sur vigilance.meteofrance.fr.","short":"Vigilance {color} : consignes officielles"},"relay.heat.outing_hours":{"kind":"officiel","verbatim":true,"sources":["spf-fortes-chaleurs-bebes"],"text":"« Préférer les sorties le matin avant 11 heures ou le soir après 21 heures. »","short":"Chaleur : sortir avant 11 h ou après 21 h"},"relay.heat.protect":{"kind":"officiel","verbatim":true,"sources":["spf-canicule-precautions"],"text":"Nourrissons et jeunes enfants : « veillez à les protéger en permanence de la chaleur » et à « les faire boire et les hydrater régulièrement ».","short":"Protéger de la chaleur, hydrater régulièrement"},"relay.heat.vehicle":{"kind":"officiel","verbatim":true,"sources":["spf-canicule-precautions"],"text":"« Ne les laissez jamais dans une pièce mal ventilée ou un véhicule, même pendant une très courte durée. »","short":"Jamais seul dans un véhicule"},"relay.heat.stroller_sun":{"kind":"officiel","verbatim":true,"sources":["spf-fortes-chaleurs-bebes"],"text":"« Protéger les bébés dans les poussettes ou les porte-bébés dorsaux des rayons directs du soleil. »","short":"Poussette à l'abri du soleil direct"},"relay.heat.shutters":{"kind":"officiel","verbatim":true,"sources":["spf-canicule-precautions"],"text":"« Fermez fenêtres et volets la journée, ouvrez-les le soir et la nuit s'il fait plus frais. »","short":"Volets fermés le jour, aérer la nuit"},"relay.heat.info_line":{"kind":"officiel","verbatim":false,"sources":["spf-canicule-precautions"],"text":"Canicule Info Service : 0800 06 66 66 (appel gratuit depuis un poste fixe, du lundi au samedi de 9 h à 19 h).","short":"Canicule Info Service : 0800 06 66 66"},"relay.cold.avoid_outings":{"kind":"officiel","verbatim":true,"sources":["santefr-grand-froid"],"text":"« Il convient avant tout d'éviter de sortir avec un bébé quand les températures sont vraiment basses. »","short":"Grand froid : éviter de sortir avec bébé"},"relay.cold.layers":{"kind":"officiel","verbatim":false,"sources":["santefr-grand-froid"],"text":"Santé.fr (fiche grand froid) : « plusieurs vêtements superposés » et couvrir « tête, mains et pieds ».","short":"Couches superposées ; tête, mains, pieds couverts"},"relay.cold.stroller_rather_than_carrier":{"kind":"officiel","verbatim":false,"sources":["santefr-grand-froid"],"text":"Par grand froid, Santé.fr conseille le landau ou la poussette plutôt que le porte-bébé, qui « peut comprimer les membres inférieurs ».","short":"Grand froid : poussette plutôt que porte-bébé"},"relay.sun.under_1y":{"kind":"officiel","verbatim":true,"sources":["santefr-uv-enfants"],"text":"« Les enfants de moins d'un an ne doivent pas être exposés au soleil. »","short":"Pas de soleil direct avant 1 an"},"relay.sun.hours":{"kind":"officiel","verbatim":false,"sources":["santefr-uv-enfants","oms-indice-uv"],"text":"Indice UV de {uv} : rechercher l'ombre et éviter « les heures d'exposition aux UV les plus intenses (de midi à 16 heures) ».","short":"UV : ombre, éviter 12 h-16 h"},"relay.sun.protect":{"kind":"officiel","verbatim":false,"sources":["santefr-uv-enfants"],"text":"Pour les enfants : « des vêtements longs, un chapeau à larges bords », « des lunettes de soleil filtrant bien les UV et enveloppantes » et « une crème solaire adaptée aux enfants sur les parties découvertes du corps ».","short":"Vêtements longs, chapeau, lunettes, crème enfant"},"relay.air.particles":{"kind":"officiel","verbatim":false,"sources":["santefr-pollution"],"text":"Épisode de pollution : « Les sorties à l'extérieur des nourrissons peuvent être maintenues » ; il est recommandé de les limiter dans la durée à proximité des sources majeures de pollution.","short":"Pollution : sorties plus courtes près du trafic"},"relay.air.ozone":{"kind":"officiel","verbatim":false,"sources":["santefr-pollution"],"text":"Épisode d'ozone : limiter la durée des sorties des nourrissons « aux moments de la journée où le niveau de pollution est le plus élevé », souvent le milieu ou la fin d'après-midi.","short":"Ozone : pas de sortie l'après-midi"},"relay.car.coat":{"kind":"officiel","verbatim":false,"sources":["awsr-siege-auto","notices-sieges-auto"],"text":"Siège auto : enlever le manteau d'hiver avant d'attacher l'enfant, puis le couvrir par-dessus le harnais (Agence wallonne pour la sécurité routière, notices des sièges).","short":"Siège auto : manteau enlevé, couvrir par-dessus"},"relay.sleep.basics":{"kind":"officiel","verbatim":false,"sources":["carnet-1000-jours"],"text":"Pour dormir : sur le dos, à plat, dans son lit, dans une turbulette ou gigoteuse adaptée à sa taille, sur un matelas ferme ; ni couverture, ni couette, ni oreiller, ni tour de lit.","short":"Sur le dos, turbulette, ni couette ni tour de lit","list":["Sur le dos, à plat, dans son lit","Dans une turbulette ou gigoteuse adaptée à sa taille","Sur un matelas ferme","Ni couverture, ni couette, ni oreiller, ni tour de lit"]},"relay.sleep.room_range":{"kind":"officiel","verbatim":false,"sources":["carnet-1000-jours"],"text":"Température de la chambre recommandée : entre 18 et 20 °C.","short":"Chambre entre 18 et 20 °C"},"relay.sleep.check_temp":{"kind":"officiel","verbatim":false,"sources":["nhs-sids"],"text":"Pour savoir s'il a trop chaud, touchez sa poitrine ou sa nuque : des mains ou des pieds frais, c'est normal. Peau chaude ou moite : retirez une couche.","short":"Touchez sa nuque, pas ses mains : moite, une couche de moins"},"relay.sleep.season_thickness":{"kind":"officiel","verbatim":false,"sources":["cd06-pmi-min"],"text":"Une gigoteuse ou une turbulette « dont l'épaisseur variera avec la saison ».","short":"Épaisseur de turbulette selon la saison"},"relay.sleep.size_adapted":{"kind":"officiel","verbatim":false,"sources":["carnet-1000-jours"],"text":"La turbulette ou gigoteuse doit être adaptée à la taille de bébé.","short":"Gigoteuse adaptée à sa taille"},"relay.sleep.no_positioners":{"kind":"officiel","verbatim":false,"sources":["has-contention-presse"],"text":"La HAS juge les dispositifs de contention, dont les réducteurs de lit, « inutiles, délétères et dangereux ».","short":"Ni cale-bébé ni réducteur de lit"},"relay.emergency":{"kind":"officiel","verbatim":false,"sources":["service-public-urgences"],"text":"En cas d'urgence : 15 (SAMU) ou 112.","short":"Urgence : 15 ou 112"},"practical.rain.cover":{"kind":"pratique","text":"Pluie possible pendant la sortie : prévoyez {gear}.","short":"Pluie possible : {gear_short}"},"practical.rain.cover_warm":{"kind":"pratique","text":"Averse possible : l'habillage pluie seulement pendant l'averse, il retient la chaleur.","short":"Averse : habillage pluie le temps de l'averse"},"practical.rain.later":{"kind":"pratique","text":"Pluie prévue vers {hour} : prévoyez {gear} pour le retour.","short":"Pluie vers {hour} : {gear_short}"},"practical.wind":{"kind":"pratique","text":"Vent soutenu : le ressenti est plus froid, protégez du vent.","short":"Vent : ressenti plus froid"},"practical.carrier.body_heat":{"kind":"pratique","text":"En porte-bébé, votre chaleur réchauffe bébé : une couche de moins qu'en poussette.","short":"Porte-bébé : une couche de moins"},"practical.walk.body_heat":{"kind":"pratique","text":"À pied, il se réchauffe en marchant : une couche de moins qu'en poussette, à remettre s'il s'arrête ou remonte dans la poussette.","short":"À pied : une couche de moins"},"practical.carrier.no_footed":{"kind":"pratique","text":"Pas de pyjama à pieds en porte-bébé : il tire sur les pieds quand les jambes sont repliées.","short":"Porte-bébé : pas de pyjama à pieds"},"fabricant.tog":{"kind":"fabricant","sources":["fabricants-tog"],"text":"Chambre à {room} °C : environ {tog} TOG selon les tableaux habituels des fabricants. L'étiquette de votre gigoteuse fait foi.","short":"Gigoteuse ≈ {tog} TOG (indicatif fabricants)"},"fabricant.night_wear":{"kind":"fabricant","sources":["ergopouch-what-to-wear","fabricants-tog"],"text":"Sous la gigoteuse : {wear}. Repère des fabricants, à adapter à bébé ; l'étiquette de la gigoteuse fait foi.","short":"{wear} + gigoteuse ≈ {tog} TOG"},"fabricant.sleepbag.norm":{"kind":"fabricant","sources":["norme-nf-en-16781"],"text":"Repère produit : gigoteuses conformes à la norme NF EN 16781.","short":"Norme NF EN 16781"},"outing.window":{"kind":"meteo","text":"Sortie idéale de {start} à {end}, {feels} °C ressentis.","short":"Sortie idéale {start} – {end} · {feels}°"},"outing.none.journee_terminee":{"kind":"meteo","text":"Plus de créneau aujourd'hui dans votre plage horaire.","short":"Plus de sortie prévue aujourd'hui"},"outing.none.vigilance":{"kind":"meteo","text":"Pas de créneau conseillé : vigilance en cours.","short":"Pas de sortie conseillée (vigilance)"},"outing.none.canicule_heures_chaudes":{"kind":"meteo","text":"Pas de créneau dans votre plage horaire : fortes chaleurs entre 11 h et 21 h.","short":"Pas de créneau : fortes chaleurs"},"outing.none.ozone_apres_midi":{"kind":"meteo","text":"Pas de créneau dans votre plage horaire : épisode d'ozone l'après-midi.","short":"Pas de créneau : ozone l'après-midi"},"outing.none.froid_extreme":{"kind":"meteo","text":"Pas de créneau conseillé : froid très vif.","short":"Pas de créneau : froid très vif"},"outing.none.vent":{"kind":"meteo","text":"Pas de créneau conseillé : rafales fortes.","short":"Pas de créneau : rafales"},"outing.none.pluie":{"kind":"meteo","text":"Pas de créneau sec dans votre plage horaire.","short":"Pas de créneau sec aujourd'hui"},"outing.none.duree":{"kind":"meteo","text":"Pas de créneau assez long dans votre plage horaire.","short":"Pas de créneau assez long"},"outing.none.hors_jour":{"kind":"meteo","text":"Pas de créneau de jour dans votre plage horaire.","short":"Pas de créneau de jour"},"night.room":{"kind":"meteo","text":"Chambre à {room} °C ce soir (repère officiel : 18 à 20 °C).","short":"Chambre {room}° · repère 18 à 20°"},"night.room_unknown":{"kind":"meteo","text":"Repère officiel : chambre entre 18 et 20 °C.","short":"Chambre : repère 18 à 20 °C"},"purchase.suggestion":{"kind":"pratique","text":"À prévoir avant le {order_by} : {label}{size}, utile à partir du {needed_from}.","short":"À prévoir : {label}{size}"}},"labels":{"items":{"body_leger":"body léger","body_mc":"body manches courtes","body_ml":"body manches longues","tenue_ample_claire":"vêtements légers, amples et clairs","tenue_legere":"tenue légère","pyjama_leger":"pyjama ou ensemble léger","pyjama":"pyjama ou ensemble","pyjama_chaud":"pyjama chaud","gilet_fin":"gilet fin à emporter","gilet":"gilet","gilet_chaud":"gilet chaud","pull":"pull","combi_legere":"combinaison légère ou manteau","combi_pilote":"combinaison pilote","combi_pilote_doublee":"combinaison pilote doublée","bonnet_fin":"bonnet fin","bonnet":"bonnet","moufles":"moufles","chaussons":"chaussons chauds","chapeau":"chapeau à larges bords","chapeau_si_soleil":"chapeau à larges bords si soleil","chanceliere":"chancelière","pantalon_leger":"pantalon léger sans pieds","pantalon":"pantalon souple sans pieds","pantalon_chaud":"pantalon chaud sans pieds","chaussettes":"chaussettes","chaussettes_chaudes":"chaussettes chaudes","couverture_portage":"couverture de portage par-dessus","manteau_portage":"manteau ou couverture de portage par-dessus","couverture_harnais":"couverture par-dessus le harnais","tshirt":"t-shirt","haut_ml":"haut à manches longues","veste":"veste ou manteau léger","manteau_chaud":"manteau chaud","combi_ski":"combinaison de ski","habillage_pluie":"habillage pluie","cape_pluie":"cape de pluie","impermeable":"imperméable à capuche","capuche":"capuche ou parapluie"},"items_short":{"body_leger":"body léger","body_mc":"body MC","body_ml":"body ML","tenue_ample_claire":"habits amples et clairs","tenue_legere":"tenue légère","pyjama_leger":"pyjama léger","pyjama":"pyjama","pyjama_chaud":"pyjama chaud","gilet_fin":"gilet fin","gilet":"gilet","gilet_chaud":"gilet chaud","pull":"pull","combi_legere":"combi légère","combi_pilote":"combi pilote","combi_pilote_doublee":"combi doublée","bonnet_fin":"bonnet fin","bonnet":"bonnet","moufles":"moufles","chaussons":"chaussons","chapeau":"chapeau","chapeau_si_soleil":"chapeau si soleil","chanceliere":"chancelière","pantalon_leger":"pantalon léger","pantalon":"pantalon","pantalon_chaud":"pantalon chaud","chaussettes":"chaussettes","chaussettes_chaudes":"chaussettes chaudes","couverture_portage":"couverture de portage","manteau_portage":"manteau de portage","couverture_harnais":"couverture","tshirt":"t-shirt","haut_ml":"haut ML","veste":"veste","manteau_chaud":"manteau chaud","combi_ski":"combi de ski","habillage_pluie":"habillage pluie","cape_pluie":"cape de pluie","impermeable":"imperméable","capuche":"capuche"},"item_layers":{"body_leger":"peau","body_mc":"peau","body_ml":"peau","tenue_ample_claire":"milieu","tenue_legere":"milieu","pyjama_leger":"milieu","pyjama":"milieu","pyjama_chaud":"milieu","pantalon_leger":"milieu","pantalon":"milieu","pantalon_chaud":"milieu","gilet_fin":"milieu","gilet":"milieu","gilet_chaud":"milieu","pull":"milieu","combi_legere":"dessus","combi_pilote":"dessus","combi_pilote_doublee":"dessus","couverture_portage":"dessus","manteau_portage":"dessus","couverture_harnais":"dessus","tshirt":"peau","haut_ml":"peau","veste":"dessus","manteau_chaud":"dessus","combi_ski":"dessus","habillage_pluie":"accessoire","cape_pluie":"accessoire","impermeable":"accessoire","capuche":"accessoire","bonnet_fin":"accessoire","bonnet":"accessoire","moufles":"accessoire","chaussons":"accessoire","chaussettes":"accessoire","chaussettes_chaudes":"accessoire","chapeau":"accessoire","chapeau_si_soleil":"accessoire","chanceliere":"accessoire"},"rain_gear":{"habillage_pluie":"l'habillage pluie","cape_pluie":"une cape de pluie","impermeable":"un imperméable à capuche","capuche":"une capuche ou un parapluie"},"item_hints":{"gilet_fin":"à emporter","chapeau_si_soleil":"si soleil","couverture_harnais":"par-dessus le harnais"},"bands":{"tres_chaud":"Très chaud","chaud":"Chaud","doux":"Doux","frais":"Frais","froid_modere":"Plutôt froid","froid":"Froid","tres_froid":"Très froid"},"layers":{"peau":"Contre la peau","milieu":"Ensuite","dessus":"Par-dessus","accessoire":"Et aussi"},"categories":{"gigoteuse_hiver":"gigoteuse chaude (≈ 2,5 TOG)","gigoteuse_ete":"gigoteuse légère (≈ 0,5-1 TOG)","combi_pilote":"combinaison pilote","manteau_hiver":"manteau chaud","accessoires_hiver":"bonnet, moufles et chaussons","chanceliere":"chancelière pour la poussette","habillage_pluie":"habillage pluie pour la poussette","chapeau_soleil":"chapeau à larges bords","vetements_longs_legers":"vêtements longs et légers","lunettes_soleil":"lunettes de soleil enveloppantes","creme_solaire_enfant":"crème solaire adaptée aux enfants"},"reasons":{"nuits_fraiches":"nuits fraîches","nuits_chaudes":"nuits chaudes","froid":"froid","pluie":"pluie fréquente","soleil":"soleil","taille":"changement de taille"},"vigilance_colors":{"jaune":"jaune","orange":"orange","rouge":"rouge"}}}};
+const SB_RULES = {"rules":{"id":"baby-rules","version":"0.1.0","status":"brouillon, à relire avant toute diffusion","updated":"2026-10-22","locale":"fr-FR","policy":{"medical_advice":false,"official_message_levels":["A","A-etranger"],"kinds":{"officiel":"Repère officiel, cité avec sa source","pratique":"Suggestion pratique, sans portée sanitaire","fabricant":"Indication des fabricants ou d'une norme produit","meteo":"Donnée météo"},"out_of_scope":["fièvre, maladie, symptômes, médicaments","diagnostic, triage ou réassurance sur l'état de santé de l'enfant","promesse de sécurité ou de prévention de la mort inattendue du nourrisson","produits présentés comme protégeant la santé"]},"outing":{"default_window":{"from":"09:00","to":"18:00"},"default_duration_h":1,"vigilance":{"block_all_from_color":"rouge","block_all_if_orange_for":["vent-violent","orages","pluie-inondation","crues","neige-verglas","avalanches","vagues-submersion","grand-froid"],"source":"meteofrance-vigilance"},"heat":{"trigger_vigilance_canicule_from":"jaune","trigger_tmax_c_at_least":30,"blocked_hours":{"from":"11:00","to":"21:00"},"source":"spf-fortes-chaleurs-bebes"},"ozone_episode_blocked_hours":{"from":"12:00","to":"18:00","source":"santefr-pollution"},"slot_exclusions":{"feels_c_at_most":-5,"precip_prob_at_least":60,"precip_mm_at_least":0.5,"gust_kmh_at_least":60},"scoring":{"base":100,"rain_prob_free":20,"rain_prob_weight":1,"comfort_low_c":15,"comfort_low_weight":2,"comfort_high_c":24,"comfort_high_weight":3,"gust_free_kmh":30,"gust_weight":0.5,"uv_free":2,"uv_weight":10,"uv_weight_under_12m":20},"none_reason_priority":["canicule_heures_chaudes","ozone_apres_midi","froid_extreme","vent","pluie","duree"]},"outfit":{"bands":[{"id":"tres_chaud","min_feels_c":27,"items":["body_leger","tenue_ample_claire","chapeau"]},{"id":"chaud","min_feels_c":22,"items":["body_mc","tenue_legere","chapeau_si_soleil"]},{"id":"doux","min_feels_c":18,"items":["body_mc","pyjama_leger","gilet_fin"]},{"id":"frais","min_feels_c":14,"items":["body_ml","pyjama","gilet"]},{"id":"froid_modere","min_feels_c":9,"items":["body_ml","pyjama","gilet_chaud","combi_legere","bonnet_fin"]},{"id":"froid","min_feels_c":3,"items":["body_ml","pyjama_chaud","pull","combi_pilote","bonnet","chaussons"]},{"id":"tres_froid","min_feels_c":null,"items":["body_ml","pyjama_chaud","pull","combi_pilote_doublee","bonnet","moufles","chaussons","chanceliere"]}],"transport":{"poussette":{"band_shift":0,"remove_items":[],"notes":[],"rain_gear":"habillage_pluie"},"porte_bebe":{"band_shift":-1,"remove_items":["chanceliere"],"replace_items":{"pyjama_leger":["pantalon_leger","chaussettes"],"pyjama":["pantalon","chaussettes"],"pyjama_chaud":["pantalon_chaud","chaussettes_chaudes"],"combi_legere":["couverture_portage"],"combi_pilote":["manteau_portage"],"combi_pilote_doublee":["manteau_portage"]},"notes":["practical.carrier.body_heat","practical.carrier.no_footed"],"rain_gear":"cape_pluie"},"a_pied":{"band_shift":-1,"min_age_m":24,"remove_items":["chanceliere"],"notes":["practical.walk.body_heat"],"rain_gear":"impermeable"},"voiture":{"band_shift":0,"remove_items":["chanceliere"],"replace_items":{"combi_legere":["couverture_harnais"],"combi_pilote":["couverture_harnais"],"combi_pilote_doublee":["couverture_harnais"],"veste":["couverture_harnais"],"manteau_chaud":["couverture_harnais"],"combi_ski":["couverture_harnais"]},"notes":[],"rain_gear":"capuche"}},"age_variants":[{"id":"enfant","from_months":24,"base_max_drop":0,"bands":{"tres_chaud":["tenue_ample_claire","chapeau"],"chaud":["tenue_legere","chapeau_si_soleil"],"doux":["tshirt","pantalon_leger","gilet_fin"],"frais":["haut_ml","pantalon","gilet"],"froid_modere":["haut_ml","pantalon","gilet_chaud","veste","bonnet_fin"],"froid":["haut_ml","pantalon_chaud","pull","manteau_chaud","bonnet","chaussettes_chaudes"],"tres_froid":["haut_ml","pantalon_chaud","pull","combi_ski","bonnet","moufles","chaussettes_chaudes"]}}],"overlays":{"rain_cover_prob_at_least":30,"rain_cover_warm_feels_c_at_least":22,"rain_later_prob_at_least":50,"wind_gust_kmh_at_least":40}},"journee":{"min_hold_h":2,"max_changes":2,"base_max_drop":1,"base_max_drop_under_dessus":2,"over_weight":1.5,"under_weight":1,"change_cost":1,"slots":{"peau":["body_leger","body_mc","body_ml","tshirt","haut_ml"],"corps":["tenue_ample_claire","tenue_legere","pyjama_leger","pyjama","pyjama_chaud","pantalon_leger","pantalon","pantalon_chaud","chaussettes","chaussettes_chaudes"],"dessus":["combi_legere","veste","couverture_portage","couverture_harnais","combi_pilote","manteau_chaud","manteau_portage","combi_pilote_doublee","combi_ski"],"haut":["gilet_fin","gilet","gilet_chaud","pull"],"tete":["chapeau_si_soleil","chapeau","bonnet_fin","bonnet"],"mains":["moufles"],"pieds":["chaussons"],"poussette":["chanceliere"]},"fixed_slots":["peau","corps"],"sun_hats":["chapeau","chapeau_si_soleil"],"remove_order":["dessus","mains","poussette","tete","pieds","haut"],"extremities":["tete","mains","pieds","poussette"],"add_order":["dessus","tete","mains","pieds","poussette","haut"],"warmth_over_tolerance":0.5,"warmth_under_tolerance":1.5,"swap_cost":1,"warmth":{"body_leger":0.5,"body_mc":1,"body_ml":1.5,"tshirt":1,"haut_ml":1.5,"tenue_ample_claire":0.5,"tenue_legere":1,"pyjama_leger":1.5,"pyjama":2,"pyjama_chaud":3,"pantalon_leger":1,"pantalon":1.5,"pantalon_chaud":2.5,"chaussettes":0.3,"chaussettes_chaudes":0.5,"gilet_fin":1,"gilet":1.5,"gilet_chaud":2,"pull":2.5,"combi_legere":2.5,"veste":2.5,"couverture_portage":2,"couverture_harnais":2,"combi_pilote":4,"manteau_chaud":4,"manteau_portage":3,"combi_pilote_doublee":5,"combi_ski":5,"chapeau_si_soleil":0,"chapeau":0,"bonnet_fin":0.5,"bonnet":1,"moufles":0.5,"chaussons":0.5,"chanceliere":1.5},"carry_dessus_for":["a_pied","voiture"],"bag":{"max_items":3,"rain_prob_at_least":50,"sun_feels_c_at_least":22},"check":"relay.check_neck","widget_urgent_relays":["relay.vigilance.active","relay.cold.avoid_outings","relay.heat.outing_hours","relay.cold.stroller_rather_than_carrier"]},"relay_triggers":{"cold_layers_bands":["froid","tres_froid"],"carrier_cold_feels_c_at_most":0,"car_coat_bands":["froid_modere","froid","tres_froid"],"uv_at_least":3,"uv_source":"oms-indice-uv","under_1y_months":12},"night":{"room_range_c":{"min":18,"max":20,"source":"carnet-1000-jours"},"always":["relay.sleep.basics","relay.sleep.room_range","relay.sleep.check_temp"],"baby_only":["relay.sleep.basics"],"baby_until_months":24,"when_room_known":["relay.sleep.season_thickness"],"heat_room_c_at_least":26,"tog_hint":{"source":"fabricants-tog","round_room_temp":true,"bins":[{"max_c":15,"tog":"3,5","wear":["body_leger","pyjama_chaud"]},{"max_c":17,"tog":"2,5","wear":["body_leger","pyjama"]},{"max_c":20,"tog":"2,5","wear":["body_ml"]},{"max_c":24,"tog":"1","wear":["pyjama_leger"]},{"max_c":27,"tog":"0,5","wear":["body_mc"]},{"max_c":null,"tog":"0,2","wear":["body_leger"]}]}},"purchases":{"horizon_weeks":6,"lead_days":14,"size_lookahead_days":28,"max_suggestions":3,"size_systems":{"vetement":[{"code":"1m","label":"1 mois","max_age_m":2},{"code":"3m","label":"3 mois","max_age_m":4},{"code":"6m","label":"6 mois","max_age_m":7},{"code":"9m","label":"9 mois","max_age_m":10},{"code":"12m","label":"12 mois","max_age_m":13},{"code":"18m","label":"18 mois","max_age_m":19},{"code":"24m","label":"24 mois","max_age_m":25},{"code":"36m","label":"3 ans","max_age_m":37},{"code":"4a","label":"4 ans","max_age_m":49},{"code":"5a","label":"5 ans","max_age_m":61},{"code":"6a","label":"6 ans","max_age_m":73}],"gigoteuse":[{"code":"0-6m","label":"0-6 mois","max_age_m":6},{"code":"6-18m","label":"6-18 mois","max_age_m":18},{"code":"18-36m","label":"18-36 mois","max_age_m":36}],"accessoire":[{"code":"0-6m","label":"0-6 mois","max_age_m":6},{"code":"6-12m","label":"6-12 mois","max_age_m":12},{"code":"12-24m","label":"12-24 mois","max_age_m":24},{"code":"24-36m","label":"2-3 ans","max_age_m":36},{"code":"3-6a","label":"3-6 ans","max_age_m":72}],"unique":[{"code":"unique","label":"taille unique","max_age_m":999}]},"size_note":"Correspondance âge/taille indicative (convention des étiquettes) ; la taille réellement portée, saisie par le parent, prime.","categories":[{"id":"gigoteuse_hiver","size_system":"gigoteuse","priority":1,"max_age_m":36,"need_if":{"week_tmean_below":15},"reason":"nuits_fraiches","relays":["relay.sleep.size_adapted","fabricant.sleepbag.norm"]},{"id":"gigoteuse_ete","size_system":"gigoteuse","priority":2,"max_age_m":36,"need_if":{"week_tmax_at_least":27},"reason":"nuits_chaudes","relays":["relay.sleep.size_adapted","fabricant.sleepbag.norm"]},{"id":"combi_pilote","size_system":"vetement","priority":1,"max_age_m":24,"need_if":{"week_band_in":["froid","tres_froid"]},"reason":"froid","relays":["relay.cold.layers"]},{"id":"manteau_hiver","size_system":"vetement","priority":1,"min_age_m":24,"need_if":{"week_band_in":["froid","tres_froid"]},"reason":"froid","relays":["relay.cold.layers"]},{"id":"accessoires_hiver","size_system":"accessoire","priority":2,"need_if":{"week_band_in":["froid_modere","froid","tres_froid"]},"reason":"froid","relays":["relay.cold.layers"]},{"id":"chanceliere","size_system":"unique","priority":3,"max_age_m":24,"need_if":{"week_band_in":["froid","tres_froid"],"transport_in":["poussette"]},"reason":"froid","relays":[]},{"id":"habillage_pluie","size_system":"unique","priority":3,"need_if":{"week_rainy_days_at_least":3,"transport_in":["poussette"]},"reason":"pluie","relays":[]},{"id":"chapeau_soleil","size_system":"accessoire","priority":1,"need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":18},"reason":"soleil","relays":[],"relays_under_12m":["relay.sun.under_1y"],"relays_from_12m":["relay.sun.protect"]},{"id":"vetements_longs_legers","size_system":"vetement","priority":2,"need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":22},"reason":"soleil","relays":[],"relays_under_12m":["relay.sun.under_1y"],"relays_from_12m":["relay.sun.protect"]},{"id":"lunettes_soleil","size_system":"accessoire","priority":3,"min_age_m":12,"under_min_age_relay":"relay.sun.under_1y","need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":18},"reason":"soleil","relays":["relay.sun.protect"]},{"id":"creme_solaire_enfant","size_system":"unique","priority":4,"min_age_m":12,"under_min_age_relay":"relay.sun.under_1y","need_if":{"week_uv_max_at_least":3,"week_tmax_at_least":18},"reason":"soleil","relays":["relay.sun.protect"]}],"never_suggest":[{"id":"tour_de_lit","relay":"relay.sleep.basics"},{"id":"couverture_couette_oreiller","relay":"relay.sleep.basics"},{"id":"cale_bebe","relay":"relay.sleep.no_positioners"},{"id":"reducteur_de_lit","relay":"relay.sleep.no_positioners"}]},"relay_priority":["relay.vigilance.active","relay.cold.avoid_outings","relay.heat.outing_hours","relay.heat.protect","relay.heat.vehicle","relay.heat.stroller_sun","relay.sun.under_1y","relay.sun.hours","relay.sun.protect","relay.air.ozone","relay.air.particles","relay.cold.stroller_rather_than_carrier","relay.car.coat","relay.cold.layers","relay.heat.shutters","relay.heat.info_line","relay.sleep.basics","relay.sleep.room_range","relay.sleep.check_temp","relay.sleep.season_thickness","relay.sleep.size_adapted","relay.sleep.no_positioners","relay.emergency"]},"messages":{"locale":"fr-FR","version":"0.1.0","disclaimer":"Cette application relaie des recommandations publiques et propose des suggestions pratiques. Elle ne remplace pas l'avis d'un professionnel de santé. En cas d'urgence : 15 ou 112.","messages":{"relay.vigilance.active":{"kind":"officiel","verbatim":false,"sources":["meteofrance-vigilance"],"text":"Vigilance {color} ({phenomena}) : suivez les conseils de comportement des pouvoirs publics sur vigilance.meteofrance.fr.","short":"Vigilance {color} : consignes officielles"},"relay.heat.outing_hours":{"kind":"officiel","verbatim":true,"sources":["spf-fortes-chaleurs-bebes"],"text":"« Préférer les sorties le matin avant 11 heures ou le soir après 21 heures. »","short":"Chaleur : sortir avant 11 h ou après 21 h"},"relay.heat.protect":{"kind":"officiel","verbatim":true,"sources":["spf-canicule-precautions"],"text":"Nourrissons et jeunes enfants : « veillez à les protéger en permanence de la chaleur » et à « les faire boire et les hydrater régulièrement ».","short":"Protéger de la chaleur, hydrater régulièrement"},"relay.heat.vehicle":{"kind":"officiel","verbatim":true,"sources":["spf-canicule-precautions"],"text":"« Ne les laissez jamais dans une pièce mal ventilée ou un véhicule, même pendant une très courte durée. »","short":"Jamais seul dans un véhicule"},"relay.heat.stroller_sun":{"kind":"officiel","verbatim":true,"sources":["spf-fortes-chaleurs-bebes"],"text":"« Protéger les bébés dans les poussettes ou les porte-bébés dorsaux des rayons directs du soleil. »","short":"Poussette à l'abri du soleil direct"},"relay.heat.shutters":{"kind":"officiel","verbatim":true,"sources":["spf-canicule-precautions"],"text":"« Fermez fenêtres et volets la journée, ouvrez-les le soir et la nuit s'il fait plus frais. »","short":"Volets fermés le jour, aérer la nuit"},"relay.heat.info_line":{"kind":"officiel","verbatim":false,"sources":["spf-canicule-precautions"],"text":"Canicule Info Service : 0800 06 66 66 (appel gratuit depuis un poste fixe, du lundi au samedi de 9 h à 19 h).","short":"Canicule Info Service : 0800 06 66 66"},"relay.cold.avoid_outings":{"kind":"officiel","verbatim":true,"sources":["santefr-grand-froid"],"text":"« Il convient avant tout d'éviter de sortir avec un bébé quand les températures sont vraiment basses. »","short":"Grand froid : éviter de sortir avec bébé"},"relay.cold.layers":{"kind":"officiel","verbatim":false,"sources":["santefr-grand-froid"],"text":"Santé.fr (fiche grand froid) : « plusieurs vêtements superposés » et couvrir « tête, mains et pieds ».","short":"Couches superposées ; tête, mains, pieds couverts"},"relay.cold.stroller_rather_than_carrier":{"kind":"officiel","verbatim":false,"sources":["santefr-grand-froid"],"text":"Par grand froid, Santé.fr conseille le landau ou la poussette plutôt que le porte-bébé, qui « peut comprimer les membres inférieurs ».","short":"Grand froid : poussette plutôt que porte-bébé"},"relay.sun.under_1y":{"kind":"officiel","verbatim":true,"sources":["santefr-uv-enfants"],"text":"« Les enfants de moins d'un an ne doivent pas être exposés au soleil. »","short":"Pas de soleil direct avant 1 an"},"relay.sun.hours":{"kind":"officiel","verbatim":false,"sources":["santefr-uv-enfants","oms-indice-uv"],"text":"Indice UV de {uv} : rechercher l'ombre et éviter « les heures d'exposition aux UV les plus intenses (de midi à 16 heures) ».","short":"UV : ombre, éviter 12 h-16 h"},"relay.sun.protect":{"kind":"officiel","verbatim":false,"sources":["santefr-uv-enfants"],"text":"Pour les enfants : « des vêtements longs, un chapeau à larges bords », « des lunettes de soleil filtrant bien les UV et enveloppantes » et « une crème solaire adaptée aux enfants sur les parties découvertes du corps ».","short":"Vêtements longs, chapeau, lunettes, crème enfant"},"relay.air.particles":{"kind":"officiel","verbatim":false,"sources":["santefr-pollution"],"text":"Épisode de pollution : « Les sorties à l'extérieur des nourrissons peuvent être maintenues » ; il est recommandé de les limiter dans la durée à proximité des sources majeures de pollution.","short":"Pollution : sorties plus courtes près du trafic"},"relay.air.ozone":{"kind":"officiel","verbatim":false,"sources":["santefr-pollution"],"text":"Épisode d'ozone : limiter la durée des sorties des nourrissons « aux moments de la journée où le niveau de pollution est le plus élevé », souvent le milieu ou la fin d'après-midi.","short":"Ozone : pas de sortie l'après-midi"},"relay.car.coat":{"kind":"officiel","verbatim":false,"sources":["awsr-siege-auto","notices-sieges-auto"],"text":"Siège auto : enlever le manteau d'hiver avant d'attacher l'enfant, puis le couvrir par-dessus le harnais (Agence wallonne pour la sécurité routière, notices des sièges).","short":"Siège auto : manteau enlevé, couvrir par-dessus"},"relay.sleep.basics":{"kind":"officiel","verbatim":false,"sources":["carnet-1000-jours"],"text":"Pour dormir : sur le dos, à plat, dans son lit, dans une turbulette ou gigoteuse adaptée à sa taille, sur un matelas ferme ; ni couverture, ni couette, ni oreiller, ni tour de lit.","short":"Sur le dos, turbulette, ni couette ni tour de lit","list":["Sur le dos, à plat, dans son lit","Dans une turbulette ou gigoteuse adaptée à sa taille","Sur un matelas ferme","Ni couverture, ni couette, ni oreiller, ni tour de lit"]},"relay.sleep.room_range":{"kind":"officiel","verbatim":false,"sources":["carnet-1000-jours"],"text":"Température de la chambre recommandée : entre 18 et 20 °C.","short":"Chambre entre 18 et 20 °C"},"relay.sleep.check_temp":{"kind":"officiel","verbatim":false,"sources":["nhs-sids"],"text":"Pour savoir s'il a trop chaud, touchez sa poitrine ou sa nuque : des mains ou des pieds frais, c'est normal. Peau chaude ou moite : retirez une couche.","short":"Touchez sa nuque, pas ses mains : moite, une couche de moins"},"relay.check_neck":{"kind":"officiel","verbatim":false,"sources":["inspq-chaleur-froid","nhs-sids"],"text":"Pour vérifier s'il a trop chaud, « touchez sa nuque : elle ne doit pas être mouillée » (Mieux vivre, Québec). Des mains ou des pieds frais, c'est normal (NHS).","short":"Touchez sa nuque, pas ses mains","tiny":"Touchez sa nuque","card":"Touchez sa nuque, pas ses mains : nuque moite, une couche de moins (Mieux vivre, Québec ; NHS)."},"relay.sleep.season_thickness":{"kind":"officiel","verbatim":false,"sources":["cd06-pmi-min"],"text":"Une gigoteuse ou une turbulette « dont l'épaisseur variera avec la saison ».","short":"Épaisseur de turbulette selon la saison"},"relay.sleep.size_adapted":{"kind":"officiel","verbatim":false,"sources":["carnet-1000-jours"],"text":"La turbulette ou gigoteuse doit être adaptée à la taille de bébé.","short":"Gigoteuse adaptée à sa taille"},"relay.sleep.no_positioners":{"kind":"officiel","verbatim":false,"sources":["has-contention-presse"],"text":"La HAS juge les dispositifs de contention, dont les réducteurs de lit, « inutiles, délétères et dangereux ».","short":"Ni cale-bébé ni réducteur de lit"},"relay.emergency":{"kind":"officiel","verbatim":false,"sources":["service-public-urgences"],"text":"En cas d'urgence : 15 (SAMU) ou 112.","short":"Urgence : 15 ou 112"},"practical.rain.cover":{"kind":"pratique","text":"Pluie possible pendant la sortie : prévoyez {gear}.","short":"Pluie possible : {gear_short}"},"practical.rain.cover_warm":{"kind":"pratique","text":"Averse possible : l'habillage pluie seulement pendant l'averse, il retient la chaleur.","short":"Averse : habillage pluie le temps de l'averse"},"practical.rain.later":{"kind":"pratique","text":"Pluie prévue vers {hour} : prévoyez {gear} pour le retour.","short":"Pluie vers {hour} : {gear_short}"},"practical.wind":{"kind":"pratique","text":"Vent soutenu : le ressenti est plus froid, protégez du vent.","short":"Vent : ressenti plus froid"},"practical.carrier.body_heat":{"kind":"pratique","text":"En porte-bébé, votre chaleur réchauffe bébé : une couche de moins qu'en poussette.","short":"Porte-bébé : une couche de moins"},"practical.walk.body_heat":{"kind":"pratique","text":"À pied, il se réchauffe en marchant : une couche de moins qu'en poussette, à remettre s'il s'arrête ou remonte dans la poussette.","short":"À pied : une couche de moins"},"practical.carrier.no_footed":{"kind":"pratique","text":"Pas de pyjama à pieds en porte-bébé : il tire sur les pieds quand les jambes sont repliées.","short":"Porte-bébé : pas de pyjama à pieds"},"fabricant.tog":{"kind":"fabricant","sources":["fabricants-tog"],"text":"Chambre à {room} °C : environ {tog} TOG selon les tableaux habituels des fabricants. L'étiquette de votre gigoteuse fait foi.","short":"Gigoteuse ≈ {tog} TOG (indicatif fabricants)"},"fabricant.night_wear":{"kind":"fabricant","sources":["ergopouch-what-to-wear","fabricants-tog"],"text":"Sous la gigoteuse : {wear}. Repère des fabricants, à adapter à bébé ; l'étiquette de la gigoteuse fait foi.","short":"{wear} + gigoteuse ≈ {tog} TOG"},"fabricant.sleepbag.norm":{"kind":"fabricant","sources":["norme-nf-en-16781"],"text":"Repère produit : gigoteuses conformes à la norme NF EN 16781.","short":"Norme NF EN 16781"},"outing.window":{"kind":"meteo","text":"Sortie idéale de {start} à {end}, {feels} °C ressentis.","short":"Sortie idéale {start} – {end} · {feels}°"},"outing.none.journee_terminee":{"kind":"meteo","text":"Plus de créneau aujourd'hui dans votre plage horaire.","short":"Plus de sortie prévue aujourd'hui"},"outing.none.vigilance":{"kind":"meteo","text":"Pas de créneau conseillé : vigilance en cours.","short":"Pas de sortie conseillée (vigilance)"},"outing.none.canicule_heures_chaudes":{"kind":"meteo","text":"Pas de créneau dans votre plage horaire : fortes chaleurs entre 11 h et 21 h.","short":"Pas de créneau : fortes chaleurs"},"outing.none.ozone_apres_midi":{"kind":"meteo","text":"Pas de créneau dans votre plage horaire : épisode d'ozone l'après-midi.","short":"Pas de créneau : ozone l'après-midi"},"outing.none.froid_extreme":{"kind":"meteo","text":"Pas de créneau conseillé : froid très vif.","short":"Pas de créneau : froid très vif"},"outing.none.vent":{"kind":"meteo","text":"Pas de créneau conseillé : rafales fortes.","short":"Pas de créneau : rafales"},"outing.none.pluie":{"kind":"meteo","text":"Pas de créneau sec dans votre plage horaire.","short":"Pas de créneau sec aujourd'hui"},"outing.none.duree":{"kind":"meteo","text":"Pas de créneau assez long dans votre plage horaire.","short":"Pas de créneau assez long"},"outing.none.hors_jour":{"kind":"meteo","text":"Pas de créneau de jour dans votre plage horaire.","short":"Pas de créneau de jour"},"journee.range":{"kind":"meteo","text":"{when}, de {first} à {extreme} °C ressentis.","short":"{when} {first}° → {extreme}°"},"journee.stable":{"kind":"meteo","text":"{when}, autour de {first} °C ressentis.","short":"{when} {first}°"},"journee.bag":{"kind":"pratique","text":"Dans le sac : {items}.","short":"sac : {items}"},"night.room":{"kind":"meteo","text":"Chambre à {room} °C ce soir (repère officiel : 18 à 20 °C).","short":"Chambre {room}° · repère 18 à 20°"},"night.room_unknown":{"kind":"meteo","text":"Repère officiel : chambre entre 18 et 20 °C.","short":"Chambre : repère 18 à 20 °C"},"purchase.suggestion":{"kind":"pratique","text":"À prévoir avant le {order_by} : {label}{size}, utile à partir du {needed_from}.","short":"À prévoir : {label}{size}"}},"labels":{"items":{"body_leger":"body léger","body_mc":"body manches courtes","body_ml":"body manches longues","tenue_ample_claire":"vêtements légers, amples et clairs","tenue_legere":"tenue légère","pyjama_leger":"pyjama ou ensemble léger","pyjama":"pyjama ou ensemble","pyjama_chaud":"pyjama chaud","gilet_fin":"gilet fin à emporter","gilet":"gilet","gilet_chaud":"gilet chaud","pull":"pull","combi_legere":"combinaison légère ou manteau","combi_pilote":"combinaison pilote","combi_pilote_doublee":"combinaison pilote doublée","bonnet_fin":"bonnet fin","bonnet":"bonnet","moufles":"moufles","chaussons":"chaussons chauds","chapeau":"chapeau à larges bords","chapeau_si_soleil":"chapeau à larges bords si soleil","chanceliere":"chancelière","pantalon_leger":"pantalon léger sans pieds","pantalon":"pantalon souple sans pieds","pantalon_chaud":"pantalon chaud sans pieds","chaussettes":"chaussettes","chaussettes_chaudes":"chaussettes chaudes","couverture_portage":"couverture de portage par-dessus","manteau_portage":"manteau ou couverture de portage par-dessus","couverture_harnais":"couverture par-dessus le harnais","tshirt":"t-shirt","haut_ml":"haut à manches longues","veste":"veste ou manteau léger","manteau_chaud":"manteau chaud","combi_ski":"combinaison de ski","habillage_pluie":"habillage pluie","cape_pluie":"cape de pluie","impermeable":"imperméable à capuche","capuche":"capuche ou parapluie"},"items_short":{"body_leger":"body léger","body_mc":"body MC","body_ml":"body ML","tenue_ample_claire":"habits amples et clairs","tenue_legere":"tenue légère","pyjama_leger":"pyjama léger","pyjama":"pyjama","pyjama_chaud":"pyjama chaud","gilet_fin":"gilet fin","gilet":"gilet","gilet_chaud":"gilet chaud","pull":"pull","combi_legere":"combi légère","combi_pilote":"combi pilote","combi_pilote_doublee":"combi doublée","bonnet_fin":"bonnet fin","bonnet":"bonnet","moufles":"moufles","chaussons":"chaussons","chapeau":"chapeau","chapeau_si_soleil":"chapeau si soleil","chanceliere":"chancelière","pantalon_leger":"pantalon léger","pantalon":"pantalon","pantalon_chaud":"pantalon chaud","chaussettes":"chaussettes","chaussettes_chaudes":"chaussettes chaudes","couverture_portage":"couverture de portage","manteau_portage":"manteau de portage","couverture_harnais":"couverture","tshirt":"t-shirt","haut_ml":"haut ML","veste":"veste","manteau_chaud":"manteau chaud","combi_ski":"combi de ski","habillage_pluie":"habillage pluie","cape_pluie":"cape de pluie","impermeable":"imperméable","capuche":"capuche"},"item_layers":{"body_leger":"peau","body_mc":"peau","body_ml":"peau","tenue_ample_claire":"milieu","tenue_legere":"milieu","pyjama_leger":"milieu","pyjama":"milieu","pyjama_chaud":"milieu","pantalon_leger":"milieu","pantalon":"milieu","pantalon_chaud":"milieu","gilet_fin":"milieu","gilet":"milieu","gilet_chaud":"milieu","pull":"milieu","combi_legere":"dessus","combi_pilote":"dessus","combi_pilote_doublee":"dessus","couverture_portage":"dessus","manteau_portage":"dessus","couverture_harnais":"dessus","tshirt":"peau","haut_ml":"peau","veste":"dessus","manteau_chaud":"dessus","combi_ski":"dessus","habillage_pluie":"accessoire","cape_pluie":"accessoire","impermeable":"accessoire","capuche":"accessoire","bonnet_fin":"accessoire","bonnet":"accessoire","moufles":"accessoire","chaussons":"accessoire","chaussettes":"accessoire","chaussettes_chaudes":"accessoire","chapeau":"accessoire","chapeau_si_soleil":"accessoire","chanceliere":"accessoire"},"rain_gear":{"habillage_pluie":"l'habillage pluie","cape_pluie":"une cape de pluie","impermeable":"un imperméable à capuche","capuche":"une capuche ou un parapluie"},"item_hints":{"gilet_fin":"à emporter","chapeau_si_soleil":"si soleil","couverture_harnais":"par-dessus le harnais"},"bands":{"tres_chaud":"Très chaud","chaud":"Chaud","doux":"Doux","frais":"Frais","froid_modere":"Plutôt froid","froid":"Froid","tres_froid":"Très froid"},"layers":{"peau":"Contre la peau","milieu":"Ensuite","dessus":"Par-dessus","accessoire":"Et aussi"},"categories":{"gigoteuse_hiver":"gigoteuse chaude (≈ 2,5 TOG)","gigoteuse_ete":"gigoteuse légère (≈ 0,5-1 TOG)","combi_pilote":"combinaison pilote","manteau_hiver":"manteau chaud","accessoires_hiver":"bonnet, moufles et chaussons","chanceliere":"chancelière pour la poussette","habillage_pluie":"habillage pluie pour la poussette","chapeau_soleil":"chapeau à larges bords","vetements_longs_legers":"vêtements longs et légers","lunettes_soleil":"lunettes de soleil enveloppantes","creme_solaire_enfant":"crème solaire adaptée aux enfants"},"reasons":{"nuits_fraiches":"nuits fraîches","nuits_chaudes":"nuits chaudes","froid":"froid","pluie":"pluie fréquente","soleil":"soleil","taille":"changement de taille"},"vigilance_colors":{"jaune":"jaune","orange":"orange","rouge":"rouge"}}}};
 
 // Dessins des vêtements, pour voir la tenue d'un coup d'œil. Une seule définition sert à l'app (SVG),
 // au widget iPhone (Scriptable, DrawContext) et au widget Android (vector drawables générés par tools/make-drawings.js).
@@ -446,22 +446,33 @@ function transportFor(profile, age, R) {
 // Tenues propres à un âge (à partir de 2 ans : haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison).
 const ageVariant = (R, age) => (R.outfit.age_variants ?? []).filter((v) => age >= v.from_months).at(-1) ?? null;
 
-function chooseOutfit(feels, profile, R, age) {
-  const { bands, transport } = R.outfit;
-  const mode = transportFor(profile, age, R);
-  const t = transport[mode];
-  const variant = ageVariant(R, age);
+// Vêtements d'une tranche, pour un âge et un mode de sortie. Certains modes remplacent des vêtements
+// (porte-bébé : pas de pyjama à pieds ni de combinaison ; voiture : couverture par-dessus le harnais).
+function bandItems(idx, mode, variant, R) {
+  const band = R.outfit.bands[idx];
+  const t = R.outfit.transport[mode];
+  const items = (variant?.bands[band.id] ?? band.items).flatMap((item) => t.replace_items?.[item] ?? [item]);
+  return [...new Set(items)].filter((item) => !t.remove_items.includes(item));
+}
+
+// Tranche portée pour un ressenti : celle du ressenti, décalée par la tendance et par le mode de sortie.
+function wornBand(feels, profile, R, mode) {
+  const bands = R.outfit.bands;
   const base = bandIndex(bands, feels);
-  const idx = clamp(base + (profile.outfit_offset ?? 0) + t.band_shift, 0, bands.length - 1);
-  // Certains modes de transport remplacent des vêtements (porte-bébé : pas de pyjama à pieds ni de combinaison).
-  const items = (variant?.bands[bands[idx].id] ?? bands[idx].items).flatMap((item) => t.replace_items?.[item] ?? [item]);
+  const idx = clamp(base + (profile.outfit_offset ?? 0) + R.outfit.transport[mode].band_shift, 0, bands.length - 1);
+  return { base, idx };
+}
+
+function chooseOutfit(feels, profile, R, age) {
+  const mode = transportFor(profile, age, R);
+  const { base, idx } = wornBand(feels, profile, R, mode);
   return {
-    band: bands[idx].id,
-    base_band: bands[base].id,
+    band: R.outfit.bands[idx].id,
+    base_band: R.outfit.bands[base].id,
     feels_c: feels,
     transport: mode,
-    items: [...new Set(items)].filter((item) => !t.remove_items.includes(item)),
-    notes: [...t.notes],
+    items: bandItems(idx, mode, ageVariant(R, age), R),
+    notes: [...R.outfit.transport[mode].notes],
   };
 }
 
@@ -525,6 +536,211 @@ function dayRelays(input, R, age, plan, outfit, params) {
   }
   if (input.alerts?.air?.episode) relays.push(plan.ozone ? 'relay.air.ozone' : 'relay.air.particles');
   return sortByPriority(relays, R.relay_priority);
+}
+
+// ——— La journée en couches ———
+// Habillé une fois le matin pour la journée dehors : au plus deux changements (« − » on enlève, « + » on remet),
+// seulement quand la tranche de ressenti change pour au moins deux heures, et un sac de trois objets au plus.
+
+const slotOf = (J, item) => Object.keys(J.slots).find((slot) => J.slots[slot].includes(item)) ?? null;
+
+// Découpe la journée en au plus trois périodes d'au moins min_hold_h heures, chacune avec sa tranche :
+// une heure trop couverte pèse plus qu'une heure pas assez couverte (une couche de moins, et elle est dans le sac),
+// chaque changement coûte, et à coût égal on garde le moins de changements. Au départ du matin, jamais trop peu couvert.
+function segmentDay(needs, J) {
+  const n = needs.length;
+  const segment = (from, to) => {
+    const part = needs.slice(from, to);
+    let best = null;
+    for (let band = from === 0 ? part[0] : Math.min(...part); band <= Math.max(...part); band++) {
+      const cost = part.reduce((sum, need) => sum + (band > need ? J.over_weight * (band - need) : J.under_weight * (need - band)), 0);
+      if (!best || cost < best.cost - 1e-9) best = { from, to, band, cost };
+    }
+    return best;
+  };
+  const hold = J.min_hold_h;
+  const cuts = [[]];
+  for (let k1 = hold; k1 <= n - hold; k1++) cuts.push([k1]);
+  if (J.max_changes >= 2) {
+    for (let k1 = hold; k1 <= n - hold; k1++) for (let k2 = k1 + hold; k2 <= n - hold; k2++) cuts.push([k1, k2]);
+  }
+  let best = null;
+  for (const cut of cuts) {
+    const bounds = [0, ...cut, n];
+    const segs = cut.concat(n).map((to, i) => segment(bounds[i], to));
+    if (segs.some((sg, i) => i > 0 && sg.band === segs[i - 1].band)) continue;
+    const total = segs.reduce((sum, sg) => sum + sg.cost, 0) + J.change_cost * cut.length;
+    if (!best || total < best.total - 1e-9) best = { segs, total };
+  }
+  return best.segs;
+}
+
+function planJournee(input, R, age, plan) {
+  const J = R.journee;
+  const { profile } = input;
+  const bands = R.outfit.bands;
+  const mode = transportFor(profile, age, R);
+  const t = R.outfit.transport[mode];
+  const variant = ageVariant(R, age);
+  const win = profile.outing_window ?? R.outing.default_window;
+  const hours = plan.slots.filter((sl) => sl.start >= toMin(win.from) && sl.end <= toMin(win.to));
+  if (!hours.length) return null;
+  const needs = hours.map((sl) => wornBand(sl.feels_c, profile, R, mode).idx);
+  const segs = segmentDay(needs, J);
+  const b0 = segs[0].band;
+  const isFixed = (item) => J.fixed_slots.includes(slotOf(J, item));
+  const layers = (idx) => new Map(bandItems(idx, mode, variant, R).filter((i) => !isFixed(i)).map((i) => [slotOf(J, i), i]));
+
+  // Body et pyjama (ou haut et pantalon) ne changent pas dans la journée : ceux de la période la plus douce,
+  // au plus base_max_drop tranche sous ceux du matin (deux sous une combinaison, qui couvre tout).
+  // La chaleur du matin vient des couches qu'on enlève. Après 2 ans, le pantalon du matin reste : le manteau ne couvre pas les jambes.
+  const worn = layers(b0);
+  const drop = variant?.base_max_drop ?? (worn.has('dessus') ? J.base_max_drop_under_dessus : J.base_max_drop);
+  const baseIdx = Math.max(Math.min(...segs.map((sg) => sg.band)), b0 - drop);
+  const base = bandItems(baseIdx, mode, variant, R).filter(isFixed);
+  const morning = [...base, ...worn.values()];
+
+  // Changements. Tête, mains et pieds suivent la tranche : bonnet, moufles, chaussons et chancelière restent tant
+  // qu'elle les demande (au soleil, le bonnet devient un chapeau). Combinaison, pull et gilet suivent la chaleur
+  // des vêtements (journee.warmth), avec le même équilibre que le découpage : trop couvert pèse plus que pas assez.
+  // En se réchauffant, on enlève la combinaison, puis le pull (ou il devient un gilet), sans trop découvrir ;
+  // en se refroidissant, on remet des couches, d'abord celles enlevées plus tôt, qu'on a sous la main.
+  const warmthOf = (items) => items.reduce((sum, item) => sum + (J.warmth[item] ?? 0), 0);
+  const w = (item) => J.warmth[item] ?? 0;
+  const sun = (item) => J.sun_hats.includes(item);
+  const removed = new Map();
+  const states = [new Map(worn)];
+  const changes = segs.slice(1).map((sg, i) => {
+    const warmer = sg.band < segs[i].band;
+    const target = layers(sg.band);
+    const goal = warmthOf(bandItems(sg.band, mode, variant, R));
+    const cost = (heat) => (heat > goal ? J.over_weight * (heat - goal) : J.under_weight * (goal - heat));
+    const allowed = (heat) => heat >= goal - J.warmth_under_tolerance;
+    let heat = warmthOf([...base, ...worn.values()]);
+    const remove = [];
+    const add = [];
+    const take = (slot) => {
+      const c = worn.get(slot);
+      remove.push(c);
+      removed.set(slot, c);
+      worn.delete(slot);
+      heat -= w(c);
+    };
+    const put = (slot, item) => {
+      add.push(item);
+      worn.set(slot, item);
+      heat += w(item);
+    };
+    if (warmer) {
+      for (const slot of J.remove_order) {
+        const c = worn.get(slot);
+        const want = target.get(slot);
+        if (slot === 'tete' && want && sun(want) && !(c && sun(c))) {
+          if (c) take(slot);
+          put(slot, want);
+          continue;
+        }
+        if (!c || sun(c)) continue;
+        if (J.extremities.includes(slot)) {
+          if (!want) take(slot);
+          continue;
+        }
+        // Garder, enlever, ou échanger le pull contre un gilet plus léger (qui doit alors être dans le sac : swap_cost).
+        const options = [{ heat, cost: cost(heat) }, { heat: heat - w(c), cost: cost(heat - w(c)), take: true }];
+        if (slot === 'haut' && want && w(want) < w(c)) {
+          options.push({ heat: heat - w(c) + w(want), cost: cost(heat - w(c) + w(want)) + J.swap_cost, take: true, swap: true });
+        }
+        const best = options.filter((o) => !o.take || allowed(o.heat)).reduce((a, b) => (b.cost < a.cost - 1e-9 ? b : a));
+        if (!best.take) continue;
+        take(slot);
+        if (best.swap) put(slot, want);
+      }
+    } else {
+      for (const slot of J.add_order) {
+        const want = target.get(slot);
+        if (!want || worn.has(slot)) continue;
+        const earlier = removed.get(slot);
+        const item = earlier && sun(earlier) === sun(want) ? earlier : want;
+        if (J.extremities.includes(slot) || cost(heat + w(item)) < cost(heat) - 1e-9) put(slot, item);
+      }
+    }
+    states.push(new Map(worn));
+    return { time: fmtMin(hours[sg.from].start), from: sg.from, band: bands[sg.band].id, remove, add };
+  });
+  const wornAt = (k) => states[segs.findLastIndex((sg) => sg.from <= k)];
+
+  // Le sac, trois objets au plus : la couche à remettre plus tard (la plus chaude d'abord) ; à pied ou en voiture,
+  // la couche qu'il porterait en poussette ; la protection contre la pluie ; un chapeau au soleil ;
+  // puis les autres couches à remettre, et celles qui manqueraient aux heures plus fraîches.
+  const slots = Object.keys(J.slots);
+  const start = new Set(morning);
+  const later = changes.flatMap((ch) => ch.add.map((item) => ({ item, reason: 'plus_tard', time: ch.time })))
+    .filter((x) => !start.has(x.item))
+    .sort((x, y) => slots.indexOf(slotOf(J, x.item)) - slots.indexOf(slotOf(J, y.item)));
+  const bag = [];
+  if (later[0]) bag.push(later[0]);
+  if (J.carry_dessus_for.includes(mode)) {
+    const plain = bandItems(clamp(b0 - t.band_shift, 0, bands.length - 1), 'poussette', variant, R).find((i) => slotOf(J, i) === 'dessus');
+    if (plain && !start.has(plain)) bag.push({ item: plain, reason: mode === 'voiture' ? 'voiture' : 'pause' });
+  }
+  const rainy = hours.find((sl) => sl.precip_prob >= J.bag.rain_prob_at_least);
+  if (rainy) bag.push({ item: t.rain_gear, reason: 'pluie', time: fmtMin(rainy.start) });
+  const sunny = hours.findIndex((sl, k) => sl.uv >= R.relay_triggers.uv_at_least && sl.feels_c >= J.bag.sun_feels_c_at_least
+    && ![...wornAt(k).values()].some(sun));
+  if (sunny >= 0) bag.push({ item: 'chapeau', reason: 'soleil', time: fmtMin(hours[sunny].start) });
+  bag.push(...later.slice(1));
+  // Ce qui manquerait à une heure plus fraîche que prévu : le bonnet, les moufles ou les chaussons que la tranche
+  // demande, et une couche du dessus si la chaleur manque au-delà de la tolérance ; sauf ce qui a été enlevé plus tôt.
+  needs.forEach((need, k) => {
+    const now = wornAt(k);
+    const target = layers(need);
+    const handy = (sl) => changes.some((ch) => ch.from <= k && ch.remove.some((r) => slotOf(J, r) === sl));
+    const missing = (sl) => target.has(sl) && !now.has(sl) && !sun(target.get(sl)) && !handy(sl);
+    const short = warmthOf([...base, ...now.values()]) < warmthOf(bandItems(need, mode, variant, R)) - J.warmth_under_tolerance;
+    const torso = short ? J.add_order.find((sl) => !J.extremities.includes(sl) && missing(sl)) : null;
+    for (const sl of [torso, ...J.extremities.filter(missing)].filter(Boolean)) {
+      bag.push({ item: target.get(sl), reason: 'si_frais', time: fmtMin(hours[k].start) });
+    }
+  });
+  const packed = bag.filter((x, i) => bag.findIndex((y) => y.item === x.item) === i).slice(0, J.bag.max_items);
+
+  // On ne remet que ce qu'on a sous la main : porté le matin, ou dans le sac.
+  const handy = new Set([...morning, ...packed.map((x) => x.item)]);
+  const kept = changes
+    .map((ch) => ({ ...ch, add: ch.add.filter((item) => handy.has(item)) }))
+    .filter((ch) => ch.remove.length || ch.add.length);
+  const feels = hours.map((sl) => sl.feels_c);
+  const first = feels[0];
+  const extreme = Math.max(...feels) - first >= first - Math.min(...feels) ? Math.max(...feels) : Math.min(...feels);
+  return {
+    from: fmtMin(hours[0].start),
+    to: fmtMin(hours.at(-1).end),
+    feels: { first: Math.round(first), extreme: Math.round(extreme) },
+    band: bands[b0].id,
+    base_band: bands[baseIdx].id,
+    transport: mode,
+    morning,
+    changes: kept.map(({ from, ...ch }) => ch),
+    bag: packed,
+    hours: hours.map((sl) => ({ time: fmtMin(sl.start), feels_c: sl.feels_c, precip_prob: sl.precip_prob, uv: sl.uv })),
+    notes: [...t.notes],
+    check: J.check,
+  };
+}
+
+// Tenue portée à une heure donnée du plan de la journée : celle du matin, avec les changements déjà passés.
+function journeeAt(journee, hhmm) {
+  const items = [...journee.morning];
+  let next = null;
+  for (const ch of journee.changes) {
+    if (toMin(ch.time) > toMin(hhmm)) {
+      next = ch;
+      break;
+    }
+    for (const item of ch.remove) items.splice(items.indexOf(item), 1);
+    items.push(...ch.add.filter((item) => !items.includes(item)));
+  }
+  return { items, next };
 }
 
 // Gigoteuse (TOG) et tenue dessous selon la chambre ; sans relevé, pour le repère officiel (milieu de 18-20 °C), en le disant.
@@ -617,13 +833,61 @@ function render(M, id, variant, params = {}) {
 
 const frNumber = (x) => String(x).replace('.', ',');
 
-// Les trois lignes du widget pour le moment voulu : « jour » (créneau) ou « soir » (nuit et achats).
+const shortList = (items, labels) => items.map((i) => labels.items_short[i] ?? i).join(', ');
+
+// Un changement en quelques mots : « 12 h : − combi pilote… + gilet » (le premier vêtement de chaque sens).
+function changeLine(ch, labels, { full = false } = {}) {
+  const part = (sign, items) => {
+    if (!items.length) return '';
+    return `${sign} ${full ? shortList(items, labels) : `${labels.items_short[items[0]] ?? items[0]}${items.length > 1 ? '…' : ''}`}`;
+  };
+  return `${hourFr(ch.time)} : ${[part('−', ch.remove), part('+', ch.add)].filter(Boolean).join(' ')}`;
+}
+
+// Ressenti du reste de la journée, depuis l'heure qu'il est : le premier, et le plus éloigné (« 6° → 17° »).
+function journeeRange(journee, now) {
+  const rest = journee.hours.filter((h) => toMin(h.time) + 60 > toMin(now));
+  const hours = rest.length ? rest : journee.hours;
+  const first = Math.round(hours[0].feels_c);
+  const feels = hours.map((h) => Math.round(h.feels_c));
+  const up = Math.max(...feels);
+  const down = Math.min(...feels);
+  const extreme = up - first >= first - down ? up : down;
+  return { when: toMin(now) < toMin('12:00') ? 'Ce matin' : 'Cet après-midi', first, extreme, stable: Math.abs(extreme - first) < 2 };
+}
+
+// « Ce matin 6° → 17° », « Cet après-midi 15° → 11° », « Ce matin 6° ».
+function journeeFeels(journee, now, M) {
+  const range = journeeRange(journee, now);
+  return render(M, range.stable ? 'journee.stable' : 'journee.range', 'short', range);
+}
+
+// Ce qui suit dans la journée : le prochain changement, le sac, puis le changement d'après.
+function journeePlanLine(journee, now, M) {
+  const labels = M.labels;
+  const next = journee.changes.filter((ch) => toMin(ch.time) > toMin(now));
+  const bag = journee.bag.length ? render(M, 'journee.bag', 'short', { items: shortList(journee.bag.map((b) => b.item), labels) }) : '';
+  const parts = [next[0] && changeLine(next[0], labels), bag, next[1] && changeLine(next[1], labels)].filter(Boolean);
+  return parts.length ? capitalize(parts.join(' · ')) : null;
+}
+
+// Les trois lignes du widget pour le moment voulu : « jour » (la journée en couches) ou « soir » (nuit et achats).
 // Avec `drawings`, la tenue (le jour) et la gigoteuse (le soir) deviennent des dessins :
 // { drawings: [identifiants de engine/drawings.js], text, label }, `label` gardant le texte pour les petits formats.
 function widgetLines(result, moment, M, { drawings = false } = {}) {
   const labels = M.labels;
   const lines = [];
-  if (moment === 'jour') {
+  const j = result.journee;
+  if (moment === 'jour' && j) {
+    // Le jour : le ressenti, la tenue du moment, puis le prochain changement et le sac (une alerte officielle passe avant).
+    const now = result.now ?? '08:00';
+    const vigilance = result.outing.reason === 'vigilance';
+    lines.push(vigilance ? render(M, 'outing.none.vigilance', 'short') : journeeFeels(j, now, M));
+    const { items } = journeeAt(j, now);
+    const label = capitalize(items.map((i) => labels.items_short[i] ?? i).join(' · '));
+    lines.push(drawings ? { drawings: items.map((i) => ITEM_DRAWINGS[i]).filter(Boolean), text: '', label } : label);
+    lines.push(j.alert ? render(M, j.alert, 'short', result.params) : journeePlanLine(j, now, M) ?? render(M, result.relays[0] ?? j.check, 'short', result.params));
+  } else if (moment === 'jour') {
     const w = result.outing.window;
     lines.push(
       w
@@ -661,6 +925,15 @@ function widgetLines(result, moment, M, { drawings = false } = {}) {
   return lines.filter(Boolean).slice(0, 3);
 }
 
+// Le plus court (widget rond de l'écran verrouillé) : l'heure du prochain changement, le ressenti, ou le TOG le soir.
+function widgetShort(result, moment) {
+  if (moment === 'soir') return result.night.tog ?? '—';
+  const j = result.journee;
+  if (!j) return result.outing.window ? hourFr(result.outing.window.start) : '—';
+  const next = j.changes.find((ch) => toMin(ch.time) > toMin(result.now ?? '08:00'));
+  return next ? hourFr(next.time) : `${j.feels.first}°`;
+}
+
 const momentOf = (now) => (toMin(now ?? '08:00') < toMin('18:00') ? 'jour' : 'soir');
 // Ce qu'affichent l'app et les widgets : le soir dès 18 h, ou dès que la dernière sortie possible de la journée est passée.
 const displayMoment = (result, now) => (momentOf(now) === 'soir' || result.outing.reason === 'journee_terminee' ? 'soir' : 'jour');
@@ -691,6 +964,8 @@ function evaluate(input, bundle) {
     : chooseOutfit(round1(mean(ref.map((sl) => sl.feels_c))), input.profile, R, age);
   if (outfit) addOverlays(outfit, plan, ref, R, params, bundle.messages.labels);
   const result = {
+    date: input.date,
+    now: input.now ?? null,
     age_months: round1(age),
     transport: transportFor(input.profile, age, R),
     outing: {
@@ -710,10 +985,19 @@ function evaluate(input, bundle) {
     outfit,
     relays: dayRelays(input, R, age, plan, outfit, params),
     params,
+    journee: planJournee(input, R, age, plan),
     night: planNight(input, R, plan.heat, age),
     purchases: planPurchases(input, R),
   };
-  result.widget = { lines: widgetLines(result, displayMoment(result, input.now), bundle.messages) };
+  // Alerte officielle qui passe avant le plan de la journée dans le widget (vigilance, grand froid, chaleur…).
+  if (result.journee) result.journee.alert = result.relays.find((id) => R.journee.widget_urgent_relays.includes(id)) ?? null;
+  const moment = displayMoment(result, input.now);
+  result.widget = {
+    lines: widgetLines(result, moment, bundle.messages),
+    check: render(bundle.messages, R.journee.check, 'short'),
+    check_tiny: render(bundle.messages, R.journee.check, 'tiny'),
+    short: widgetShort(result, moment),
+  };
   if (input.check_product) result.product = checkProduct(input.check_product, age, R);
   return result;
 }
@@ -745,6 +1029,8 @@ function lint(bundle) {
     if (msg.kind === 'fabricant' && !levels.includes('C')) errors.push(`${id} : indication fabricant sans source produit`);
   }
   const referenced = [
+    R.journee.check,
+    ...R.journee.widget_urgent_relays,
     ...R.relay_priority,
     ...R.night.always,
     ...R.night.when_room_known,
@@ -768,6 +1054,9 @@ function lint(bundle) {
     if (!M.labels.rain_gear[t.rain_gear]) errors.push(`protection de pluie sans libellé : ${t.rain_gear}`);
   }
   for (const item of items) {
+    const slot = slotOf(R.journee, item);
+    if (!slot && !Object.values(R.outfit.transport).some((t) => t.rain_gear === item)) errors.push(`vêtement sans emplacement (journee.slots) : ${item}`);
+    if (slot && R.journee.warmth[item] === undefined) errors.push(`vêtement sans chaleur (journee.warmth) : ${item}`);
     if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!M.labels.layers[M.labels.item_layers[item]]) errors.push(`couche inconnue pour : ${item}`);
@@ -1322,7 +1611,7 @@ function sbDraw(family, lines, info) {
     if (k < shown.length - 1) w.addSpacer(small ? 3 : 5);
   });
   w.addSpacer();
-  sbText(w, info.footer, 9, { color: new Color('#ffffff', 0.7) });
+  sbText(w, small ? info.footerSmall : info.footer, 9, { color: new Color('#ffffff', 0.7) });
   return w;
 }
 
@@ -1384,16 +1673,16 @@ async function runSuperbebe() {
   const result = evaluate(input, SB_RULES);
   const moment = displayMoment(result, time);
   const lines = widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 });
-  const updated = parisNow(new Date(cache.at)).time.replace(':', ' h ');
-  const window = result.outing.window;
+  // Pied du widget : le geste pour vérifier qu'il n'a pas trop chaud, et l'heure de la météo.
+  const updated = hourFr(parisNow(new Date(cache.at)).time);
+  const offlineText = offline ? 'Hors ligne · ' : '';
   const info = {
     name: child.name,
     place: cfg.n || 'Superbébé',
     theme: skyTheme(result, moment),
-    footer: `${offline ? 'Hors ligne · ' : ''}Mis à jour à ${updated} · Open-Meteo`,
-    short: moment === 'jour'
-      ? window ? hourFr(window.start) : '—'
-      : result.night.tog ? `${result.night.tog}` : '—',
+    footer: `${offlineText}${result.widget.check} · ${updated}`,
+    footerSmall: `${offlineText}${result.widget.check_tiny} · ${updated}`,
+    short: result.widget.short,
   };
   const widget = sbDraw(family, lines, info);
   widget.url = sbTapUrl(child.id);

@@ -27,11 +27,13 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import android.window.OnBackInvokedDispatcher
+import androidx.core.content.FileProvider
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.max
@@ -344,6 +346,26 @@ class MainActivity : Activity() {
         fun share(text: String): Boolean {
             if (!onApp) return false
             val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+            runOnUiThread { startActivity(Intent.createChooser(send, null)) }
+            return true
+        }
+
+        // Fiche du jour : l'image (PNG en base64) et le texte avec le lien, vers la messagerie choisie.
+        @JavascriptInterface
+        fun shareImage(base64: String, text: String): Boolean {
+            if (!onApp) return false
+            val context = this@MainActivity
+            val uri = runCatching {
+                val dir = File(cacheDir, "fiches").apply { mkdirs() }
+                val file = File(dir, "fiche-du-jour.png")
+                file.writeBytes(android.util.Base64.decode(base64, android.util.Base64.DEFAULT))
+                FileProvider.getUriForFile(context, "fr.superbebe.widget.fichiers", file)
+            }.getOrNull() ?: return false
+            val send = Intent(Intent.ACTION_SEND)
+                .setType("image/png")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .putExtra(Intent.EXTRA_TEXT, text)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             runOnUiThread { startActivity(Intent.createChooser(send, null)) }
             return true
         }

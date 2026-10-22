@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fichiers partagés par l'app : l'image de la fiche du jour, dans le cache. -->
+<paths>
+    <cache-path name="fiches" path="fiches/" />
+</paths>

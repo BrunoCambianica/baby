@@ -100,6 +100,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 .hero-big.words { font-size: clamp(1.9rem, 8.5vw, 2.35rem); line-height: 1.12; letter-spacing: -0.01em; }
 .hero-sub { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 1.05rem; opacity: 0.95; position: relative; flex-wrap: wrap; }
+.hero-sub .ico { align-self: flex-start; margin-top: 1px; }
+.hero-sub > span { flex: 1 1 12em; min-width: 0; }
 .hero-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; position: relative; }
 
 .glass {
@@ -172,6 +174,45 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .band strong { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
 .band span { font-size: 0.88rem; color: var(--ink-3); }
 .dress-ico.night { background: var(--violet-soft); color: var(--violet); }
+/* La journée en couches */
+.day-step { display: grid; gap: 10px; }
+.change-time { font-size: 0.86rem; font-weight: 650; color: var(--ink-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.change-time .hint { font-weight: 500; }
+.changes { display: grid; gap: 10px; }
+.change { background: var(--fill); border-radius: 16px; padding: 10px 12px 12px; display: grid; gap: 8px; align-content: start; }
+p.change { display: block; font-size: 0.92rem; color: var(--ink-2); }
+.past { opacity: 0.5; }
+.dress.small { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px 4px; }
+.dress.small .dress-name { overflow-wrap: normal; font-size: 0.72rem; }
+.dress.small .dress-ico { width: 44px; height: 44px; border-radius: 14px; }
+.dress-ico { position: relative; }
+.sign { position: absolute; right: -5px; top: -5px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; line-height: 1; color: #fff; background: var(--ink-3); }
+.plus .sign { background: var(--amber); }
+.minus .dress-ico { background: var(--card); color: var(--ink-3); }
+.bag { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.bag-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 650; color: var(--ink-2); }
+.bag-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bag-list li { display: flex; align-items: center; gap: 10px; font-size: 0.94rem; }
+.bag-list .dress-ico { width: 40px; height: 40px; border-radius: 12px; background: var(--amber-soft); color: var(--amber); }
+.check { font-size: 0.9rem; color: var(--ink-2); background: var(--green-soft); border-radius: 14px; padding: 10px 12px; }
+.check summary { list-style: none; display: flex; gap: 8px; align-items: center; cursor: pointer; color: var(--ink); }
+.check summary::-webkit-details-marker { display: none; }
+.check summary .ico { color: var(--green); }
+.check summary .chev { margin-left: auto; color: var(--ink-3); transition: transform 0.2s; }
+.check[open] summary .chev { transform: rotate(90deg); }
+.check p { margin-top: 8px; }
+.check .source { font-size: 0.8rem; }
+p.check { display: block; }
+.fold summary { list-style: none; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 650; color: var(--ink-2); }
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary .ico { color: var(--ink-3); }
+.fold summary .chev { margin-left: auto; transition: transform 0.2s; }
+.fold[open] summary .chev { transform: rotate(90deg); }
+.fold[open] summary { margin-bottom: 12px; }
+.btn .ico { display: inline-block; vertical-align: -4px; margin-right: 6px; }
+.share-row { display: grid; gap: 10px; }
+.fiche-hero { padding-bottom: 54px; }
+
 .tips { list-style: none; display: grid; gap: 8px; margin: 0; background: var(--fill); border-radius: 14px; padding: 10px 12px; font-size: 0.92rem; color: var(--ink-2); }
 .tips li { display: flex; gap: 10px; align-items: flex-start; }
 .tips .ico { color: var(--blue); margin-top: 1px; flex: none; }

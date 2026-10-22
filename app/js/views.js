@@ -1,12 +1,13 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { ageMonths, hourFr, render, skyTheme, widgetLines } from '../../engine/engine.js';
+import { ageMonths, hourFr, journeeRange, render, skyTheme, toMin, widgetLines } from '../../engine/engine.js';
 import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
+import { bagReason } from './fiche.js';
 import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.6.0';
+export const VERSION = '0.7.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -180,10 +181,22 @@ function heroSortir(state, ctx) {
   const { result, date, tomorrow } = ctx;
   const theme = sortirTheme(ctx);
   const w = result.outing.window;
+  const j = result.journee;
   const days = `<div class="days glass" role="tablist" aria-label="Jour">${[['aujourdhui', "Aujourd'hui"], ['demain', 'Demain']]
     .map(([v, l]) => `<button role="tab" aria-selected="${state.day === v}" data-action="day" data-value="${v}">${l}</button>`).join('')}</div>`;
   let main;
-  if (w) {
+  if (j && result.outing.reason !== 'vigilance') {
+    // La journée : le ressenti du matin (ou de l'heure qu'il est) jusqu'au plus chaud ou au plus froid ; la sortie idéale ensuite.
+    const range = journeeRange(j, tomorrow ? j.from : ctx.input.now);
+    const who = state.profile.count > 1 ? `${esc(childName(state.profile, state.profile.index))} · ` : '';
+    const slots = result.outing.slots.filter((s) => s.time >= j.from && s.time < j.to);
+    const first = (w && slots.find((s) => s.time === w.start)) ?? slots[0];
+    const night = first ? first.time >= ctx.input.forecast.daylight.sunset : false;
+    const outing = w ? `sortie idéale ${hourFr(w.start)} – ${hourFr(w.end)}` : render(M, `outing.none.${result.outing.reason}`, 'short');
+    main = `<p class="hero-label">${who}${tomorrow ? 'Demain' : range.when}</p>
+      <p class="hero-big">${range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`}</p>
+      <p class="hero-sub">${first ? icon(weatherIcon(first.weather_code, { night, precipProb: first.precip_prob }), { size: 22 }) : ''}<span>${esc(slots.length ? `${conditions(slots)} · ` : '')}${esc(outing)}</span></p>`;
+  } else if (w) {
     const slots = windowSlots(result);
     const night = slots[0].time >= ctx.input.forecast.daylight.sunset;
     main = `<p class="hero-label">Sortie idéale${tomorrow ? ' demain' : ''}</p>
@@ -237,27 +250,75 @@ function dressList(state, outfit) {
     ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}`;
 }
 
+// Tenue sans plan de la journée (prévisions qui ne couvrent pas la plage horaire) : celle du créneau conseillé.
 function outfitCard(state, ctx) {
   const M = state.bundle.messages;
-  const { result, picked } = ctx;
-  const outfit = picked ?? result.outfit;
+  const outfit = ctx.result.outfit;
   if (!outfit) return '';
-  const params = picked ? picked.params : result.params;
-  const tips = outfit.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', params))}</span></li>`).join('');
-  const pickedBar = picked
-    ? `<div class="picked"><span>À ${hourFr(state.pickedHour)} · ${Math.round(picked.feels_c)}° ressentis${picked.reasons.length ? ` · ${esc(picked.reasons.map((r) => SLOT_FLAG[r] ?? r).join(', '))}` : ''}</span>
-        <button class="icon-btn" data-action="pick-hour" data-hour="${state.pickedHour}" aria-label="Revenir au créneau idéal">${icon('x', { size: 18 })}</button></div>`
-    : '';
+  const tips = outfit.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', ctx.result.params))}</span></li>`).join('');
   return `<section class="card" aria-labelledby="t-tenue">
     <div class="card-head">
-      <h2 class="card-title" id="t-tenue">${icon('shirt', { size: 18 })}${picked ? 'Tenue à cette heure' : "Comment l'habiller"}</h2>
+      <h2 class="card-title" id="t-tenue">${icon('shirt', { size: 18 })}Comment l'habiller</h2>
       <button class="icon-btn" data-action="share" aria-label="Envoyer à la nounou ou au co-parent">${icon('share', { size: 18 })}</button>
     </div>
-    ${pickedBar}
     ${modes(state, ctx.result.transport, state.profile.birth)}
     ${bandTitle(state, outfit)}
     ${dressList(state, outfit)}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
+  </section>`;
+}
+
+// Un vêtement du plan : dessin et nom, avec « − » (on l'enlève) ou « + » (on le remet).
+function changeItem(state, item, sign) {
+  const labels = state.bundle.messages.labels;
+  return `<li class="${sign === '−' ? 'minus' : 'plus'}"><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 28 })}<span class="sign" aria-hidden="true">${sign}</span></span>
+    <span class="dress-name">${esc(capitalize(labels.items_short[item] ?? item))}</span></li>`;
+}
+
+// La journée en couches : la tenue du matin, au plus deux changements, le sac, le geste de la nuque.
+// Au fil de la journée, l'étape en cours est marquée « maintenant ».
+function dayCard(state, ctx) {
+  const M = state.bundle.messages;
+  const labels = M.labels;
+  const j = ctx.result.journee;
+  const now = ctx.tomorrow ? null : ctx.input.now;
+  const passed = now ? j.changes.filter((ch) => toMin(ch.time) <= toMin(now)).length : -1;
+  const started = now && toMin(now) >= toMin(j.from);
+  const mark = (k) => (k === passed && started ? ' <span class="tag blue">maintenant</span>' : '');
+  const dim = (k) => (now && k < passed ? ' past' : '');
+  const text = !drawingsOn(state);
+  const changes = j.changes.map((ch, k) => (text
+    ? `<p class="change${dim(k + 1)}"><strong>Vers ${hourFr(ch.time)}</strong>${mark(k + 1)} : ${[ch.remove.length ? `enlever ${esc(ch.remove.map((i) => labels.items[i]).join(', '))}` : '', ch.add.length ? `mettre ${esc(ch.add.map((i) => labels.items[i]).join(', '))}` : ''].filter(Boolean).join(' ; ')}</p>`
+    : `<div class="change${dim(k + 1)}"><p class="change-time">Vers ${hourFr(ch.time)}${mark(k + 1)}</p>
+        <ul class="dress small">${ch.remove.map((i) => changeItem(state, i, '−')).join('')}${ch.add.map((i) => changeItem(state, i, '+')).join('')}</ul></div>`)).join('');
+  const rainHot = j.bag.some((b) => b.reason === 'pluie' && b.item === 'habillage_pluie'
+    && (j.hours.find((h) => h.time === b.time)?.feels_c ?? 0) >= state.bundle.rules.outfit.overlays.rain_cover_warm_feels_c_at_least);
+  const bag = j.bag.length
+    ? `<div class="bag"><p class="bag-title">${icon('bag', { size: 18 })}Dans le sac</p><ul class="bag-list">${j.bag.map((b) => `<li>
+        ${text ? '' : `<span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[b.item], { size: 26 })}</span>`}
+        <span><strong>${esc(capitalize(labels.items_short[b.item] ?? b.item))}</strong>${bagReason([b.item, b.reason, b.time]) ? `<span class="hint"> · ${esc(bagReason([b.item, b.reason, b.time]))}</span>` : ''}</span></li>`).join('')}</ul>
+        ${rainHot ? `<p class="hint">${esc(render(M, 'practical.rain.cover_warm', 'text'))}</p>` : ''}</div>`
+    : '';
+  const tips = j.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', ctx.result.params))}</span></li>`).join('');
+  const check = M.messages[j.check];
+  return `<section class="card day" aria-labelledby="t-jour">
+    <div class="card-head">
+      <h2 class="card-title" id="t-jour">${icon('shirt', { size: 18 })}Habillez-le une fois</h2>
+      <button class="icon-btn" data-action="share-fiche" aria-label="Envoyer la fiche du jour">${icon('share', { size: 18 })}</button>
+    </div>
+    ${modes(state, ctx.result.transport, state.profile.birth)}
+    <div class="day-step${now && passed > 0 ? ' past' : ''}">
+      <p class="change-time">${ctx.tomorrow ? 'Demain matin' : 'Le matin'}, dès ${hourFr(j.from)}${mark(0)}<span class="hint"> · ${esc(labels.bands[j.band])}</span></p>
+      ${dressList(state, { items: j.morning })}
+    </div>
+    ${changes ? `<div class="changes">${changes}</div>` : `<p class="hint">Pas de changement à prévoir de ${hourFr(j.from)} à ${hourFr(j.to)}.</p>`}
+    ${bag}
+    <details class="check" data-details="nuque"${state.open.has('nuque') ? ' open' : ''}>
+      <summary>${icon('info', { size: 18 })}<strong>${esc(check.short)}</strong>${chev(16)}</summary>
+      <p>${esc(check.text)}</p><p class="source">Source : ${sourceLinks(state, check.sources ?? [])}</p>
+    </details>
+    ${tips ? `<ul class="tips">${tips}</ul>` : ''}
+    <button class="btn soft" data-action="share-fiche">${icon('share', { size: 18 })}Envoyer la fiche du jour</button>
   </section>`;
 }
 
@@ -272,17 +333,16 @@ function hoursCard(state, ctx) {
     const off = s.reasons.length > 0;
     const night = s.time < sunrise || s.time >= sunset;
     const flag = best ? 'idéal' : off ? SLOT_FLAG[s.reasons[0]] ?? '' : '';
-    return `<button class="h-cell${best ? ' best' : ''}${off ? ' off' : ''}" data-action="pick-hour" data-hour="${s.time}" aria-pressed="${state.pickedHour === s.time}"
+    return `<div class="h-cell${best ? ' best' : ''}${off ? ' off' : ''}" role="listitem"
         aria-label="${hourFr(s.time)}, ${Math.round(s.feels_c)} degrés ressentis${flag ? `, ${flag}` : ''}">
       <span class="h-flag">${flag}</span><span class="h-time">${hourFr(s.time)}</span>
       ${icon(weatherIcon(s.weather_code, { night, precipProb: s.precip_prob }), { size: 24 })}
-      <span class="h-temp">${Math.round(s.feels_c)}°</span></button>`;
+      <span class="h-temp">${Math.round(s.feels_c)}°</span></div>`;
   }).join('');
-  return `<section class="card" aria-labelledby="t-heures">
-    <h2 class="card-title" id="t-heures">${icon('clock', { size: 18 })}Heure par heure</h2>
-    <div class="hours" role="group" aria-label="Heures de la journée">${cells}</div>
-    ${state.pickedHour ? '' : '<p class="hint">Touchez une heure pour voir la tenue à ce moment-là.</p>'}
-  </section>`;
+  return `<details class="card fold" data-details="heures"${state.open.has('heures') ? ' open' : ''}>
+    <summary>${icon('clock', { size: 18 })}Heure par heure${chev()}</summary>
+    <div class="hours" role="list" aria-label="Heures de la journée">${cells}</div>
+  </details>`;
 }
 
 function officialCard(state, ids, params) {
@@ -353,7 +413,7 @@ function laterCards(state, ctx) {
 function sortirContent(state, ctx) {
   if (!ctx.tomorrow && !ctx.result.outfit) return `${laterCards(state, ctx)}${promoCard(state)}${foot()}`;
   return [
-    outfitCard(state, ctx),
+    ctx.result.journee ? dayCard(state, ctx) : outfitCard(state, ctx),
     hoursCard(state, ctx),
     officialCard(state, ctx.result.relays, ctx.result.params),
     ctx.tomorrow ? '' : promoCard(state),
@@ -474,7 +534,7 @@ function prevoirContent(state, ctx) {
 
 function tabbar(state, ctx) {
   const count = ctx?.result.purchases.length ?? 0;
-  const tabs = [['sortir', 'Sortir', 'sun'], ['nuit', 'Nuit', 'moon'], ['prevoir', 'Prévoir', 'bag']];
+  const tabs = [['sortir', 'Journée', 'sun'], ['nuit', 'Nuit', 'moon'], ['prevoir', 'Prévoir', 'bag']];
   return `<nav class="tabbar" role="tablist" aria-label="Sections">${tabs.map(([v, l, i]) =>
     `<button role="tab" aria-selected="${state.tab === v}" data-action="tab" data-value="${v}">${icon(i)}<span>${l}</span>${v === 'prevoir' && count ? `<span class="badge">${count}</span>` : ''}</button>`).join('')}</nav>`;
 }

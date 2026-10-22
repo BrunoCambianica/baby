@@ -36,6 +36,17 @@
       "notes": "Lu le 22/10/2026 : « Check your baby's temperature by feeling their chest or the back of their neck. Do not worry if their hands or feet feel cool, this is normal. » Retirer une couche si la peau est chaude ou moite. Source étrangère faute de source française lue sur ce geste."
     },
     {
+      "id": "inspq-chaleur-froid",
+      "publisher": "Institut national de santé publique du Québec, guide Mieux vivre avec notre enfant",
+      "short": "Mieux vivre (INSPQ, Québec)",
+      "title": "Protéger votre bébé de la grande chaleur et du froid",
+      "url": "https://www.inspq.qc.ca/mieux-vivre/enfant/securite/proteger-bebe-chaleur-et-froid",
+      "published": "2026-02-17",
+      "level": "A-etranger",
+      "verification": "lu",
+      "notes": "Lu le 22/10/2026 : « Pour vérifier si votre enfant a trop chaud, touchez sa nuque : elle ne doit pas être mouillée. » Conseil général, pas limité au sommeil. Source étrangère faute de source française lue sur ce geste."
+    },
+    {
       "id": "santefr-grand-froid",
       "publisher": "Santé.fr (RecoSanté, recommandations validées par le HCSP et Santé publique France)",
       "short": "Santé.fr",

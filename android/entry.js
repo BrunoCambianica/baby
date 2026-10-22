@@ -34,6 +34,8 @@ function sbRenderChild(forecast, cfg, child, state, date, time) {
     id: child.id,
     name: child.name,
     place: cfg.n || 'Superbébé',
+    // Pied du widget : le geste pour vérifier qu'il n'a pas trop chaud (l'heure de la météo est ajoutée par l'app).
+    check: result.widget.check,
     // Avec la tenue en dessins (réglage de l'app), certaines lignes sont des objets { drawings, text, label }.
     lines: widgetLines(result, moment, SB_RULES.messages, { drawings: cfg.i !== 0 }),
     moment,

@@ -145,8 +145,8 @@ await test('Deuxième enfant : fiche, pastilles, tenue et mode propres à chacun
   assert((await page.getAttribute('.modes [data-value="a_pied"]', 'aria-checked')) === 'true', 'mode à pied non retenu');
   const zoeItems = await page.locator('.dress-name').allTextContents();
   assert(!zoeItems.some((t) => /Body|Pyjama|Chancelière/.test(t)), `tenue de Zoé : ${zoeItems.join(', ')}`);
-  const tips = await page.textContent('.tips');
-  assert(tips.includes('imperméable') && !tips.includes('habillage'), `pluie à pied : ${tips}`);
+  const bag = await page.textContent('.bag');
+  assert(bag.includes('Imperméable') && !bag.includes('abillage'), `pluie à pied : ${bag}`);
   await shot(page, 'l1-zoe');
   await page.click('.kids >> text=Léo');
   assert(!(await page.isVisible('.modes [data-value="a_pied"]')), 'à pied proposé pour Léo');
@@ -283,6 +283,78 @@ await test('Assistant du widget iPhone : un widget par enfant, choisi par son pr
   const hint = await page.textContent('.step:last-child .fine');
   assert(hint.includes('Léo ou Zoé'), hint);
   assert((await page.textContent('.w-head')).startsWith('Léo · Lyon'), await page.textContent('.w-head'));
+});
+
+await test('Journée : tenue du matin, changements, sac, geste de la nuque', async (use) => {
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '5°→19°', await page.textContent('.hero-big'));
+  const times = await page.locator('.change .change-time').allTextContents();
+  assert(times.length === 2 && times[0].startsWith('Vers 11 h') && times[1].startsWith('Vers 16 h'), times.join(' / '));
+  const first = await page.locator('.change').first().textContent();
+  assert(/Combi pilote/.test(first) && /Gilet/.test(first), first);
+  assert((await page.textContent('.bag')).includes('Gilet'), await page.textContent('.bag'));
+  assert(await page.isVisible('text=Touchez sa nuque, pas ses mains'), 'geste de la nuque absent');
+  assert(!(await page.isVisible('text=Touchez une heure')), 'ancienne invite « touchez une heure »');
+  await shot(page, 'l2-journee-matin');
+});
+
+await test('Journée à 14 h : l\'étape en cours est marquée, les précédentes estompées', async (use) => {
+  const page = use(await phone({ at: '2026-10-27T14:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  assert((await page.locator('.change').first().textContent()).includes('maintenant'), 'étape de 11 h non marquée');
+  assert(await page.locator('.day-step.past').count() === 1, 'matin non estompé');
+  assert((await page.textContent('.hero-label')).includes('Cet après-midi'), await page.textContent('.hero-label'));
+  await shot(page, 'l2-journee-14h');
+});
+
+await test('Fiche du jour : image et lien envoyés, page lisible sans l\'app, sans nom de famille ni commune', async (use) => {
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  await page.evaluate(() => {
+    navigator.canShare = (data) => Boolean(data?.files?.length);
+    navigator.share = async (data) => {
+      window.shared = { text: data.text, file: data.files?.[0] ? { name: data.files[0].name, size: data.files[0].size, type: data.files[0].type } : null };
+      window.sharedImage = data.files?.[0] ? await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(data.files[0]);
+      }) : null;
+    };
+  });
+  await page.click('.day .btn[data-action="share-fiche"]');
+  await page.waitForFunction(() => window.shared);
+  const shared = await page.evaluate(() => window.shared);
+  assert(shared.file?.type === 'image/png' && shared.file.size > 20000, JSON.stringify(shared.file));
+  assert(shared.text.startsWith('Léo · mardi 27 octobre') && shared.text.includes('Vers 11 h : enlever') && !shared.text.includes('Lyon'), shared.text);
+  const image = await page.evaluate(() => window.sharedImage);
+  const { writeFileSync } = await import('node:fs');
+  writeFileSync(join(CAPTURES, 'l2-fiche-image.png'), Buffer.from(image.split(',')[1], 'base64'));
+  const link = shared.text.match(/https?:\S+#f=F1\.[\w-]+/)?.[0];
+  assert(link, 'lien de la fiche absent');
+  const reader = await page.context().newPage();
+  reader.errors = [];
+  reader.on('pageerror', (e) => page.errors.push(e.message));
+  await reader.goto(link);
+  await reader.waitForSelector('.dress');
+  const body = await reader.textContent('body');
+  assert(body.includes('Léo') && body.includes('Vers 11 h') && body.includes('Dans le sac') && body.includes('Touchez sa nuque'), body.slice(0, 300));
+  assert(!body.includes('Lyon'), 'commune dans la fiche');
+  await reader.screenshot({ path: join(CAPTURES, 'l2-fiche-page.png'), fullPage: true });
+});
+
+await test('Fiche du jour dans l\'app Android 0.7 : l\'image part par le pont, avec le texte et le lien', async (use) => {
+  const init = `window.calls = []; window.SuperbebeAndroid = { sync() {}, colors() {}, widgets: () => 1, version: () => '0.7.0',
+    widgetChildren: () => '{}', share: () => true, shareImage: (png, text) => { window.calls.push([png.length, text]); return true; } };
+    if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }`;
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init }));
+  await page.goto(APP);
+  await page.click('.day .btn[data-action="share-fiche"]');
+  const calls = await page.evaluate(() => window.calls);
+  assert(calls.length === 1 && calls[0][0] > 20000 && calls[0][1].includes('#f=F1.'), JSON.stringify(calls.map(([n, t]) => [n, t.slice(0, 40)])));
 });
 
 await browser.close();

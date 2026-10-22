@@ -51,8 +51,8 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
 
         val now = ZonedDateTime.now(PARIS)
         val updated = Instant.ofEpochMilli(SbStore.forecastAt(c)).atZone(PARIS)
-        val footer = (if (offline) "Hors ligne · " else "") +
-            String.format(Locale.FRANCE, "Mis à jour à %02d h %02d · Open-Meteo", updated.hour, updated.minute)
+        val time = if (updated.minute == 0) "${updated.hour} h" else String.format(Locale.FRANCE, "%d h %02d", updated.hour, updated.minute)
+        val footer = (if (offline) "Hors ligne · " else "") + time
         val state = JSONObject().put("rooms", SbStore.rooms(c)).put("room", SbStore.room(c) ?: JSONObject.NULL)
         try {
             val out = SbEngine.compute(
@@ -61,8 +61,12 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
                 String.format(Locale.ROOT, "%02d:%02d", now.hour, now.minute),
             )
             if (out.has("error")) throw IllegalStateException("configuration invalide")
+            // Pied : « Touchez sa nuque, pas ses mains · 7 h 30 » (« Hors ligne · » devant, sans réseau).
             val children = out.getJSONArray("children")
-            SbStore.saveRenders(c, (0 until children.length()).map { children.getJSONObject(it).put("footer", footer) })
+            SbStore.saveRenders(c, (0 until children.length()).map {
+                val child = children.getJSONObject(it)
+                child.put("footer", (if (offline) "Hors ligne · " else "") + listOf(child.optString("check"), time).filter { part -> part.isNotEmpty() }.joinToString(" · "))
+            })
         } catch (e: SbEngine.Unsupported) {
             SbStore.saveMessage(
                 c, place.name,
