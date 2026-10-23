@@ -69,7 +69,7 @@ class SbWidget : GlanceAppWidget() {
             Spacer(GlanceModifier.height(8.dp))
             render.lines.forEachIndexed { index, line ->
                 if (line.drawings.isNotEmpty()) {
-                    Drawings(line, white)
+                    DrawingsRow(line, white)
                 } else {
                     Text(
                         text = line.text,
@@ -90,39 +90,40 @@ class SbWidget : GlanceAppWidget() {
         }
     }
 
-    // Tenue en dessins : jusqu'à huit vêtements, puis « +n » et le texte éventuel (TOG de la gigoteuse).
-    @Composable
-    private fun Drawings(line: SbStore.Line, color: ColorProvider) {
-        val shown = line.drawings.mapNotNull { SbDrawings.resource(it) }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            shown.take(MAX_DRAWINGS).forEachIndexed { k, resource ->
-                if (k > 0) Spacer(GlanceModifier.width(6.dp))
-                Image(
-                    provider = ImageProvider(resource),
-                    contentDescription = if (k == 0) line.label else null,
-                    modifier = GlanceModifier.size(24.dp),
-                )
-            }
-            val rest = shown.size - MAX_DRAWINGS
-            val text = listOfNotNull(if (rest > 0) "+$rest" else null, line.text.ifEmpty { null }).joinToString("  ")
-            if (text.isNotEmpty()) {
-                Spacer(GlanceModifier.width(8.dp))
-                Text(text = text, style = TextStyle(color = color, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-            }
-        }
-    }
-
     private fun background(theme: String): Int = when (theme) {
         "clair" -> R.drawable.widget_bg_clair
         "pluie" -> R.drawable.widget_bg_pluie
         "chaleur" -> R.drawable.widget_bg_chaleur
         "froid" -> R.drawable.widget_bg_froid
         "nuit" -> R.drawable.widget_bg_nuit
+        "maison" -> R.drawable.widget_bg_maison
         else -> R.drawable.widget_bg_nuageux
     }
 }
 
 private const val MAX_DRAWINGS = 8
+
+/** Tenue en dessins (widgets principal et Maison) : jusqu'à huit vêtements, puis « +n » et le texte éventuel (TOG de la gigoteuse). */
+@Composable
+internal fun DrawingsRow(line: SbStore.Line, color: ColorProvider) {
+    val shown = line.drawings.mapNotNull { SbDrawings.resource(it) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        shown.take(MAX_DRAWINGS).forEachIndexed { k, resource ->
+            if (k > 0) Spacer(GlanceModifier.width(6.dp))
+            Image(
+                provider = ImageProvider(resource),
+                contentDescription = if (k == 0) line.label else null,
+                modifier = GlanceModifier.size(24.dp),
+            )
+        }
+        val rest = shown.size - MAX_DRAWINGS
+        val text = listOfNotNull(if (rest > 0) "+$rest" else null, line.text.ifEmpty { null }).joinToString("  ")
+        if (text.isNotEmpty()) {
+            Spacer(GlanceModifier.width(8.dp))
+            Text(text = text, style = TextStyle(color = color, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        }
+    }
+}
 
 class SbWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SbWidget()

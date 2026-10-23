@@ -17,10 +17,11 @@ tools/compiler-apk.sh      # compile, puis copie l'APK dans dist/superbebe-andro
 
 | Fichier | Rôle |
 |---|---|
-| `MainActivity.kt` | Affiche l'app web en plein écran et lui offre le pont `SuperbebeAndroid` : réglages et relevés des chambres vers les widgets, couleurs des barres du système, pose d'un widget par enfant, partage d'un texte ou de l'image de la fiche du jour (`FileProvider`, cache de l'app). Reprend la configuration envoyée depuis Chrome (lien `superbebe://config/SB1.…`). Propose l'APK publié s'il est plus récent (`dist/android-version.json`) |
-| `SbWorker.kt` | Toutes les 30 minutes : météo Open-Meteo, appel du moteur pour chaque enfant (`sbAndroidAll`), enregistrement des lignes |
+| `MainActivity.kt` | Affiche l'app web en plein écran et lui offre le pont `SuperbebeAndroid` : réglages et relevés (chambres, pièces de jour) vers les widgets, relevés notés sur le widget Maison vers l'app (`readings`), couleurs des barres du système, pose d'un widget par enfant, partage d'un texte ou de l'image de la fiche du jour (`FileProvider`, cache de l'app). Reprend la configuration envoyée depuis Chrome (lien `superbebe://config/SB1.…`). Propose l'APK publié s'il est plus récent (`dist/android-version.json`) |
+| `SbWorker.kt` | Toutes les 30 minutes : météo Open-Meteo, appel du moteur pour chaque enfant (`sbAndroidAll`), enregistrement des lignes et des tenues de la maison pour chaque relevé possible |
 | `SbEngine.kt` | Exécute le moteur JavaScript dans le bac à sable |
 | `SbWidget.kt` | Widget Glance : affiche les lignes de son enfant sur un ciel assorti à la météo (`res/drawable/widget_bg_*`), la tenue en dessins ; le toucher ouvre l'app sur cet enfant (`superbebe://enfant/…`). `SbPinReceiver` attache l'enfant au widget posé depuis l'app |
+| `SbHomeWidget.kt` | Widget Maison : de 6 h à 18 h la pièce où vit l'enfant, ensuite sa chambre ; − et + notent la température (un demi-degré, `SbRoomStep`), la toucher la note telle quelle ; la tenue suit tout de suite, lue dans la table calculée par le moteur, sans réseau. Le toucher ailleurs ouvre l'app sur l'onglet Maison (`superbebe://maison/…`) |
 | `SbReminder.kt` | Rappel du soir activé dans l'app : autorisation des notifications (Android 13 et plus), calcul à l'heure choisie, une notification par jour au plus avec la tenue et le sac de demain de chaque enfant, et la nuit |
 | `SbWidgetConfigure.kt` | Choix de l'enfant d'un widget : à la pose avant Android 12, ou appui long, « Modifier le widget » ; rien à choisir avec un seul enfant |
 | `SbDrawings.kt`, `res/drawable/drawing_*.xml` | Dessins des vêtements, générés par `npm run build` (tools/make-drawings.js) à partir de `engine/drawings.js` : ne pas modifier à la main |

@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.12)
+# Tester Superbébé (version 0.13)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -33,6 +33,8 @@ Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chamb
 
 **Un widget par enfant** : posez un deuxième widget Scriptable, puis appui long dessus, **Modifier le widget**, et dans **Parameter**, écrivez le prénom de l'enfant (ou son numéro : 1, 2…). Sans rien dans Parameter, le widget montre le premier enfant.
 
+**Widget Maison** : un autre widget Scriptable, avec **maison** dans Parameter (ou « Léo maison »). Le jour, la température chez vous et la tenue pour rester à la maison ; le soir, sa chambre, la gigoteuse et la tenue dessous. Sur iPhone, un widget ne peut pas avoir de boutons : le toucher ouvre l'onglet Maison, où − et + notent la température.
+
 ## 2 bis. Installer l'app et le widget sur Android (3 minutes)
 
 1. Ouvrez <https://brunocambianica.github.io/baby/> dans Chrome, puis **Réglages**, **Ajouter le widget**, onglet **Android**, **Télécharger**.
@@ -41,6 +43,8 @@ Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chamb
 4. Dans l'app, carte « Ajoutez le widget », **Ajouter** : Android propose de le poser sur l'écran d'accueil.
 
 Ensuite, utilisez l'icône de l'app Superbébé ; celle installée depuis Chrome peut être retirée. Toucher le widget ouvre l'app ; vos réglages et le relevé de la chambre passent au widget tout seuls.
+
+**Widget Maison** (app 0.13) : Réglages, **Le widget Maison**. Le jour la pièce où il vit, le soir sa chambre : **−** et **+** notent la température directement sur le widget, et la tenue suit tout de suite ; toucher la température la confirme telle quelle. L'app reprend ces relevés à son ouverture.
 
 **Un widget par enfant** : dans l'app, Réglages, un bouton **Le widget de…** par enfant. Posé depuis l'écran d'accueil, Android demande pour quel enfant ; appui long sur un widget, **Modifier le widget**, pour en changer. L'app Android 0.6 est nécessaire : l'ancienne propose elle-même la mise à jour.
 

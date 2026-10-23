@@ -7,7 +7,8 @@ import vm from 'node:vm';
 import { loadRules, readJSON, ROOT } from './load-rules.js';
 
 const read = (path) => readFileSync(join(ROOT, path), 'utf8');
-const strip = (source) => source.replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
+// Imports retirés, même sur plusieurs lignes (« import {\n  a, b,\n} from '…'; »), et mot-clé export enlevé.
+const strip = (source) => source.replace(/^import [^;]*;\n/gm, '').replace(/^export /gm, '');
 
 const { version, homepage } = readJSON(join(ROOT, 'package.json'));
 const { rules, messages } = loadRules();

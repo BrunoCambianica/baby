@@ -42,7 +42,8 @@ import kotlin.math.max
  * L'app Superbébé sur Android : l'app web en plein écran, sans barre de navigateur, reliée au widget.
  * L'app web transmet ses réglages et les relevés des chambres aux widgets par le pont « SuperbebeAndroid » ;
  * une configuration envoyée depuis Chrome (lien superbebe://config/…) est reprise dans l'app.
- * Un widget touché ouvre l'app sur son enfant (superbebe://enfant/…).
+ * Un widget touché ouvre l'app sur son enfant (superbebe://enfant/…), le widget Maison sur l'onglet Maison (superbebe://maison/…).
+ * Les relevés notés sur le widget Maison reviennent à l'app par le pont (« readings »).
  */
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -105,7 +106,8 @@ class MainActivity : Activity() {
         // Au premier lancement, l'app reprend les réglages déjà donnés au widget (ancienne app du widget).
         val first = SbStore.takeFirstImport(this)
         val config = received ?: first
-        val child = childFrom(intent)?.let { "?enfant=${Uri.encode(it)}" } ?: ""
+        val query = listOfNotNull(childFrom(intent)?.let { "enfant=${Uri.encode(it)}" }, if (fromHomeWidget(intent)) "onglet=maison" else null)
+        val child = if (query.isEmpty()) "" else query.joinToString("&", prefix = "?")
         web.loadUrl(if (config != null) "$appUrl$child#import=$config" else "$appUrl$child")
         registerBack()
         checkForUpdate()
@@ -120,14 +122,18 @@ class MainActivity : Activity() {
             return
         }
         childFrom(intent)?.let { web.evaluateJavascript("window.sbChoisirEnfant && window.sbChoisirEnfant(${JSONObject.quote(it)})", null) }
+        if (fromHomeWidget(intent)) web.evaluateJavascript("window.sbOnglet && window.sbOnglet('maison')", null)
     }
 
-    // Enfant du widget touché : superbebe://enfant/identifiant (vide pour un seul enfant sans identifiant).
+    // Enfant du widget touché : superbebe://enfant/identifiant, ou superbebe://maison/identifiant pour le widget Maison
+    // (vide pour un seul enfant sans identifiant).
     private fun childFrom(intent: Intent?): String? {
         val uri = intent?.data ?: return null
-        if (uri.scheme != "superbebe" || uri.host != "enfant") return null
+        if (uri.scheme != "superbebe" || (uri.host != "enfant" && uri.host != "maison")) return null
         return uri.lastPathSegment?.takeIf { it.isNotBlank() }
     }
+
+    private fun fromHomeWidget(intent: Intent?): Boolean = intent?.data?.let { it.scheme == "superbebe" && it.host == "maison" } == true
 
     override fun onResume() {
         super.onResume()
@@ -195,6 +201,8 @@ class MainActivity : Activity() {
     }
 
     private fun widgetComponent() = ComponentName(this, SbWidgetReceiver::class.java)
+
+    private fun homeWidgetComponent() = ComponentName(this, SbHomeWidgetReceiver::class.java)
 
     // Compare la version installée à celle publiée sur le site ; propose l'APK s'il est plus récent, au plus une fois par jour.
     private fun checkForUpdate() {
@@ -302,6 +310,27 @@ class MainActivity : Activity() {
             }
         }
 
+        // Relevés de la journée (pièce de vie) et de la nuit, de la 0.13 : {"jour": {"identifiant": {"value":…,"at":…}}, "nuit": {…}}.
+        @JavascriptInterface
+        fun syncReadings(json: String) {
+            if (!onApp) return
+            val context = this@MainActivity
+            val all = runCatching { JSONObject(json) }.getOrNull() ?: return
+            fun readings(kind: String): Map<String, Pair<Double, Long>> {
+                val group = all.optJSONObject(kind) ?: return emptyMap()
+                return group.keys().asSequence().mapNotNull { id ->
+                    group.optJSONObject(id)?.let { id to (it.optDouble("value", Double.NaN) to it.optLong("at")) }
+                }.toMap()
+            }
+            val day = SbStore.saveDayRooms(context, readings("jour"))
+            val night = SbStore.saveRooms(context, readings("nuit"))
+            if (day || night) SbWorker.refreshNow(context, replace = true)
+        }
+
+        // Relevés gardés par les widgets, ceux notés sur le widget Maison compris : l'app reprend les plus récents.
+        @JavascriptInterface
+        fun readings(): String = if (onApp) SbStore.allReadings(this@MainActivity) else "{}"
+
         @JavascriptInterface
         fun colors(top: String, bottom: String) {
             val topColor = runCatching { Color.parseColor(top) }.getOrNull() ?: return
@@ -311,6 +340,23 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun widgets(): Int = AppWidgetManager.getInstance(this@MainActivity).getAppWidgetIds(widgetComponent()).size
+
+        @JavascriptInterface
+        fun homeWidgets(): Int = AppWidgetManager.getInstance(this@MainActivity).getAppWidgetIds(homeWidgetComponent()).size
+
+        // Widget Maison d'un enfant, posé comme le widget principal (SbPinReceiver y attache l'enfant).
+        @JavascriptInterface
+        fun addHomeWidget(childId: String): Boolean {
+            if (!onApp) return false
+            val context = this@MainActivity
+            val manager = AppWidgetManager.getInstance(context)
+            if (!manager.isRequestPinAppWidgetSupported) return false
+            val answer = Intent(context, SbPinReceiver::class.java).putExtra(SbPinReceiver.EXTRA_CHILD, childId)
+            val callback = PendingIntent.getBroadcast(
+                context, "maison:$childId".hashCode(), answer, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+            )
+            return manager.requestPinAppWidget(homeWidgetComponent(), null, callback)
+        }
 
         // Widgets posés par enfant : {"identifiant": nombre} ; un widget sans enfant choisi compte pour le premier.
         @JavascriptInterface

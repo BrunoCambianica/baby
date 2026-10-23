@@ -13,6 +13,7 @@ const SB_SKY = {
   chaleur: ['#ec7f24', '#f9cd84'],
   froid: ['#4a72c0', '#b8d3f4'],
   nuit: ['#121a33', '#3a4a80'],
+  maison: ['#2f8f83', '#8fd3c6'],
 };
 
 function sbFiles() {
@@ -36,10 +37,18 @@ function sbFiles() {
 
 const sbDecode = (b64) => Data.fromBase64String(b64).toRawString();
 const sbValid = (text) => Boolean(text) && Boolean(decodeConfig(text, sbDecode));
-// Relevé de la chambre de l'enfant, valable 16 heures ; `room` vient des versions à un seul enfant.
-function sbFreshRoom(state, childId, first) {
-  const room = state.rooms?.[childId] ?? (first ? state.room : null);
+// Relevé de l'enfant, valable 16 heures : sa chambre (`room` vient des versions à un seul enfant) ou, avec `day`,
+// la pièce où il passe la journée (widget Maison).
+function sbFreshRoom(state, childId, first, day = false) {
+  const room = day ? state.dayRooms?.[childId] : state.rooms?.[childId] ?? (first ? state.room : null);
   return room && Date.now() - room.at < SB_ROOM_TTL_MS ? room.value : null;
+}
+
+// Champ Parameter du widget : le prénom ou le numéro de l'enfant, et « maison » pour le widget Maison (« Léo maison »).
+function sbParam(param) {
+  const words = String(param ?? '').trim().split(/[\s,;]+/).filter(Boolean);
+  const home = words.some((w) => plainName(w) === 'maison');
+  return { home, ref: words.filter((w) => plainName(w) !== 'maison').join(' ') };
 }
 
 // Réglages : le dernier changement l'emporte, qu'il vienne du script copié depuis l'app (chargeur),
@@ -56,14 +65,14 @@ function sbResolveConfig(state, param) {
   }
 }
 
-function sbRoom(state, childId, text) {
+function sbRoom(state, childId, text, key = 'rooms') {
   const [value, at] = String(text ?? '').split('@').map(Number);
-  if (!(value >= 5 && value <= 40 && at > (state.rooms?.[childId]?.at ?? 0))) return;
-  state.rooms = { ...state.rooms, [childId]: { value, at } };
+  if (!(value >= 5 && value <= 40 && at > (state[key]?.[childId]?.at ?? 0))) return;
+  state[key] = { ...state[key], [childId]: { value, at } };
 }
 
-// Réglages et relevés des chambres envoyés par l'app : config=SB1.… et rooms=enfant:valeur@horodatage,…
-// (room=valeur@horodatage pour le premier enfant, dans les versions à un seul enfant) ;
+// Réglages et relevés envoyés par l'app : config=SB1.… et rooms=enfant:valeur@horodatage,… pour les chambres
+// (room=valeur@horodatage pour le premier enfant, dans les versions à un seul enfant), dayrooms=… pour les pièces de jour ;
 // rappel=HH:MM (rappel du soir activé dans l'app) ou rappel=0.
 function sbApply(state, params) {
   const config = String(params.config ?? '');
@@ -74,9 +83,11 @@ function sbApply(state, params) {
   }
   const cfg = decodeConfig(state.config ?? '', sbDecode);
   if (params.room && cfg) sbRoom(state, configChildren(cfg)[0].id, params.room);
-  for (const part of String(params.rooms ?? '').split(',')) {
-    const colon = part.indexOf(':');
-    if (colon > 0) sbRoom(state, part.slice(0, colon), part.slice(colon + 1));
+  for (const [param, key] of [['rooms', 'rooms'], ['dayrooms', 'dayRooms']]) {
+    for (const part of String(params[param] ?? '').split(',')) {
+      const colon = part.indexOf(':');
+      if (colon > 0) sbRoom(state, part.slice(0, colon), part.slice(colon + 1), key);
+    }
   }
 }
 
@@ -90,11 +101,12 @@ function sbQuery(url) {
 }
 
 // Toucher le widget relance ce script dans Scriptable (le réglage « When Interacting » est ignoré)…
-const sbTapUrl = (childId) => `scriptable:///run/${encodeURIComponent(Script.name())}?ouvrir=app${childId ? `&enfant=${childId}` : ''}`;
+const sbTapUrl = (childId, home) => `scriptable:///run/${encodeURIComponent(Script.name())}?ouvrir=app${childId ? `&enfant=${childId}` : ''}${home ? '&onglet=maison' : ''}`;
 
-// … qui ouvre l'app en plein écran, sur l'enfant du widget. L'app y renvoie ses changements par des liens superbebe-sync:?…
-async function sbOpenApp(state, configText, childId) {
-  const url = `${SB_APP_URL}?hote=scriptable${childId ? `&enfant=${encodeURIComponent(childId)}` : ''}#import=${configText}`;
+// … qui ouvre l'app en plein écran, sur l'enfant du widget (et l'onglet Maison pour le widget Maison).
+// L'app y renvoie ses changements par des liens superbebe-sync:?…
+async function sbOpenApp(state, configText, childId, home = false) {
+  const url = `${SB_APP_URL}?hote=scriptable${childId ? `&enfant=${encodeURIComponent(childId)}` : ''}${home ? '&onglet=maison' : ''}#import=${configText}`;
   if (typeof WebView === 'undefined') {
     Safari.open(url);
     return;
@@ -129,6 +141,7 @@ async function sbWelcome() {
     '2. Scriptable, taille moyenne, Ajouter le widget.',
     `3. Appui long sur le widget, Modifier le widget, Script : « ${name} ».`,
     'Plusieurs enfants ? Un widget par enfant : dans Parameter, écrivez son prénom.',
+    'Widget Maison (température chez vous ou de sa chambre, et la tenue) : un autre widget, Parameter : maison.',
     name === 'Superbébé' ? '' : "Astuce : renommez ce script « Superbébé » (touchez son nom en haut) pour que l'app puisse lui envoyer vos réglages.",
   ].filter(Boolean).join('\n\n');
   alert.addAction('Compris');
@@ -336,9 +349,10 @@ async function runSuperbebe() {
       : "Réglages manquants. Dans l'app Superbébé : Réglages, Ajouter le widget, puis copiez à nouveau le script dans Scriptable.";
     return sbFinish(sbMessageWidget(family, message), inWidget);
   }
-  const child = pickChild(cfg, query.enfant ?? (sbValid(param) ? '' : param));
+  const wanted = sbValid(param) ? { home: false, ref: '' } : sbParam(param);
+  const child = pickChild(cfg, query.enfant ?? wanted.ref);
   if (!inWidget && query.ouvrir === 'app') {
-    await sbOpenApp(state, state.config, child.id);
+    await sbOpenApp(state, state.config, child.id, query.onglet === 'maison');
     files.write('etat.json', state);
     return Script.complete();
   }
@@ -367,8 +381,12 @@ async function runSuperbebe() {
   const { date, time } = parisNow();
   const profile = configToProfile(cfg, child.id);
   profile.room_temp_c = sbFreshRoom(state, child.id, child.id === configChildren(cfg)[0].id);
+  profile.day_room_temp_c = sbFreshRoom(state, child.id, false, true);
   // Le jour, la journée en couches ; le soir, la tenue et le sac de demain, à préparer, et la nuit.
-  const view = widgetView({ forecast: cache.forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0 });
+  // Widget Maison : la journée chez vous ou la nuit dans sa chambre, le relevé et la tenue.
+  const view = wanted.home
+    ? homeWidgetView({ forecast: cache.forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0 })
+    : widgetView({ forecast: cache.forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0 });
   await sbScheduleReminder(state, cfg, cache.forecast, date, time);
   files.write('etat.json', state);
   // Pied du widget : le geste pour vérifier qu'il n'a pas trop chaud, et l'heure de la météo.
@@ -376,13 +394,13 @@ async function runSuperbebe() {
   const offlineText = offline ? 'Hors ligne · ' : '';
   const info = {
     name: child.name,
-    place: cfg.n || 'Superbébé',
+    place: wanted.home ? (view.kind === 'nuit' ? 'Sa chambre' : 'Chez vous') : cfg.n || 'Superbébé',
     theme: view.theme,
     footer: `${offlineText}${view.check} · ${updated}`,
     footerSmall: `${offlineText}${view.check_tiny} · ${updated}`,
     short: view.short,
   };
   const widget = sbDraw(family, view.lines, info);
-  widget.url = sbTapUrl(child.id);
+  widget.url = sbTapUrl(child.id, wanted.home);
   return sbFinish(widget, inWidget);
 }

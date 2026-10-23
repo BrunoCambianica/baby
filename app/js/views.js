@@ -1,5 +1,5 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { ageMonths, homeMoment, hourFr, journeeRange, render, skyTheme, toMin, widgetLines } from '../../engine/engine.js';
+import { ageMonths, homeMoment, homeStatus, hourFr, journeeRange, render, skyTheme, toMin, widgetLines } from '../../engine/engine.js';
 import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.12.0';
+export const VERSION = '0.13.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -457,11 +457,8 @@ function heroMaison(state, ctx) {
   const fallback = night ? 19 : 21;
   const last = night ? state.profile.room : state.profile.room_day;
   const value = plan.room_temp_c ?? last?.value ?? fallback;
-  const sleep = state.bundle.rules.night.room_range_c;
-  const day = state.bundle.rules.indoor.comfort_range_c;
-  const status = night
-    ? { in_range: ['ok', 'Dans la plage recommandée pour dormir'], above: ['warn', `Un peu chaud pour dormir : au-dessus de ${sleep.max} °C`], below: ['warn', `Un peu frais pour dormir : sous ${sleep.min} °C`] }[plan.room_status]
-    : { in_range: ['ok', `Bien pour la journée (${day.min} à ${day.max} °C)`], above: ['warn', `Au-dessus de ${day.max} °C : habillez-le léger`], below: ['warn', `Sous ${day.min} °C : une couche de plus`] }[plan.room_status];
+  // État du relevé par rapport au repère : les mêmes mots que le widget Maison.
+  const status = [plan.room_status === 'in_range' ? 'ok' : 'warn', homeStatus(plan, kind, state.bundle.rules, state.bundle.messages)];
   const who = state.profile.count > 1 ? `${esc(childName(state.profile, state.profile.index))} · ` : '';
   const seg = `<div class="days glass" role="tablist" aria-label="Jour ou nuit">${[['jour', 'Jour'], ['nuit', 'Nuit']]
     .map(([v, l]) => `<button role="tab" aria-selected="${kind === v}" data-action="maison" data-value="${v}">${l}</button>`).join('')}</div>`;
@@ -827,6 +824,7 @@ function homeScreenGroup(state) {
   if (state.host === 'scriptable') return '';
   const rows = state.host === 'android'
     ? androidWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('plus', { size: 20 })}</button>`)
+      + (state.androidHome ? homeWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('home', { size: 20 })}</button>`) : '')
     : `<a class="row" href="#widget"><span>Ajouter le widget</span>${chev()}</a>
         ${state.device === 'ios' && state.widgetReady && state.updateLink ? `<a class="row" href="${esc(state.updateLink)}"><span>Envoyer mes réglages au widget</span>${icon('refresh', { size: 20 })}</a>` : ''}
         ${state.installPrompt ? `<button class="row" data-action="install"><span>Installer l'app</span>${icon('download', { size: 20 })}</button>` : ''}`;
@@ -874,12 +872,26 @@ function androidWidgetRows(state, button) {
   }).join('');
 }
 
+// App Android 0.13 et plus : le widget Maison, un par enfant (− et + y notent la température).
+function homeWidgetRows(state, button) {
+  const children = state.household.children;
+  const label = (c, i) => `${state.homeWidgets ? 'Un autre widget Maison' : 'Le widget Maison'}${children.length > 1 ? ` de ${esc(childName(c, i))}` : ''}`;
+  return children.map((c, i) => button(label(c, i), `data-action="add-home-widget" data-child="${esc(c.id)}"`)).join('');
+}
+
 // iPhone : un widget par enfant, choisi par le champ Parameter du widget.
 function iosKidsHint(state) {
   const children = state.household.children;
   if (children.length < 2) return '';
   const names = children.map((c, i) => `<strong>${esc(c.name || String(i + 1))}</strong>`).join(' ou ');
   return `<p class="fine">Un widget par enfant : posez-en un pour chacun, puis appui long sur le widget, Modifier le widget, Parameter : ${names}.</p>`;
+}
+
+// iPhone : le widget Maison, même script, « maison » dans Parameter (et le prénom s'il y a plusieurs enfants).
+function iosHomeHint(state) {
+  const first = state.household.children[0];
+  const example = state.household.children.length > 1 ? ` (ou <strong>${esc(first.name || '1')} maison</strong>)` : '';
+  return `<p class="fine">Widget Maison (la température chez vous le jour, de sa chambre la nuit, et la tenue) : un autre widget Scriptable, Parameter : <strong>maison</strong>${example}. Le toucher ouvre l'onglet Maison pour noter la température.</p>`;
 }
 
 // Pose du widget sur iPhone en trois vignettes : les écrans tels qu'on les voit, l'endroit à toucher en bleu.
@@ -923,6 +935,7 @@ export function viewWidget(state, ctx) {
       ${widgetHowTo()}
       <button class="btn small soft" data-step="4">C'est fait</button>
       ${iosKidsHint(state)}
+      ${iosHomeHint(state)}
       <p class="fine">Toucher le widget ouvre ensuite Superbébé en plein écran. Écran verrouillé : appui long dessus, Personnaliser, puis un widget Scriptable.</p></div></li>`;
   const android = `
     <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Télécharger l'app Superbébé</h3>
@@ -943,7 +956,11 @@ export function viewWidget(state, ctx) {
         ? androidWidgetRows(state, (label, attrs) => `<button class="btn small tint" ${attrs}>${label}</button>`)
         : `<button class="btn small tint" data-action="add-widget" data-child="${esc(state.profile.id)}">${state.widgets ? 'Ajouter un autre widget' : "Ajouter à l'écran d'accueil"}</button>`}
       <p>Android demande de confirmer. Sinon : appui long sur l'écran d'accueil, Widgets, puis Superbébé${state.household.children.length > 1 ? ', et choisissez l\'enfant' : ''}.</p>
-      <p class="fine">Le widget suit vos réglages et le relevé de la chambre, sans rien copier. Le toucher ouvre l'app.</p></div></li>`;
+      <p class="fine">Le widget suit vos réglages et le relevé de la chambre, sans rien copier. Le toucher ouvre l'app.</p></div></li>
+    ${state.androidHome ? `<li class="step${state.homeWidgets ? ' done' : ''}"><span class="step-num">${state.homeWidgets ? icon('check', { size: 16 }) : 2}</span><div class="step-body">
+      <h3>Le widget Maison</h3>
+      <p>La température chez vous le jour, de sa chambre la nuit : − et + la notent sans ouvrir l'app, et la tenue suit.</p>
+      ${homeWidgetRows(state, (label, attrs) => `<button class="btn small tint" ${attrs}>${label}</button>`)}</div></li>` : ''}`;
   const tabs = state.host === 'android' ? '' : `<div class="seg" role="tablist" aria-label="Téléphone">${[['ios', 'iPhone'], ['android', 'Android']].map(([v, l]) =>
     `<button role="tab" aria-selected="${state.platform === v}" data-action="platform" data-value="${v}">${l}</button>`).join('')}</div>`;
   const steps = state.host === 'android' ? inApp : state.platform === 'android' ? android : ios;

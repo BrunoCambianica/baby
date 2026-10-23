@@ -280,6 +280,11 @@ await test('Widget iPhone : l\'app s\'ouvre sur l\'enfant du widget ; une config
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   const src = await page.getAttribute('#sb-sync', 'data-sync');
   assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+&rappel=0$/.test(src), src);
+  // Le relevé du jour (widget Maison) part aussi.
+  await page.click('[data-action="maison"][data-value="jour"]');
+  await page.click('[aria-label="Monter d\'un demi-degré"]');
+  const both = await page.getAttribute('#sb-sync', 'data-sync');
+  assert(/&rooms=zoe222:19\.5@\d+&dayrooms=zoe222:21\.5@\d+&rappel=0$/.test(both), both);
   const newer = encodeConfig(householdToConfig({ ...local, outing_duration_h: 2, updated: Date.now() + 60_000 }), toB64);
   await page.goto(`${APP}?hote=scriptable#import=${newer}`);
   await page.waitForSelector('.hero-big');
@@ -307,6 +312,31 @@ await test('App Android : configuration v2 pour la 0.6, v1 de l\'enfant affiché
   calls = await old.evaluate(() => window.calls);
   const cfg = decode(calls[0][0]);
   assert(cfg.v === 1 && cfg.b === '2024-03' && cfg.t === 'a_pied', JSON.stringify(cfg));
+});
+
+await test('App Android 0.13 : widget Maison proposé, relevés notés sur le widget repris par l\'app, relevés du jour transmis', async (use) => {
+  // Le widget Maison a noté 23 °C dans la chambre de Léo à 7 h ; l'app ouverte depuis ce widget (onglet Maison) le reprend.
+  const noted = Date.parse('2026-10-21T07:00:00+02:00');
+  const bridge = `window.calls = []; window.SuperbebeAndroid = {
+    sync: (c, r) => window.calls.push(['sync', r]), syncReadings: (json) => window.calls.push(['readings', json]), colors() {}, widgets: () => 1,
+    homeWidgets: () => 0, version: () => '0.13.0', widgetChildren: () => '{"leo111":1}', addWidget: () => true, addChildWidget: () => true,
+    addHomeWidget: (id) => { window.calls.push(['maison', id]); return true; }, share: () => true, reminderState: () => 'off',
+    readings: () => JSON.stringify({ nuit: { leo111: { value: 23, at: ${noted} } }, jour: {} }) };`;
+  const page = use(await phone({ at: '2026-10-21T20:30:00+02:00', init: `${bridge} if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
+  await page.goto(`${APP}?enfant=leo111&onglet=maison`);
+  await page.waitForSelector('text=Pour la nuit');
+  assert((await page.textContent('.hero-big')).startsWith('23,0') && await page.isVisible('text=Un peu chaud pour dormir : au-dessus de 20 °C'), await page.textContent('.hero'));
+  assert(!page.url().includes('onglet='), page.url());
+  assert((await stored(page)).children[0].room.value === 23, 'relevé du widget non gardé');
+  // Un relevé du jour noté dans l'app part vers les widgets.
+  await page.click('[data-action="maison"][data-value="jour"]');
+  await page.click('[aria-label="Monter d\'un demi-degré"]');
+  const calls = await page.evaluate(() => window.calls);
+  const last = JSON.parse(calls.filter(([k]) => k === 'readings').at(-1)[1]);
+  assert(last.jour.leo111.value === 21.5 && last.nuit.leo111.value === 23, JSON.stringify(last));
+  await page.goto(`${APP}#reglages`);
+  await page.click('text=Le widget Maison de Zoé');
+  assert((await page.evaluate(() => window.calls)).some(([k, id]) => k === 'maison' && id === 'zoe222'), 'widget Maison non demandé');
 });
 
 await test('Assistant du widget iPhone : un widget par enfant, choisi par son prénom', async (use) => {

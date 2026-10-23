@@ -5,7 +5,10 @@ import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** État local des widgets : configuration, dernière météo, relevés des chambres, enfant de chaque widget et derniers rendus. */
+/**
+ * État local des widgets : configuration, dernière météo, relevés (chambres la nuit, pièce de jour), enfant de chaque widget,
+ * derniers rendus et tenues de la maison pour le widget Maison.
+ */
 object SbStore {
     const val DEFAULT_BASE_URL = "https://brunocambianica.github.io/baby/"
     private const val ROOM_TTL_MS = 16 * 3600 * 1000L
@@ -42,7 +45,8 @@ object SbStore {
     /** Oublie les réglages (« Effacer mes données » dans l'app) ; true s'il y en avait. */
     fun clearConfig(context: Context): Boolean {
         if (config(context) == null) return false
-        prefs(context).edit().remove("config").remove("room").remove("room_at").remove("rooms").remove("reminder_on").apply()
+        prefs(context).edit().remove("config").remove("room").remove("room_at").remove("rooms").remove("dayrooms").remove("home")
+            .remove("reminder_on").apply()
         return true
     }
 
@@ -85,8 +89,10 @@ object SbStore {
         return if (fresh) p.getFloat("room", 19f).toDouble() else null
     }
 
-    private fun roomReadings(context: Context): JSONObject =
-        runCatching { JSONObject(prefs(context).getString("rooms", "{}") ?: "{}") }.getOrDefault(JSONObject())
+    private fun readings(context: Context, key: String): JSONObject =
+        runCatching { JSONObject(prefs(context).getString(key, "{}") ?: "{}") }.getOrDefault(JSONObject())
+
+    private fun roomReadings(context: Context): JSONObject = readings(context, "rooms")
 
     /** Relevés des chambres encore valables (16 heures : une soirée et une nuit), par enfant : { identifiant: degrés }. */
     fun rooms(context: Context): JSONObject {
@@ -100,9 +106,14 @@ object SbStore {
         return fresh
     }
 
-    /** Garde, pour chaque enfant, le relevé le plus récent ; true si l'un d'eux a changé. */
-    fun saveRooms(context: Context, readings: Map<String, Pair<Double, Long>>): Boolean {
-        val all = roomReadings(context)
+    /** Garde, pour chaque enfant, le relevé de la chambre le plus récent ; true si l'un d'eux a changé. */
+    fun saveRooms(context: Context, readings: Map<String, Pair<Double, Long>>): Boolean = saveReadings(context, "rooms", readings)
+
+    /** Même chose pour la pièce où il passe la journée (onglet et widget Maison). */
+    fun saveDayRooms(context: Context, readings: Map<String, Pair<Double, Long>>): Boolean = saveReadings(context, "dayrooms", readings)
+
+    private fun saveReadings(context: Context, key: String, readings: Map<String, Pair<Double, Long>>): Boolean {
+        val all = readings(context, key)
         var changed = false
         for ((id, reading) in readings) {
             val (value, at) = reading
@@ -110,8 +121,54 @@ object SbStore {
             all.put(id, JSONObject().put("value", value).put("at", at))
             changed = true
         }
-        if (changed) prefs(context).edit().putString("rooms", all.toString()).apply()
+        if (changed) prefs(context).edit().putString(key, all.toString()).apply()
         return changed
+    }
+
+    /** Dernier relevé d'un enfant, même ancien : « nuit » (sa chambre) ou « jour » (la pièce de jour). */
+    data class Reading(val value: Double, val at: Long) {
+        fun fresh(now: Long = System.currentTimeMillis()) = now - at < ROOM_TTL_MS
+    }
+
+    fun reading(context: Context, childId: String, kind: String): Reading? {
+        val r = readings(context, if (kind == "jour") "dayrooms" else "rooms").optJSONObject(childId) ?: return null
+        val value = r.optDouble("value", Double.NaN)
+        return if (value.isNaN()) null else Reading(value, r.optLong("at"))
+    }
+
+    /** Relevé noté sur le widget Maison, maintenant ; l'app le reprend à sa prochaine ouverture (pont « readings »). */
+    fun saveReading(context: Context, childId: String, kind: String, value: Double) {
+        val reading = mapOf(childId to (value to System.currentTimeMillis()))
+        if (kind == "jour") saveDayRooms(context, reading) else saveRooms(context, reading)
+    }
+
+    /** Tous les relevés, pour l'app : { "nuit": { identifiant: { value, at } }, "jour": { … } }. */
+    fun allReadings(context: Context): String =
+        JSONObject().put("nuit", readings(context, "rooms")).put("jour", readings(context, "dayrooms")).toString()
+
+    /** Widget Maison d'un enfant : prénom, lieu, geste à rappeler, et les tenues pour chaque relevé (homeTable du moteur). */
+    data class Home(val id: String, val name: String, val place: String, val check: String, val table: JSONObject)
+
+    fun saveHome(context: Context, homes: List<JSONObject>) {
+        prefs(context).edit().putString("home", JSONArray(homes).toString()).apply()
+    }
+
+    /** Celui de l'enfant demandé, à défaut le premier ; null avant le premier calcul. */
+    fun home(context: Context, childId: String?): Home? {
+        val array = runCatching { JSONArray(prefs(context).getString("home", "[]")) }.getOrDefault(JSONArray())
+        val homes = (0 until array.length()).mapNotNull { array.optJSONObject(it) }.mapNotNull { h ->
+            val table = h.optJSONObject("maison") ?: return@mapNotNull null
+            Home(h.optString("id"), h.optString("name"), h.optString("place").ifEmpty { "Superbébé" }, h.optString("check"), table)
+        }
+        return homes.firstOrNull { it.id == childId } ?: homes.firstOrNull()
+    }
+
+    /** Une ligne de widget lue dans le JSON du moteur : un texte, ou { drawings, text, label }. */
+    fun line(item: Any?): Line = if (item is JSONObject) {
+        val ids = item.optJSONArray("drawings") ?: JSONArray()
+        Line(item.optString("text"), (0 until ids.length()).map { ids.getString(it) }, item.optString("label"))
+    } else {
+        Line(item?.toString() ?: "")
     }
 
     /** Rappel du soir : activé dans l'app, à l'heure choisie (« 20:00 »), au plus une fois par jour. */
@@ -143,15 +200,7 @@ object SbStore {
         editor.apply()
     }
 
-    private fun lines(array: JSONArray): List<Line> = (0 until array.length()).map { i ->
-        val item = array.opt(i)
-        if (item is JSONObject) {
-            val ids = item.optJSONArray("drawings") ?: JSONArray()
-            Line(item.optString("text"), (0 until ids.length()).map { ids.getString(it) }, item.optString("label"))
-        } else {
-            Line(item?.toString() ?: "")
-        }
-    }
+    private fun lines(array: JSONArray): List<Line> = (0 until array.length()).map { i -> line(array.opt(i)) }
 
     /** Rendu de l'enfant demandé ; à défaut celui du premier enfant, ou le dernier message. */
     fun render(context: Context, childId: String?): Render {

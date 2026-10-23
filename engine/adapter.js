@@ -1,6 +1,8 @@
 // Adaptateur Open-Meteo → entrée du moteur. Fonctions pures, partagées par l'app web et le widget iPhone.
 // N'utilise que du JavaScript standard (pas d'API du navigateur), pour tourner aussi dans Scriptable.
-import { addDays, displayMoment, evaluate, mean, reminderText, round1, skyTheme, widgetLines, widgetShort } from './engine.js';
+import {
+  addDays, displayMoment, evaluate, frNumber, homeLines, homeMoment, homeTable, mean, reminderText, round1, skyTheme, widgetLines, widgetShort,
+} from './engine.js';
 
 export const PARIS_TZ = 'Europe/Paris';
 export const FORECAST_DAYS = 16;
@@ -178,6 +180,26 @@ export function widgetView({ forecast, profile, date, time, lat }, bundle, { dra
     reminder: tomorrow?.journee ? reminderText(today, tomorrow, bundle.messages) : null,
   };
 }
+
+// Ce qu'affiche le widget Maison pour un enfant : de 6 h à 18 h la journée chez vous, ensuite la nuit dans sa chambre.
+// Le relevé du moment, la tenue, l'état par rapport au repère ; `short` pour le widget rond de l'écran verrouillé.
+export function homeWidgetView({ forecast, profile, date, time, lat }, bundle, { drawings = true } = {}) {
+  const today = evaluate(buildInput({ forecast, profile, date, now: time, lat }), bundle);
+  const kind = homeMoment(time);
+  const plan = kind === 'nuit' ? today.night : today.indoor;
+  return {
+    today,
+    kind,
+    lines: homeLines(today, kind, bundle, { drawings }),
+    theme: kind === 'nuit' ? 'nuit' : 'maison',
+    short: plan.room_temp_c === null ? (kind === 'nuit' ? `${today.night.tog}` : '—') : `${frNumber(plan.room_temp_c)}°`,
+    check: today.widget.check,
+    check_tiny: today.widget.check_tiny,
+  };
+}
+
+// Les tenues de la maison pour chaque relevé possible (widget Maison d'Android, voir homeTable).
+export const homeWidgetTable = ({ profile, date }, bundle, options) => homeTable({ date, profile }, bundle, options);
 
 // Configuration partagée entre l'app web et les widgets : JSON en ASCII, puis base64url.
 // v1 : un seul enfant (b, t, o à la racine) ; v2 : la commune, les horaires et les enfants (k).

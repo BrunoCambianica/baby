@@ -41,6 +41,8 @@ function sbRenderChild(forecast, cfg, child, state, date, time) {
     moment: view.moment,
     theme: view.theme,
     reminder: state.reminder ? view.reminder : null,
+    // Widget Maison : la tenue et l'état pour chaque relevé possible, le jour et la nuit (voir homeTable).
+    maison: homeWidgetTable({ profile, date }, SB_RULES, { drawings: cfg.i !== 0 }),
   };
 }
 

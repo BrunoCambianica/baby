@@ -418,6 +418,71 @@
       "text": "Repère officiel : chambre entre 18 et 20 °C.",
       "short": "Chambre : repère 18 à 20 °C"
     },
+    "maison.jour.title": {
+      "kind": "meteo",
+      "text": "Chez vous, {room} °C.",
+      "short": "Chez vous {room}°"
+    },
+    "maison.jour.title_unknown": {
+      "kind": "meteo",
+      "text": "Température chez vous à noter dans l'app.",
+      "short": "Chez vous : température à noter"
+    },
+    "maison.nuit.title": {
+      "kind": "meteo",
+      "text": "Sa chambre, {room} °C.",
+      "short": "Chambre {room}°"
+    },
+    "maison.nuit.title_unknown": {
+      "kind": "meteo",
+      "text": "Température de sa chambre à noter dans l'app.",
+      "short": "Chambre : température à noter"
+    },
+    "maison.jour.in_range": {
+      "kind": "pratique",
+      "text": "Pièce entre {min} et {max} °C : bien pour la journée.",
+      "short": "Bien pour la journée ({min} à {max} °C)"
+    },
+    "maison.jour.above": {
+      "kind": "pratique",
+      "text": "Pièce au-dessus de {max} °C : habillez-le léger.",
+      "short": "Au-dessus de {max} °C : habillez-le léger"
+    },
+    "maison.jour.below": {
+      "kind": "pratique",
+      "text": "Pièce sous {min} °C : une couche de plus.",
+      "short": "Sous {min} °C : une couche de plus"
+    },
+    "maison.jour.unknown": {
+      "kind": "pratique",
+      "text": "Sans relevé, la tenue pour {min} à {max} °C, le repère de jour.",
+      "short": "Tenue pour {min} à {max} °C, le repère de jour"
+    },
+    "maison.nuit.in_range": {
+      "kind": "pratique",
+      "text": "Chambre dans la plage recommandée pour dormir ({min} à {max} °C).",
+      "short": "Dans la plage recommandée pour dormir"
+    },
+    "maison.nuit.above": {
+      "kind": "pratique",
+      "text": "Chambre au-dessus de {max} °C : un peu chaud pour dormir.",
+      "short": "Un peu chaud pour dormir : au-dessus de {max} °C"
+    },
+    "maison.nuit.below": {
+      "kind": "pratique",
+      "text": "Chambre sous {min} °C : un peu frais pour dormir.",
+      "short": "Un peu frais pour dormir : sous {min} °C"
+    },
+    "maison.nuit.unknown": {
+      "kind": "pratique",
+      "text": "Sans relevé, la tenue pour une chambre à {min}-{max} °C, le repère officiel.",
+      "short": "Tenue pour {min} à {max} °C, le repère officiel"
+    },
+    "maison.widget.confirm": {
+      "kind": "pratique",
+      "text": "Touchez la température pour la noter : − et + la changent d'un demi-degré.",
+      "short": "Touchez la température pour la noter"
+    },
     "purchase.suggestion": {
       "kind": "pratique",
       "text": "À prévoir avant le {order_by} : {label}{size}, utile à partir du {needed_from}.",

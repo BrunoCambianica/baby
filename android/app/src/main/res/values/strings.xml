@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">Superbébé</string>
     <string name="widget_description">Quand sortir avec bébé, comment l\'habiller, et le repère du soir.</string>
+    <string name="widget_maison_name">Superbébé · Maison</string>
+    <string name="widget_maison_description">La température chez vous le jour, de sa chambre la nuit, à noter avec − et +, et la tenue qui va avec.</string>
 </resources>

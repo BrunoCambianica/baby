@@ -21,7 +21,10 @@ import java.time.ZonedDateTime
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-/** Récupère la météo, calcule les lignes de chaque enfant et redessine les widgets (toutes les 30 minutes). */
+/**
+ * Récupère la météo, calcule les lignes de chaque enfant et les tenues de la maison, puis redessine les widgets
+ * (toutes les 30 minutes, et quelques secondes après un relevé noté sur le widget Maison).
+ */
 class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -30,7 +33,8 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val place = SbConfig.decode(config)
         if (config == null || place == null) {
             SbStore.saveMessage(c, "Superbébé", "Ouvrez Superbébé pour choisir votre commune.")
-            SbWidget().updateAll(c)
+            SbStore.saveHome(c, emptyList())
+            updateWidgets(c)
             return Result.success()
         }
 
@@ -45,7 +49,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val forecast = SbStore.forecast(c, key)
         if (forecast == null) {
             SbStore.saveMessage(c, place.name, "Météo indisponible. Vérifiez la connexion.")
-            SbWidget().updateAll(c)
+            updateWidgets(c)
             return Result.success()
         }
 
@@ -72,6 +76,14 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
                 )
             }
             val children = out.getJSONArray("children")
+            // Tenues de la maison à part : le widget principal n'en a pas besoin.
+            SbStore.saveHome(c, (0 until children.length()).map {
+                val child = children.getJSONObject(it)
+                val home = JSONObject().put("id", child.optString("id")).put("name", child.optString("name"))
+                    .put("place", child.optString("place")).put("check", child.optString("check")).put("maison", child.optJSONObject("maison"))
+                child.remove("maison")
+                home
+            })
             SbStore.saveRenders(c, (0 until children.length()).map {
                 val child = children.getJSONObject(it)
                 child.put("footer", (if (offline) "Hors ligne · " else "") + listOf(child.optString("check"), time).filter { part -> part.isNotEmpty() }.joinToString(" · "))
@@ -84,15 +96,21 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         } catch (e: Exception) {
             SbStore.saveMessage(c, place.name, "Calcul impossible pour le moment. ${e.message ?: ""}".trim(), footer)
         }
-        SbWidget().updateAll(c)
+        updateWidgets(c)
         SbReminder.schedule(c)
         return Result.success()
+    }
+
+    private suspend fun updateWidgets(c: Context) {
+        SbWidget().updateAll(c)
+        SbHomeWidget().updateAll(c)
     }
 
     companion object {
         private val PARIS: ZoneId = ZoneId.of("Europe/Paris")
         private const val PERIODIC = "superbebe-periodique"
         private const val NOW = "superbebe-maintenant"
+        private const val SOON = "superbebe-releve"
 
         // Doit rester identique à forecastUrl() dans engine/adapter.js.
         fun forecastUrl(lat: Double, lon: Double): String =
@@ -119,6 +137,15 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
                 PERIODIC,
                 ExistingPeriodicWorkPolicy.UPDATE,
                 PeriodicWorkRequestBuilder<SbWorker>(30, TimeUnit.MINUTES).build(),
+            )
+        }
+
+        // Après un relevé sur le widget Maison : un seul calcul quelques secondes après la dernière touche.
+        fun refreshSoon(context: Context) {
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                SOON,
+                ExistingWorkPolicy.REPLACE,
+                OneTimeWorkRequestBuilder<SbWorker>().setInitialDelay(4, TimeUnit.SECONDS).build(),
             )
         }
 

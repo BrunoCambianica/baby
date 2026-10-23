@@ -484,6 +484,38 @@ await test('Plusieurs enfants : chambre de chacun, ouverture de l\'app sur l\'en
   assert(/nuit 21,5°/i.test(leo.texts[2]) && /nuit 18°/i.test(zoe.texts[2]), `${leo.texts[2]} / ${zoe.texts[2]}`);
 });
 
+await test('Widget Maison (iPhone) : « maison » dans Parameter, le jour la pièce de vie, la nuit sa chambre ; il ouvre l\'onglet Maison', async () => {
+  const files = new Map();
+  const at = Date.parse('2026-10-21T09:00:00+02:00');
+  // L'app, ouverte depuis le widget, envoie les relevés : chambre (rooms) et pièce de jour (dayrooms).
+  const open = await run({
+    files, param: 'Léo maison', loaderConfig: FAMILLE, inWidget: false, query: { ouvrir: 'app', enfant: 'leo1', onglet: 'maison' },
+    navigations: [`superbebe-sync:?config=${FAMILLE}&rooms=leo1:23@${at}&dayrooms=leo1:17@${at}`],
+  });
+  assert(open.view?.url === `${APP}?hote=scriptable&enfant=leo1&onglet=maison#import=${FAMILLE}`, String(open.view?.url));
+  const day = await run({ files, param: 'Léo maison', loaderConfig: FAMILLE, at: '2026-10-21T10:00:00+02:00' });
+  assert(day.texts[0] === 'LÉO · CHEZ VOUS' && day.texts[1] === 'Chez vous 17°' && day.widget.url.endsWith('&enfant=leo1&onglet=maison'), `${day.texts.join(' | ')} ${day.widget.url}`);
+  assert(day.widget.rows[0].images.length === 3 && day.texts.includes('Sous 20 °C : une couche de plus'), JSON.stringify(day.texts));
+  const night = await run({ files, param: 'maison', loaderConfig: FAMILLE, at: '2026-10-21T20:30:00+02:00' });
+  assert(night.texts[0] === 'LÉO · SA CHAMBRE' && night.texts[1] === 'Chambre 23°', night.texts.join(' | '));
+  assert(night.widget.rows[0].texts[0].text.includes('1 TOG') && night.texts.includes('Un peu chaud pour dormir : au-dessus de 20 °C'), JSON.stringify(night.texts));
+  // Le widget principal du même enfant garde sa journée en couches.
+  const main = await run({ files, param: 'Léo', loaderConfig: FAMILLE, at: '2026-10-21T10:00:00+02:00' });
+  assert(main.texts[0] === 'LÉO · LYON' && !main.widget.url.includes('onglet'), main.texts[0]);
+});
+
+await test('Widget Maison (Android) : la tenue et l\'état pour chaque relevé, calculés d\'avance, le jour et la nuit', async () => {
+  const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
+  const out = JSON.parse(vm.runInContext(`${android}\nsbAndroidAll(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {}, "2026-10-21", "10:00");`, vm.createContext({})));
+  const leo = out.children[0].maison;
+  assert(Object.keys(leo.jour.by).length === 51 && leo.jour.by['10.0'] && leo.nuit.by['35.0'] && leo.confirm === 'Touchez la température pour la noter', Object.keys(leo.jour.by).join());
+  assert(leo.nuit.by['19.5'].outfit.text === '≈ 2,5 TOG' && leo.nuit.by['19.5'].outfit.drawings.at(-1) === 'gigoteuse', JSON.stringify(leo.nuit.by['19.5']));
+  assert(leo.nuit.by['22.5'].status === 'Un peu chaud pour dormir : au-dessus de 20 °C' && leo.jour.by['28.0'].outfit.drawings.join() === 'body_sans_manches', JSON.stringify(leo.jour.by['28.0']));
+  assert(leo.jour.unknown.status === 'Tenue pour 20 à 22 °C, le repère de jour', leo.jour.unknown.status);
+  const zoe = out.children[1].maison;
+  assert(zoe.jour.by['21.0'].outfit.drawings.join() === 'haut_ml,pantalon', JSON.stringify(zoe.jour.by['21.0']));
+});
+
 await test('Rappel du soir : programmé à l\'heure choisie avec la tenue de demain de chaque enfant, retiré quand on le coupe', async () => {
   const files = new Map();
   const scheduled = [];

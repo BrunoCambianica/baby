@@ -72,5 +72,18 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/superbebe_widget" />
         </receiver>
+
+        <!-- Widget Maison : la température chez vous ou de sa chambre, à noter avec − et +, et la tenue qui va avec. -->
+        <receiver
+            android:name=".SbHomeWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_maison_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/superbebe_maison" />
+        </receiver>
     </application>
 </manifest>

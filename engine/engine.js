@@ -697,6 +697,53 @@ export function widgetLines(result, moment, M, { drawings = false, tomorrow = nu
   return lines.filter(Boolean).slice(0, 3);
 }
 
+// Onglet et widget Maison : le relevé comparé à son repère (le jour 20 à 22 °C, la nuit la chambre à 18-20 °C).
+function homeRange(kind, R) {
+  const range = kind === 'nuit' ? R.night.room_range_c : R.indoor.comfort_range_c;
+  return { min: range.min, max: range.max };
+}
+export const homeStatus = (plan, kind, R, M) => render(M, `maison.${kind}.${plan.room_temp_c === null ? 'unknown' : plan.room_status}`, 'short', homeRange(kind, R));
+
+// La tenue de la maison sur une ligne de widget : dessins (et la gigoteuse la nuit) ou texte.
+function homeOutfit(plan, kind, M, drawings) {
+  const names = plan.wear.map((i) => M.labels.items_short[i] ?? i);
+  const label = kind === 'nuit'
+    ? render(M, 'fabricant.night_wear', 'short', { wear: capitalize(names.join(' + ')), tog: plan.tog })
+    : capitalize(names.join(' · '));
+  if (!drawings) return label;
+  const ids = plan.wear.map((i) => ITEM_DRAWINGS[i]).filter(Boolean);
+  return kind === 'nuit' ? { drawings: [...ids, 'gigoteuse'], text: `≈ ${plan.tog} TOG`, label } : { drawings: ids, text: '', label };
+}
+
+// Les trois lignes du widget Maison (iPhone) : le relevé, la tenue, l'état par rapport au repère.
+export function homeLines(result, kind, bundle, { drawings = false } = {}) {
+  const M = bundle.messages;
+  const plan = kind === 'nuit' ? result.night : result.indoor;
+  const title = plan.room_temp_c === null
+    ? render(M, `maison.${kind}.title_unknown`, 'short')
+    : render(M, `maison.${kind}.title`, 'short', { room: frNumber(plan.room_temp_c) });
+  return [title, homeOutfit(plan, kind, M, drawings), homeStatus(plan, kind, bundle.rules, M)];
+}
+
+// Widget Maison d'Android : pour chaque relevé possible (10 à 35 °C, au demi-degré), la tenue et l'état, le jour et la nuit,
+// calculés d'avance pour que − et + répondent tout de suite, sans réseau ni moteur. `unknown` : sans relevé récent.
+export function homeTable(input, bundle, { drawings = true } = {}) {
+  const R = bundle.rules;
+  const M = bundle.messages;
+  const age = ageMonths(input.profile.birth, input.date);
+  const entry = (kind, room) => {
+    const profile = { ...input.profile, room_temp_c: kind === 'nuit' ? room : null, day_room_temp_c: kind === 'jour' ? room : null };
+    const plan = kind === 'nuit' ? planNight({ ...input, profile }, R, false, age) : planIndoor({ ...input, profile }, R, age);
+    return { outfit: homeOutfit(plan, kind, M, drawings), status: homeStatus(plan, kind, R, M) };
+  };
+  const temps = Array.from({ length: 51 }, (_, k) => 10 + k / 2);
+  const table = { confirm: render(M, 'maison.widget.confirm', 'short') };
+  for (const kind of ['jour', 'nuit']) {
+    table[kind] = { unknown: entry(kind, null), by: Object.fromEntries(temps.map((t) => [t.toFixed(1), entry(kind, t)])) };
+  }
+  return table;
+}
+
 // Le plus court (widget rond de l'écran verrouillé) : l'heure du prochain changement, le ressenti, ou le TOG le soir.
 export function widgetShort(result, moment) {
   if (moment === 'soir') return result.night.tog ?? '—';

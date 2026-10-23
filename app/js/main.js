@@ -37,6 +37,9 @@ const reminderHost = host === 'scriptable' || (host === 'android' && androidAtLe
 const webPush = !reminderHost && !host && 'PushManager' in window && 'serviceWorker' in navigator && Boolean(apiBase())
   && (standalone || !/iPhone|iPad|iPod/i.test(navigator.userAgent));
 const widgetKids = () => (androidMulti ? ask(() => JSON.parse(android.widgetChildren()), {}) : {});
+// App Android 0.13 et plus : widget Maison, relevés du jour, relevés notés sur le widget repris par l'app.
+const androidHome = host === 'android' && typeof android.readings === 'function' && typeof android.addHomeWidget === 'function';
+const homeWidgets = () => (androidHome ? ask(() => android.homeWidgets(), 0) : 0);
 
 // Foyer enregistré ; le profil à un seul enfant des versions précédentes devient le premier enfant.
 function loadHousehold() {
@@ -81,6 +84,8 @@ const state = {
   // Onglet de navigateur sur téléphone : on propose d'ouvrir Superbébé comme une app, sans les barres du navigateur.
   inBrowser: !host && !standalone && /Android|iPhone|iPod/i.test(navigator.userAgent),
   widgets: host === 'android' ? ask(() => android.widgets(), 0) : 0,
+  androidHome,
+  homeWidgets: homeWidgets(),
   widgetKids: widgetKids(),
   reminder: store.reminder(),
   reminderHost,
@@ -416,6 +421,8 @@ function syncHost() {
     if (androidMulti) {
       const rooms = Object.fromEntries(children.filter((c) => c.room).map((c) => [c.id, c.room]));
       ask(() => android.sync(h ? configText() : '', JSON.stringify(rooms)));
+      const days = Object.fromEntries(children.filter((c) => c.room_day).map((c) => [c.id, c.room_day]));
+      if (androidHome && h) ask(() => android.syncReadings(JSON.stringify({ jour: days, nuit: rooms })));
     } else {
       const room = state.profile?.room ?? null;
       ask(() => android.sync(h ? encodeConfig(profileToConfig(state.profile), (x) => btoa(x)) : '', room ? JSON.stringify(room) : ''));
@@ -425,8 +432,10 @@ function syncHost() {
     return;
   }
   const config = h ? configText() : '';
-  // room= : le premier enfant, pour un widget iPhone dont le code n'est pas encore à jour ; rappel= : rappel du soir.
+  // room= : le premier enfant, pour un widget iPhone dont le code n'est pas encore à jour ; dayrooms= : pièces de jour
+  // (widget Maison) ; rappel= : rappel du soir.
   const rooms = children.filter((c) => c.room).map((c) => `${c.id}:${c.room.value}@${c.room.at}`).join(',');
+  const dayrooms = children.filter((c) => c.room_day).map((c) => `${c.id}:${c.room_day.value}@${c.room_day.at}`).join(',');
   const first = children[0]?.room;
   const reminder = `&rappel=${h && state.reminder.on ? state.reminder.at : '0'}`;
   let frame = document.getElementById('sb-sync');
@@ -436,7 +445,31 @@ function syncHost() {
     frame.hidden = true;
     document.body.appendChild(frame);
   }
-  frame.src = `superbebe-sync:?config=${encodeURIComponent(config)}${rooms ? `&rooms=${rooms}` : ''}${first ? `&room=${first.value}@${first.at}` : ''}${reminder}`;
+  frame.src = `superbebe-sync:?config=${encodeURIComponent(config)}${rooms ? `&rooms=${rooms}` : ''}${dayrooms ? `&dayrooms=${dayrooms}` : ''}${first ? `&room=${first.value}@${first.at}` : ''}${reminder}`;
+}
+
+// Relevés notés sur le widget Maison d'Android : repris s'ils sont plus récents que ceux de l'app (puis partagés comme les autres).
+function pullReadings() {
+  if (!androidHome || !state.household) return false;
+  const all = ask(() => JSON.parse(android.readings()), null);
+  if (!all) return false;
+  let changed = false;
+  const children = state.household.children.map((c) => {
+    let next = c;
+    for (const [kind, key] of [['nuit', 'room'], ['jour', 'room_day']]) {
+      const r = all[kind]?.[c.id];
+      if (r && Number.isFinite(r.value) && r.at > (c[key]?.at ?? 0) && r.at <= Date.now() + 60_000) {
+        next = { ...next, [key]: { value: r.value, at: r.at } };
+        changed = true;
+      }
+    }
+    return next;
+  });
+  if (changed) {
+    state.household = { ...state.household, children, updated: Date.now() };
+    saveHousehold();
+  }
+  return changed;
 }
 
 // Foyer remplacé (configuration plus récente d'un widget, profils de l'autre parent) : météo à recharger si la commune change.
@@ -454,12 +487,17 @@ function replaceHousehold(household) {
 }
 
 // Réglages reçus du widget ou de l'app Android (#import=SB1.…) : ils remplacent ceux de l'app s'ils sont plus récents
-// (garde-robe et relevés des chambres conservés). ?enfant=… : l'enfant du widget touché.
+// (garde-robe et relevés conservés). ?enfant=… : l'enfant du widget touché ; ?onglet=maison : touché depuis le widget Maison.
 // #partage=SB1.… : profils envoyés par l'autre parent, appliqués après confirmation (écran « recevoir »).
 function takeImport() {
   const params = new URLSearchParams(location.search);
   const wanted = params.get('enfant');
   const match = location.hash.match(/^#(import|partage)=(SB1\.[\w-]+)/);
+  if (params.get('onglet') === 'maison') {
+    state.tab = 'nuit';
+    params.delete('onglet');
+    history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`);
+  }
   if (match || wanted) {
     params.delete('enfant');
     const query = params.toString();
@@ -1023,6 +1061,11 @@ const actions = {
     const asked = id && androidMulti ? ask(() => android.addChildWidget(id), false) : ask(() => android.addWidget(), false);
     if (!asked) toast("Appui long sur l'écran d'accueil, Widgets, puis Superbébé.");
   },
+  // Widget Maison (app Android 0.13 et plus) : la température à noter avec − et +, et la tenue qui va avec.
+  'add-home-widget'(el) {
+    const asked = ask(() => android.addHomeWidget(el.dataset.child ?? state.profile.id), false);
+    if (!asked) toast("Appui long sur l'écran d'accueil, Widgets, puis Superbébé · Maison.");
+  },
   'hide-promo'() {
     store.hidePromo();
     state.promoHidden = true;
@@ -1193,6 +1236,8 @@ document.addEventListener('visibilitychange', () => {
     // Retour de la fenêtre « Ajouter le widget » ou de l'écran d'accueil.
     state.widgets = ask(() => android.widgets(), state.widgets);
     state.widgetKids = widgetKids();
+    state.homeWidgets = homeWidgets();
+    pullReadings();
     if (reminderHost) state.reminderState = ask(() => android.reminderState(), state.reminderState);
     if (currentView() !== 'onboarding') paint();
   }
@@ -1212,15 +1257,23 @@ setInterval(() => {
   if (currentView() === 'app' && document.visibilityState === 'visible') paint();
 }, 5 * 60 * 1000);
 
-// Widget Android touché alors que l'app est déjà ouverte : elle passe à son enfant.
+// Widget Android touché alors que l'app est déjà ouverte : elle passe à son enfant (et à l'onglet Maison pour le widget Maison).
 window.sbChoisirEnfant = (id) => {
   if (!state.household?.children.some((c) => c.id === id)) return;
   showChild(id);
   if (currentView() === 'app') paint();
 };
+window.sbOnglet = (tab) => {
+  if (tab !== 'maison') return;
+  state.tab = 'nuit';
+  state.maison = null;
+  if (route()) location.hash = '';
+  paint();
+};
 
 async function boot() {
   takeImport();
+  pullReadings();
   paint();
   try {
     state.bundle = await loadBundle();
