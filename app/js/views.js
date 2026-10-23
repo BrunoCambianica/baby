@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.14.1';
+export const VERSION = '0.14.2';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -153,7 +153,7 @@ function heroTop(state, date) {
     : '';
   return `<div class="hero-top">
       <div>
-        <a class="hero-place" href="#reglages">${icon('pin', { size: 18 })}${esc(state.profile.commune.nom)}</a>
+        <a class="hero-place" href="#reglages/commune">${icon('pin', { size: 18 })}${esc(state.profile.commune.nom)}</a>
         <p class="hero-date">${esc(dayLong(date))}</p>
       </div>
       <a class="glass glass-btn" href="#reglages" aria-label="Réglages">${icon('settings', { size: 20 })}</a>
@@ -707,7 +707,7 @@ export function viewSettings(state) {
     ${parentsGroup(state)}
     <section class="group"><h2 class="group-title">Sorties</h2>
       <div class="group-body">
-        <div class="row column"><span>Commune</span>${communePicker(draft, results)}</div>
+        <div class="row column" id="reglage-commune"><span>Commune</span>${communePicker(draft, results)}</div>
         <div class="row column"><span>Plage horaire</span>
           <div class="pair">
             <select id="from" aria-label="Début">${hours(6, 20).map((h) => `<option value="${h}"${profile.outing_window.from === h ? ' selected' : ''}>de ${hourFr(h)}</option>`).join('')}</select>

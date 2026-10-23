@@ -123,6 +123,7 @@ function currentView() {
   if (!state.household) return state.received || route() === 'recevoir' ? 'recevoir' : 'onboarding';
   const r = route();
   if (r.startsWith('enfant/')) return 'enfant';
+  if (r === 'reglages/commune') return 'reglages';
   if (['reglages', 'widget', 'apropos', 'recevoir'].includes(r)) return r;
   return state.received ? 'recevoir' : 'app';
 }
@@ -1220,7 +1221,10 @@ window.addEventListener('hashchange', () => {
   state.results = [];
   state.confirmClear = false;
   paint();
-  window.scrollTo(0, 0);
+  // La commune en haut de l'écran mène droit à son réglage (rubrique Sorties).
+  const target = route() === 'reglages/commune' && document.getElementById('reglage-commune');
+  if (target) target.scrollIntoView({ block: 'center' });
+  else window.scrollTo(0, 0);
   if (route() === 'widget') preloadLoader();
 });
 

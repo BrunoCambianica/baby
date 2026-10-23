@@ -258,7 +258,9 @@
         {
           "id": "n20", "max_c": 20, "tog": "2", "wear": ["body_ml", "pyjama"], "sources": ["petites-billes-tog"],
           "alternatives": [
-            { "id": "tog-2-5", "tog": "2,5", "wear": ["body_ml"], "sources": ["tommee-tippee-what-to-wear"] }
+            { "id": "tog-2-5", "tog": "2,5", "wear": ["body_ml"], "sources": ["tommee-tippee-what-to-wear"] },
+            { "id": "tog-2-5-pyjama", "tog": "2,5", "wear": ["pyjama"], "sources": ["ergopouch-what-to-wear"] },
+            { "id": "tog-3-5-leger", "tog": "3,5", "wear": ["pyjama_leger"], "sources": ["ergopouch-what-to-wear"] }
           ]
         },
         {

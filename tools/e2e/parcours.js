@@ -546,6 +546,16 @@ await test('Maison : le jour et la nuit, chacun avec son relevé ; la nuit par d
   await evening.waitForSelector('text=Pour la journée');
 });
 
+await test('La commune en haut de l\'écran ouvre les réglages sur la commune', async (use) => {
+  const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await page.goto(APP);
+  await page.click('.hero-place');
+  await page.waitForSelector('#reglage-commune');
+  const box = await page.locator('#reglage-commune').boundingBox();
+  const height = page.viewportSize().height;
+  assert(box && box.y >= 0 && box.y + box.height <= height, `commune hors de l'écran : ${JSON.stringify(box)} / ${height}`);
+});
+
 await test('Tenues au choix : sans pyjama par défaut la journée (maison et sorties), pyjama la nuit, listes déroulantes', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.goto(APP);
@@ -572,7 +582,7 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   let tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
   assert(tiles.join() === 'Body ML,Pyjama,Gigoteuse 2 TOG', `nuit par défaut : ${tiles.join()}`);
   const night = await page.locator('select[data-action="night-option"] option').allTextContents();
-  assert(night.join(' | ') === '2 TOG : body ML + pyjama (par défaut) | 2,5 TOG : body ML' && await page.isVisible('text=Gigoteuse plus légère : une couche de plus dessous'), night.join(' | '));
+  assert(night.join(' | ') === '2 TOG : body ML + pyjama (par défaut) | 2,5 TOG : body ML | 2,5 TOG : pyjama | 3,5 TOG : pyjama léger' && await page.isVisible('text=Gigoteuse plus légère : une couche de plus dessous'), night.join(' | '));
   // Toucher la liste l'ouvre seulement : rien ne change avant le choix.
   await page.click('select[data-action="night-option"]');
   assert(!(await stored(page)).children[0].night_options?.n20, 'tenue changée au simple toucher');

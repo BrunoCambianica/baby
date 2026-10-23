@@ -893,6 +893,15 @@
       }
     },
     {
+      "id": "nuit-19-alternatives-ergopouch",
+      "description": "Chambre à 19 °C : deux tenues d'ergoPouch en plus, gigoteuse plus chaude et pyjama seul ou léger",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-3-5-leger" } } },
+      "expect": {
+        "night.options.*.id": ["principal", "tog-2-5", "tog-2-5-pyjama", "tog-3-5-leger"],
+        "night.tog": "3,5", "night.wear": ["pyjama_leger"]
+      }
+    },
+    {
       "id": "nuit-choix-2-5-tog",
       "description": "Chambre à 19 °C, gigoteuse 2,5 TOG : le body ML seul, sans pyjama (Tommee Tippee), gardé pour cette tranche",
       "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-2-5" } } },
@@ -902,7 +911,7 @@
       "id": "nuit-ancien-choix-1-tog",
       "description": "Le choix « 1 TOG + body ML » de la 0.12, retiré car non compensé : la tenue principale revient",
       "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-1" } } },
-      "expect": { "night.option": "principal", "night.tog": "2", "night.wear": ["body_ml", "pyjama"], "night.options.*.id": ["principal", "tog-2-5"] }
+      "expect": { "night.option": "principal", "night.tog": "2", "night.wear": ["body_ml", "pyjama"], "night.options.*.id": ["principal", "tog-2-5", "tog-2-5-pyjama", "tog-3-5-leger"] }
     },
     {
       "id": "nuit-choix-autre-tranche",
