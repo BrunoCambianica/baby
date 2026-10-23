@@ -83,6 +83,8 @@ const state = {
   host,
   // Onglet de navigateur sur téléphone : on propose d'ouvrir Superbébé comme une app, sans les barres du navigateur.
   inBrowser: !host && !standalone && /Android|iPhone|iPod/i.test(navigator.userAgent),
+  // App ouverte depuis une icône d'écran d'accueil (installée depuis le navigateur) plutôt que dans un onglet.
+  standalone,
   widgets: host === 'android' ? ask(() => android.widgets(), 0) : 0,
   androidHome,
   homeWidgets: homeWidgets(),
@@ -208,6 +210,7 @@ function paint() {
   else if (view === 'enfant') html = V.viewChild(state);
   else if (view === 'reglages') {
     state.updateLink = scriptableLink();
+    state.androidLink = androidLink();
     html = V.viewSettings(state);
   }
   else if (view === 'widget') {
@@ -219,6 +222,8 @@ function paint() {
     html = V.viewWidget(state, ctx);
   } else if (view === 'apropos') html = V.viewAbout(state);
   else {
+    // Version navigateur sur Android : le widget Maison renvoie vers l'app Android (lien qui l'ouvre ou la télécharge).
+    if (state.device === 'android' && !host && state.household) state.androidLink = androidLink();
     const ctx = compute(state.tab === 'sortir' ? state.day : 'aujourdhui');
     // La veille au soir, comme les widgets : la journée de demain, à préparer ce soir, et la nuit.
     if (ctx && state.tab === 'sortir' && !ctx.tomorrow && ctx.moment === 'soir') ctx.evening = compute('demain');

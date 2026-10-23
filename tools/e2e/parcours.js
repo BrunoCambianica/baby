@@ -356,6 +356,19 @@ await test('App Android ancienne (0.8) : pas de widget Maison, la mise à jour e
   assert(!(await page.isVisible('text=Le widget Maison')), 'widget Maison proposé à une app qui ne l\'a pas');
 });
 
+await test('Android, version navigateur : le widget Maison renvoie vers l\'app Android, et les réglages disent où l\'on est', async (use) => {
+  const page = use(await phone({ android: true, at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await page.goto(APP);
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.waitForSelector('.promo >> text=Le widget Maison');
+  const open = await page.getAttribute('.promo a.link', 'href');
+  assert(open.startsWith('intent://config/SB1.') && open.includes('package=fr.superbebe.widget') && open.includes('superbebe-android.apk'), open);
+  await page.goto(`${APP}#reglages`);
+  await page.waitForSelector('text=Ouvert dans');
+  assert((await page.textContent('.row:has-text("Ouvert dans") .value')) === 'navigateur', await page.textContent('.row:has-text("Ouvert dans")'));
+  assert(await page.isVisible("text=Ouvrir l'app Android Superbébé") && await page.isVisible('text=Ici, c\'est la version navigateur'), 'lien vers l\'app Android absent');
+});
+
 await test('Assistant du widget iPhone : un widget par enfant, choisi par son prénom', async (use) => {
   const page = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.goto(`${APP}#widget`);

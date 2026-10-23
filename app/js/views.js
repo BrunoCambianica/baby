@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.13.3';
+export const VERSION = '0.13.4';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -505,13 +505,28 @@ function indoorCard(state, ctx) {
     </section>`;
 }
 
-// App Android 0.13 et plus, sans widget Maison posé : le poser d'ici, sans chercher dans la liste des widgets du téléphone.
+// Le widget Maison depuis son onglet. Dans l'app Android 0.13 et plus, sans widget Maison posé : le poser d'ici, sans
+// chercher dans la liste des widgets du téléphone. Dans le navigateur d'un téléphone Android : il est dans l'app Android.
 function homeWidgetPromo(state) {
-  if (state.host !== 'android' || !state.androidHome || state.homeWidgets) return '';
-  return `<section class="card promo">
+  const card = (text) => `<section class="card promo">
     <span class="promo-ico">${icon('home')}</span>
-    <div><h3>Le widget Maison</h3><p>La température à noter avec − et + depuis l'écran d'accueil, et la tenue qui va avec. <button class="link" data-action="add-home-widget" data-child="${esc(state.profile.id)}">Ajouter</button></p></div>
+    <div><h3>Le widget Maison</h3><p>${text}</p></div>
   </section>`;
+  if (state.host === 'android') {
+    return state.androidHome && !state.homeWidgets
+      ? card(`La température à noter avec − et + depuis l'écran d'accueil, et la tenue qui va avec. <button class="link" data-action="add-home-widget" data-child="${esc(state.profile.id)}">Ajouter</button>`)
+      : '';
+  }
+  return state.device === 'android' && !state.host && state.androidLink
+    ? card(`Il est dans l'app Android Superbébé (version 0.13 ou plus), pas dans cette version navigateur. <a class="link" href="${esc(state.androidLink)}">Ouvrir l'app</a>`)
+    : '';
+}
+
+// Où l'app est ouverte : utile pour savoir d'où viennent les widgets (seule l'app Android en pose sur Android).
+function openedIn(state) {
+  if (state.host === 'android') return `app Android ${state.androidVersion || ''}`.trim();
+  if (state.host === 'scriptable') return 'widget iPhone (Scriptable)';
+  return state.standalone ? 'icône installée depuis le navigateur' : 'navigateur';
 }
 
 function maisonContent(state, ctx) {
@@ -698,6 +713,7 @@ export function viewSettings(state) {
     <section class="group"><h2 class="group-title">Application</h2>
       <div class="group-body">
         <button class="row" data-action="check-update"><span>${state.updateReady ? 'Installer la mise à jour' : 'Rechercher une mise à jour'}</span><span class="value">v${VERSION}</span></button>
+        <div class="row"><span>Ouvert dans</span><span class="value">${esc(openedIn(state))}</span></div>
         ${state.androidVersion ? `<div class="row"><span>App Android installée</span><span class="value">${esc(state.androidVersion)}</span></div>` : ''}
         ${apkUpdate(state) ? `<a class="row" href="${esc(state.apkLatest.url)}"><span>Mettre à jour l'app Android</span><span class="value">${esc(state.apkLatest.versionName)}</span></a>` : ''}
         <button class="row" data-action="copy-report"><span>Copier mes retours de test</span>${icon('share', { size: 20 })}</button>
@@ -849,14 +865,18 @@ function homeScreenGroup(state) {
   const homeRows = state.androidHome
     ? homeWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('home', { size: 20 })}</button>`)
     : state.apkLatest ? `<a class="row" href="${esc(state.apkLatest.url)}"><span>Widget Maison : mettre à jour l'app Android</span><span class="value">${esc(state.androidVersion || '?')} → ${esc(state.apkLatest.versionName)}</span></a>` : '';
+  // Version navigateur sur Android : les widgets, dont le widget Maison, sont dans l'app Android ; on l'ouvre d'ici.
+  const openApp = state.device === 'android' && !state.host && state.androidLink
+    ? `<a class="row" href="${esc(state.androidLink)}"><span>Ouvrir l'app Android Superbébé</span>${chev()}</a>`
+    : '';
   const rows = state.host === 'android'
     ? androidWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('plus', { size: 20 })}</button>`) + homeRows
-    : `<a class="row" href="#widget"><span>Ajouter le widget</span>${chev()}</a>
+    : `${openApp}<a class="row" href="#widget"><span>Ajouter le widget</span>${chev()}</a>
         ${state.device === 'ios' && state.widgetReady && state.updateLink ? `<a class="row" href="${esc(state.updateLink)}"><span>Envoyer mes réglages au widget</span>${icon('refresh', { size: 20 })}</a>` : ''}
         ${state.installPrompt ? `<button class="row" data-action="install"><span>Installer l'app</span>${icon('download', { size: 20 })}</button>` : ''}`;
   const note = state.device === 'ios' && state.widgetReady && !state.host
     ? '<p class="group-note">Après un changement de commune ou de réglage, touchez « Envoyer mes réglages au widget ».</p>'
-    : '';
+    : openApp ? '<p class="group-note">Ici, c\'est la version navigateur. Sur Android, les widgets (dont le widget Maison) viennent de l\'app Superbébé : ouvrez-la, ou installez-la si elle manque.</p>' : '';
   return `<section class="group"><h2 class="group-title">Écran d'accueil</h2><div class="group-body">${rows}</div>${note}</section>`;
 }
 
