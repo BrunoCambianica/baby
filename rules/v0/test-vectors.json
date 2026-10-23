@@ -358,11 +358,11 @@
       "input": { "now": "20:30", "profile": { "room_temp_c": 19 } },
       "expect": {
         "night.room_status": "in_range",
-        "night.tog": "2,5",
+        "night.tog": "2",
         "night.relays.include": ["relay.sleep.basics", "relay.sleep.room_range", "relay.sleep.season_thickness"],
         "widget.lines.length": 3,
         "widget.lines.0.contains": "19",
-        "widget.lines.1.contains": "2,5 TOG"
+        "widget.lines.1.contains": "2 TOG"
       }
     },
     {
@@ -399,13 +399,13 @@
       "expect": {
         "night.room_status": "unknown",
         "night.room_assumed": true,
-        "night.tog": "2,5",
-        "night.wear": ["body_ml"],
+        "night.tog": "2",
+        "night.wear": ["body_ml", "pyjama"],
         "night.relays.include": ["relay.sleep.basics", "relay.sleep.room_range", "relay.sleep.check_temp"],
         "night.relays.exclude": ["relay.sleep.season_thickness"],
         "widget.lines.length": 3,
         "widget.lines.0.contains": "18 à 20",
-        "widget.lines.1.contains": "Body ML + gigoteuse ≈ 2,5 TOG"
+        "widget.lines.1.contains": "Body ML + pyjama + gigoteuse ≈ 2 TOG"
       }
     },
     {
@@ -686,7 +686,7 @@
       "expect": {
         "journee.band": "froid",
         "journee.base_band": "frais",
-        "journee.morning": ["body_ml", "pyjama", "pull", "combi_pilote", "bonnet", "chaussons"],
+        "journee.morning": ["body_ml", "pantalon", "chaussettes", "pull", "combi_pilote", "bonnet", "chaussons"],
         "journee.changes": [{ "time": "12:00", "remove": ["combi_pilote", "bonnet", "chaussons", "pull"], "add": ["gilet"] }],
         "journee.bag.*.item": ["gilet"],
         "widget.lines.0": "Ce matin 5° → 15°",
@@ -710,7 +710,7 @@
       "description": "15 °C jusqu'à 15 h, puis 5 °C : on remet combinaison, bonnet et chaussons, tous dans le sac",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "15:00-22:00": { "feels_c": 5 } } } } },
       "expect": {
-        "journee.morning": ["body_ml", "pyjama", "gilet"],
+        "journee.morning": ["body_ml", "pantalon", "chaussettes", "gilet"],
         "journee.changes": [{ "time": "15:00", "remove": [], "add": ["combi_pilote", "bonnet", "chaussons"] }],
         "journee.bag.*.item": ["combi_pilote", "bonnet", "chaussons"]
       }
@@ -831,10 +831,10 @@
     },
     {
       "id": "maison-21",
-      "description": "À la maison à 21 °C : body manches longues et pyjama, comme un adulte en pantalon et haut léger",
+      "description": "À la maison à 21 °C : par défaut sans pyjama : body manches longues, pantalon et chaussettes, comme un adulte en pantalon et haut léger",
       "input": { "profile": { "day_room_temp_c": 21 } },
       "expect": {
-        "indoor.wear": ["body_ml", "pyjama"],
+        "indoor.wear": ["body_ml", "pantalon", "chaussettes"],
         "indoor.room_status": "in_range",
         "indoor.relays.include": ["relay.indoor.dress_like_you", "relay.indoor.no_overwrap", "relay.check_neck"],
         "indoor.relays.exclude": ["relay.heat.protect"]
@@ -844,7 +844,7 @@
       "id": "maison-fraiche",
       "description": "Maison à 17 °C : un gilet fin en plus, et la pièce est sous 20 °C",
       "input": { "profile": { "day_room_temp_c": 17 } },
-      "expect": { "indoor.wear": ["body_ml", "pyjama", "gilet_fin"], "indoor.room_status": "below" }
+      "expect": { "indoor.wear": ["body_ml", "pantalon", "chaussettes", "gilet_fin"], "indoor.room_status": "below" }
     },
     {
       "id": "maison-chaleur",
@@ -856,7 +856,7 @@
       "id": "maison-sans-releve",
       "description": "Sans relevé : la tenue pour 21 °C, milieu du repère de 20 à 22 °C, en le disant",
       "input": {},
-      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pyjama"] }
+      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pantalon", "chaussettes"] }
     },
     {
       "id": "maison-enfant",
@@ -869,7 +869,7 @@
       "description": "Salon à 18 °C le jour, chambre à 23 °C la nuit : chaque tenue suit son relevé, jamais celui de l'autre pièce",
       "input": { "now": "20:30", "profile": { "day_room_temp_c": 18, "room_temp_c": 23 } },
       "expect": {
-        "indoor.wear": ["body_ml", "pyjama", "gilet_fin"],
+        "indoor.wear": ["body_ml", "pantalon", "chaussettes", "gilet_fin"],
         "indoor.room_temp_c": 18,
         "night.room_temp_c": 23,
         "night.tog": "1",
@@ -880,7 +880,7 @@
       "id": "maison-releve-chambre-seul",
       "description": "Seule la chambre est relevée : la tenue de jour reste celle du repère de 20 à 22 °C",
       "input": { "profile": { "room_temp_c": 16 } },
-      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pyjama"], "night.tog": "2,5" }
+      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pantalon", "chaussettes"], "night.tog": "2,5" }
     },
     {
       "id": "nuit-tenues-au-choix",
@@ -893,16 +893,16 @@
       }
     },
     {
-      "id": "nuit-choix-2-tog",
-      "description": "Chambre à 19 °C, gigoteuse 2 TOG : un pyjama en plus du body (Les Petites Billes), gardé pour cette tranche",
-      "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-2" } } },
-      "expect": { "night.option": "tog-2", "night.tog": "2", "night.wear": ["body_ml", "pyjama"], "widget.lines.1.contains": "2 TOG" }
+      "id": "nuit-choix-2-5-tog",
+      "description": "Chambre à 19 °C, gigoteuse 2,5 TOG : le body ML seul, sans pyjama (Tommee Tippee), gardé pour cette tranche",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-2-5" } } },
+      "expect": { "night.option": "tog-2-5", "night.tog": "2,5", "night.wear": ["body_ml"], "widget.lines.1.contains": "2,5 TOG" }
     },
     {
       "id": "nuit-ancien-choix-1-tog",
       "description": "Le choix « 1 TOG + body ML » de la 0.12, retiré car non compensé : la tenue principale revient",
       "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-1" } } },
-      "expect": { "night.option": "principal", "night.tog": "2,5", "night.wear": ["body_ml"], "night.options.*.id": ["principal", "tog-2"] }
+      "expect": { "night.option": "principal", "night.tog": "2", "night.wear": ["body_ml", "pyjama"], "night.options.*.id": ["principal", "tog-2-5"] }
     },
     {
       "id": "nuit-choix-autre-tranche",
@@ -914,7 +914,7 @@
       "id": "nuit-choix-inconnu",
       "description": "Un choix qui n'existe plus (règles mises à jour) : la tenue principale",
       "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "ancien" } } },
-      "expect": { "night.option": "principal", "night.tog": "2,5" }
+      "expect": { "night.option": "principal", "night.tog": "2" }
     },
     {
       "id": "nuit-couche-seule",
@@ -928,8 +928,14 @@
       "input": { "profile": { "day_room_temp_c": 21, "day_style": "sans_pyjama" } },
       "expect": {
         "indoor.wear": ["body_ml", "pantalon", "chaussettes"], "indoor.day_style": "sans_pyjama",
-        "indoor.styles.*.id": [null, "sans_pyjama"]
+        "indoor.styles.*.id": ["pyjama", "sans_pyjama"]
       }
+    },
+    {
+      "id": "maison-avec-pyjama",
+      "description": "Avec pyjama choisi à 21 °C : body ML et pyjama, dehors comme à la maison ; sans pyjama reste proposé",
+      "input": { "profile": { "day_room_temp_c": 21, "day_style": "pyjama" } },
+      "expect": { "indoor.wear": ["body_ml", "pyjama"], "indoor.day_style": "pyjama", "indoor.styles.*.id": ["pyjama", "sans_pyjama"] }
     },
     {
       "id": "maison-sans-pyjama-froid",
@@ -947,7 +953,7 @@
       "id": "maison-chaleur-sans-choix",
       "description": "À 28 °C, rien à remplacer : une seule tenue, pas de choix proposé",
       "input": { "profile": { "day_room_temp_c": 28, "day_style": "sans_pyjama" } },
-      "expect": { "indoor.wear": ["body_leger"], "indoor.day_style": null, "indoor.styles.length": 1 }
+      "expect": { "indoor.wear": ["body_leger"], "indoor.day_style": "pyjama", "indoor.styles.length": 1 }
     },
     {
       "id": "sortie-sans-pyjama",

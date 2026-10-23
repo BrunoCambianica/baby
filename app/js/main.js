@@ -723,7 +723,7 @@ const actions = {
     const value = el.dataset.value || null;
     if (sheet) sheet.dayStyle = value;
     if (sheet?.child !== 'nouveau') updateChild({ day_style: value }, sheet?.child);
-    if (!sheet) toast(value ? 'Sans pyjama la journée, dehors comme à la maison.' : 'Avec pyjama la journée.');
+    if (!sheet) toast(value === 'pyjama' ? 'Avec pyjama la journée.' : 'Sans pyjama la journée, dehors comme à la maison.');
     paint();
   },
   // Tenue de nuit choisie pour une tranche de température ; « principal » revient à la tenue habituelle.
@@ -1153,6 +1153,12 @@ document.addEventListener('input', (event) => {
 
 document.addEventListener('change', (event) => {
   const { id, value } = event.target;
+  // Listes déroulantes des tenues au choix : la valeur choisie passe à l'action, comme pour un bouton.
+  if (event.target.matches('select[data-action]')) {
+    event.target.dataset.value = value;
+    actions[event.target.dataset.action]?.(event.target);
+    return;
+  }
   const d = state.draft;
   if ((id === 'birth-month' || id === 'birth-year') && d) {
     if (id === 'birth-month') d.birthMonth = value;

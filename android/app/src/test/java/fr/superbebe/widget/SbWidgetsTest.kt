@@ -92,7 +92,7 @@ class SbWidgetsTest {
         SbStore.saveRooms(context, mapOf("leo1" to (22.5 to now() - 20 * 3600 * 1000L)))
         val shown = texts(render(SbHomeWidget()))
         // Relevé de plus de 16 heures : la dernière valeur, la tenue du repère, et comment noter.
-        assertTrue(shown.toString(), "LÉO · SA CHAMBRE" in shown && "22,5°" in shown && "≈ 2,5 TOG" in shown)
+        assertTrue(shown.toString(), "LÉO · SA CHAMBRE" in shown && "22,5°" in shown && "≈ 2 TOG" in shown)
         assertTrue(shown.toString(), "Touchez la température pour la noter" in shown)
     }
 

@@ -461,12 +461,18 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
   const page = use(await phone({ at: '2026-10-26T20:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
   await page.waitForSelector('.day');
-  assert((await page.textContent('.hero-label')).includes('Demain · à préparer ce soir'), await page.textContent('.hero-label'));
+  assert((await page.textContent('.hero .tonight')).includes('Pas de sortie conseillée ce soir'), 'ce soir non dit');
+  assert((await page.textContent('.hero-label')).includes('Demain · la tenue à préparer ce soir'), await page.textContent('.hero-label'));
+  // Demain : jusqu'à trois créneaux, dans l'ordre de la journée, un seul marqué idéal.
+  const windows = await page.locator('.hero .windows .w-time').allTextContents();
+  const starts = windows.map((t) => parseInt(t, 10));
+  assert(windows.length >= 1 && windows.length <= 3 && starts.every((h, k) => k === 0 || h > starts[k - 1]), windows.join(' | '));
+  assert((await page.locator('.hero .windows li.best').count()) === 1, 'créneau idéal non marqué');
   assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '5°→19°', await page.textContent('.hero-big'));
   assert(!(await page.isVisible('.days')), 'choix du jour affiché le soir');
   assert((await page.textContent('#t-jour')).includes('À préparer ce soir'), await page.textContent('#t-jour'));
   assert((await page.textContent('.day .change-time')).startsWith('Demain matin'), await page.textContent('.day .change-time'));
-  assert(await page.isVisible('text=Ce soir') && await page.isVisible('text=Gigoteuse 2,5 TOG'), 'carte de la nuit absente');
+  assert(await page.isVisible('text=Ce soir') && await page.isVisible('text=Gigoteuse 2 TOG'), 'carte de la nuit absente');
   assert((await page.getAttribute('[data-value="sortir"]', 'aria-selected')) === 'true', 'l\'app doit rester sur Sorties');
   await shot(page, 'l3-veille-au-soir');
   await page.goto(`${APP}#widget`);
@@ -515,7 +521,7 @@ await test('Maison : le jour et la nuit, chacun avec son relevé ; la nuit par d
   assert((await page.textContent('.hero-big')).startsWith('21,0'), await page.textContent('.hero-big'));
   await page.click("text=C'est la température chez vous");
   let names = await page.locator('.card:first-of-type .dress-name').allTextContents();
-  assert(names.join() === 'Body ML,Pyjama', names.join());
+  assert(names.join() === 'Body ML,Pantalon,Chaussettes', names.join());
   assert(await page.isVisible('text=Habillez-le comme vous') && await page.isVisible('text=Santé Manitoba (Canada)'), 'repères absents');
   for (let k = 0; k < 14; k++) await page.click('[aria-label="Monter d\'un demi-degré"]');
   names = await page.locator('.card:first-of-type .dress-name').allTextContents();
@@ -525,14 +531,14 @@ await test('Maison : le jour et la nuit, chacun avec son relevé ; la nuit par d
   await page.click('[data-action="maison"][data-value="nuit"]');
   await page.waitForSelector('text=Pour la nuit');
   assert((await page.textContent('.hero-big')).startsWith('19,0') && await page.isVisible("text=C'est la température de sa chambre"), await page.textContent('.hero-big'));
-  assert(await page.isVisible('text=Gigoteuse 2,5 TOG') && !(await page.isVisible('text=Pour la journée')), 'tenue de nuit');
+  assert(await page.isVisible('text=Gigoteuse 2 TOG') && !(await page.isVisible('text=Pour la journée')), 'tenue de nuit');
   const h = await stored(page);
   assert(h.children[0].room_day?.value === 28 && !h.children[0].room, JSON.stringify(h.children[0]));
   await page.context().close();
   const evening = use(await phone({ at: '2026-10-21T20:30:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await evening.goto(APP);
-  // « Noter la chambre », dans la carte « Ce soir » de l'onglet Sorties, ouvre Maison côté nuit.
-  await evening.click('text=Noter la chambre');
+  // « Détails », dans la carte « Ce soir » de l'onglet Sorties, ouvre Maison côté nuit.
+  await evening.click('.card >> text=Détails');
   await evening.waitForSelector('text=Pour la nuit');
   assert(!(await evening.isVisible('text=Pour la journée')) && (await evening.textContent('.hero-label')).includes('La nuit, dans sa chambre'), 'la nuit attendue le soir');
   await shot(evening, 'l5-maison-soir');
@@ -540,35 +546,44 @@ await test('Maison : le jour et la nuit, chacun avec son relevé ; la nuit par d
   await evening.waitForSelector('text=Pour la journée');
 });
 
-await test('Tenues au choix : sans pyjama la journée (maison et sorties), autre gigoteuse pour la nuit', async (use) => {
+await test('Tenues au choix : sans pyjama par défaut la journée (maison et sorties), pyjama la nuit, listes déroulantes', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.goto(APP);
   await page.click('.tabbar [data-value="nuit"]');
-  await page.click('text=Sans pyjama : body ML, pantalon, chaussettes');
   let names = await page.locator('.card:first-of-type .dress-name').allTextContents();
-  assert(names.join() === 'Body ML,Pantalon,Chaussettes', names.join());
-  assert(await page.isVisible('text=Avec pyjama : body ML, pyjama'), 'retour au pyjama non proposé');
+  assert(names.join() === 'Body ML,Pantalon,Chaussettes', `par défaut : ${names.join()}`);
+  const day = await page.locator('select[data-action="day-style"] option').allTextContents();
+  assert(day.join(' | ') === 'Avec pyjama : body ML, pyjama | Sans pyjama : body ML, pantalon, chaussettes (par défaut)', day.join(' | '));
   await shot(page, 'l6-maison-sans-pyjama');
+  await page.selectOption('select[data-action="day-style"]', 'pyjama');
+  names = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  assert(names.join() === 'Body ML,Pyjama', `avec pyjama : ${names.join()}`);
+  assert((await stored(page)).children[0].day_style === 'pyjama', 'avec pyjama non enregistré');
+  await page.selectOption('select[data-action="day-style"]', 'sans_pyjama');
   await page.click('.tabbar [data-value="sortir"]');
   const morning = await page.locator('.day-step .dress-name').allTextContents();
   assert(!morning.some((t) => /Pyjama/.test(t)) && morning.some((t) => /Pantalon/.test(t)), `sorties : ${morning.join(', ')}`);
-  // La nuit : 19 °C par défaut (18-20 °C), une autre tenue publiée pour cette température.
+  // Créneaux de sortie : jusqu'à trois, dans l'ordre de la journée, le meilleur marqué.
+  assert((await page.locator('.hero .windows li.best').count()) === 1, 'créneau idéal non marqué');
+  await shot(page, 'l6-creneaux');
+  // La nuit : 19 °C par défaut (18-20 °C), pyjama sous une 2 TOG ; l'autre gigoteuse dans la liste.
   await page.click('.tabbar [data-value="nuit"]');
   await page.click('[data-action="maison"][data-value="nuit"]');
-  assert(await page.isVisible('text=Ou, selon votre gigoteuse') && await page.isVisible('text=Gigoteuse plus légère : une couche de plus dessous'), 'autres tenues de nuit absentes');
-  await page.click('text=2 TOG : body ML + pyjama');
-  await page.waitForSelector('text=Votre choix pour cette température');
-  assert((await page.textContent('.card:first-of-type .band strong')).includes('2 TOG') && await page.isVisible('text=2,5 TOG : body ML (habituelle)'), await page.textContent('.card:first-of-type'));
-  const tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
-  assert(tiles.join() === 'Body ML,Pyjama,Gigoteuse 2 TOG', tiles.join());
+  let tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  assert(tiles.join() === 'Body ML,Pyjama,Gigoteuse 2 TOG', `nuit par défaut : ${tiles.join()}`);
+  const night = await page.locator('select[data-action="night-option"] option').allTextContents();
+  assert(night.join(' | ') === '2 TOG : body ML + pyjama (par défaut) | 2,5 TOG : body ML' && await page.isVisible('text=Gigoteuse plus légère : une couche de plus dessous'), night.join(' | '));
+  await page.selectOption('select[data-action="night-option"]', 'tog-2-5');
+  tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  assert(tiles.join() === 'Body ML,Gigoteuse 2,5 TOG', tiles.join());
   await shot(page, 'l6-nuit-choix');
   const h = await stored(page);
-  assert(h.children[0].day_style === 'sans_pyjama' && h.children[0].night_options.n20 === 'tog-2' && !h.children[1].day_style, JSON.stringify(h.children));
+  assert(h.children[0].day_style === 'sans_pyjama' && h.children[0].night_options.n20 === 'tog-2-5' && !h.children[1].day_style, JSON.stringify(h.children));
   // Fiche de l'enfant : le réglage « La journée » n'existe qu'avant 2 ans.
   await page.goto(`${APP}#enfant/leo111`);
   assert((await page.getAttribute('[data-action="day-style"][data-value="sans_pyjama"]', 'aria-checked')) === 'true', 'réglage absent de la fiche');
-  await page.click('[data-action="day-style"][data-value=""]');
-  assert(!(await stored(page)).children[0].day_style, 'retour au pyjama non enregistré');
+  await page.click('[data-action="day-style"][data-value="pyjama"]');
+  assert((await stored(page)).children[0].day_style === 'pyjama', 'retour au pyjama non enregistré');
   await page.goto(`${APP}#enfant/zoe222`);
   await page.waitForSelector('text=Tendance');
   assert(!(await page.isVisible('text=Sans pyjama')), 'choix du pyjama proposé à 2 ans et demi');

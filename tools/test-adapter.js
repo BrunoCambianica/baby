@@ -93,7 +93,7 @@ test('De bout en bout : une vraie journée donne un créneau, une tenue et trois
   assert(result.outfit && result.outfit.items.length > 2, 'tenue vide');
   assert(result.widget.lines.length === 3, JSON.stringify(result.widget.lines));
   assert(result.outing.slots.length === 9, `${result.outing.slots.length} heures dans la plage`);
-  assert(result.night.tog === '2,5', `TOG ${result.night.tog}`);
+  assert(result.night.tog === '2', `TOG ${result.night.tog}`);
 });
 
 test('Widget le soir : la tenue et le sac de demain, à préparer, et la nuit ; le rappel du soir', () => {
@@ -105,14 +105,14 @@ test('Widget le soir : la tenue et le sac de demain, à préparer, et la nuit ; 
   assert(evening.moment === 'soir' && evening.theme === 'nuit' && evening.tomorrow?.date === '2026-10-27', `${evening.moment} ${evening.tomorrow?.date}`);
   assert(evening.lines[0] === 'Demain 5° → 19°', evening.lines[0]);
   assert(evening.lines[1].drawings.includes('combi_chaude'), JSON.stringify(evening.lines[1]));
-  assert(evening.lines[2] === 'Sac : gilet · nuit 19° : body ML + 2,5 TOG', evening.lines[2]);
+  assert(evening.lines[2] === 'Sac : gilet · nuit 19° : body ML + pyjama + 2 TOG', evening.lines[2]);
   const rainy = widgetView({ forecast, profile, date: '2026-10-24', time: '20:30', lat: 45.758 }, bundle);
   assert(rainy.lines[0] === 'Demain 8° → 14° · pluie vers 8 h' && rainy.lines[2].startsWith('Sac : habillage pluie'), JSON.stringify(rainy.lines));
-  assert(evening.reminder.startsWith('Body ML, pyjama, pull, combi pilote') && evening.reminder.endsWith('nuit 19° : body ML + 2,5 TOG'), evening.reminder);
+  assert(evening.reminder.startsWith('Body ML, pantalon, chaussettes, pull, combi pilote') && evening.reminder.endsWith('nuit 19° : body ML + pyjama + 2 TOG'), evening.reminder);
   const morning = widgetView({ forecast, profile, date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle);
   assert(morning.moment === 'jour' && morning.tomorrow === null && morning.reminder === null && morning.lines[0] === 'Ce matin 5° → 19°', JSON.stringify(morning.lines));
   const early = widgetView({ forecast, profile, date: '2026-10-27', time: '16:00', lat: 45.758 }, bundle, { reminder: true });
-  assert(early.moment === 'jour' && early.reminder?.startsWith('Body MC, pyjama léger') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
+  assert(early.moment === 'jour' && early.reminder?.startsWith('Body MC, pantalon léger') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
 });
 
 test('Configuration du widget : aller-retour avec accents', () => {
@@ -179,7 +179,7 @@ test('Charte : une tenue de nuit non compensée (gigoteuse plus légère sans co
   const n20 = bad.rules.night.tog_hint.bins.find((b) => b.id === 'n20').alternatives;
   // L'erreur de la 0.12 : 1 TOG au lieu de 2,5 avec le même body, à 19 °C.
   n20.push({ id: 'trop-legere', tog: '1', wear: ['body_ml'], sources: ['ergopouch-what-to-wear'] });
-  n20.push({ id: 'trop-chaude', tog: '3,5', wear: ['body_ml'], sources: ['ergopouch-what-to-wear'] });
+  n20.push({ id: 'trop-chaude', tog: '3,5', wear: ['body_ml', 'pyjama', 'gilet'], sources: ['ergopouch-what-to-wear'] });
   n20.push({ id: 'plus-de-vetements', tog: '2,5', wear: ['body_ml', 'pyjama'], sources: ['ergopouch-what-to-wear'] });
   bad.rules.outfit.day_styles.sans_pyjama.replace_items.pyjama = ['pantalon_chaud', 'chaussettes_chaudes'];
   const { errors } = lint(bad);

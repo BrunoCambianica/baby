@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.13.5';
+export const VERSION = '0.14.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -176,6 +176,14 @@ function conditions(slots) {
   return parts.join(' · ');
 }
 
+// Jusqu'à trois créneaux de sortie dans l'ordre de la journée, le meilleur marqué.
+function windowsRow(windows, label) {
+  if (!windows?.length) return '';
+  return `<ol class="windows" aria-label="${esc(label)}">${windows.map((w) => `<li class="glass${w.best ? ' best' : ''}">
+      ${w.best ? '<span class="w-flag">idéal</span>' : ''}<span class="w-time">${hourFr(w.start)} – ${hourFr(w.end)}</span>
+      <span class="w-feels">${Math.round(w.feels_c)}° ressentis</span></li>`).join('')}</ol>`;
+}
+
 // La veille au soir : demain, à préparer ce soir (ressenti et pluie de demain).
 function heroEvening(state, ctx) {
   const M = state.bundle.messages;
@@ -184,11 +192,14 @@ function heroEvening(state, ctx) {
   const who = state.profile.count > 1 ? `${esc(childName(state.profile, state.profile.index))} · ` : '';
   const slots = next.outing.slots.filter((s) => s.time >= next.journee.from && s.time < next.journee.to);
   const w = next.outing.window;
-  const outing = w ? `sortie idéale ${hourFr(w.start)} – ${hourFr(w.end)}` : render(M, `outing.none.${next.outing.reason}`, 'short');
+  const outing = w ? '' : render(M, `outing.none.${next.outing.reason}`, 'short');
+  // D'abord ce soir (pas de sortie), puis demain : on lit la journée qui vient comme une tenue à préparer, pas à mettre.
   return `<header class="hero hero--nuit">${heroArt('moonStars')}${heroTop(state, ctx.date)}
-    <p class="hero-label">${who}Demain · à préparer ce soir</p>
+    <p class="status-pill glass tonight">${icon('moon', { size: 18 })}Pas de sortie conseillée ce soir</p>
+    <p class="hero-label">${who}Demain · la tenue à préparer ce soir</p>
     <p class="hero-big">${range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`}</p>
-    <p class="hero-sub"><span>${esc(slots.length ? `${conditions(slots)} · ` : '')}${esc(outing)}</span></p>
+    <p class="hero-sub"><span>${esc(slots.length ? conditions(slots) : '')}${esc(outing && slots.length ? ` · ${outing}` : outing)}</span></p>
+    ${windowsRow(next.outing.windows, 'Demain, créneaux de sortie')}
   </header>`;
 }
 
@@ -209,21 +220,24 @@ function heroSortir(state, ctx) {
     const slots = result.outing.slots.filter((s) => s.time >= j.from && s.time < j.to);
     const first = (w && slots.find((s) => s.time === w.start)) ?? slots[0];
     const night = first ? first.time >= ctx.input.forecast.daylight.sunset : false;
-    const outing = w ? `sortie idéale ${hourFr(w.start)} – ${hourFr(w.end)}` : render(M, `outing.none.${result.outing.reason}`, 'short');
+    const outing = w ? '' : render(M, `outing.none.${result.outing.reason}`, 'short');
     main = `<p class="hero-label">${who}${tomorrow ? 'Demain' : range.when}</p>
       <p class="hero-big">${range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`}</p>
-      <p class="hero-sub">${first ? icon(weatherIcon(first.weather_code, { night, precipProb: first.precip_prob }), { size: 22 }) : ''}<span>${esc(slots.length ? `${conditions(slots)} · ` : '')}${esc(outing)}</span></p>`;
+      <p class="hero-sub">${first ? icon(weatherIcon(first.weather_code, { night, precipProb: first.precip_prob }), { size: 22 }) : ''}<span>${esc(slots.length ? conditions(slots) : '')}${esc(outing && slots.length ? ` · ${outing}` : outing)}</span></p>
+      ${windowsRow(result.outing.windows, 'Créneaux de sortie')}`;
   } else if (w) {
     const slots = windowSlots(result);
     const night = slots[0].time >= ctx.input.forecast.daylight.sunset;
     main = `<p class="hero-label">Sortie idéale${tomorrow ? ' demain' : ''}</p>
       <p class="hero-big">${hourFr(w.start)} – ${hourFr(w.end)}</p>
-      <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots))}</p>`;
+      <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots))}</p>
+      ${result.outing.windows.length > 1 ? windowsRow(result.outing.windows, 'Créneaux de sortie') : ''}`;
   } else {
     const over = result.outing.reason === 'journee_terminee';
     main = `<p class="hero-label">${tomorrow ? 'Demain' : "Aujourd'hui"}</p>
       <p class="hero-big words">${esc(render(M, `outing.none.${result.outing.reason}`, 'short'))}</p>
-      ${!tomorrow ? `<div class="hero-actions"><button class="glass glass-pill" data-action="day" data-value="demain">Voir demain ${icon('chevronRight', { size: 18 })}</button></div>` : ''}
+      ${over ? '<p class="hero-sub">Vous pouvez déjà préparer la tenue de demain.</p>' : ''}
+      ${!tomorrow ? `<div class="hero-actions"><button class="glass glass-pill" data-action="day" data-value="demain">${over ? 'Préparer demain' : 'Voir demain'} ${icon('chevronRight', { size: 18 })}</button></div>` : ''}
       ${over ? '' : `<p class="hero-sub">${esc(render(M, `outing.none.${result.outing.reason}`, 'text'))}</p>`}`;
   }
   const art = { clair: 'sun', nuageux: 'cloud', pluie: 'rain', chaleur: 'sun', froid: 'snow', soir: 'moon', nuit: 'moonStars' }[theme];
@@ -285,10 +299,11 @@ function outfitCard(state, ctx) {
   </section>`;
 }
 
-// Une tenue au choix : ses dessins (ou rien, en mode texte) et son nom, à adopter d'un geste.
-function altButton(state, drawings, text, attrs) {
-  const art = drawingsOn(state) ? `<span class="alt-art">${drawings.map((id) => drawingSvg(id, { size: 22 })).join('')}</span>` : '';
-  return `<button class="alt" ${attrs}>${art}<span class="alt-text">${esc(text)}</span>${chev(16)}</button>`;
+// Tenues au choix : une liste déroulante, la tenue affichée sélectionnée, celle par défaut signalée.
+function outfitChoice(label, action, choices, extra = '') {
+  return `<label class="alts"><span class="alts-title">${esc(label)}</span>
+      <select data-action="${action}"${extra} aria-label="${esc(label)}">${choices.map((c) =>
+        `<option value="${esc(c.value)}"${c.selected ? ' selected' : ''}>${esc(c.text)}</option>`).join('')}</select></label>`;
 }
 
 // Un vêtement du plan : dessin et nom, avec « − » (on l'enlève) ou « + » (on le remet).
@@ -425,7 +440,7 @@ function tonightCard(state, ctx) {
       <div class="card-head"><h2 class="card-title">${icon('moon', { size: 18 })}Ce soir</h2>
         <span class="tag">${n.room_assumed ? 'chambre 18-20 °C' : `chambre ${decimal(n.room_temp_c)} °C`}</span></div>
       ${wear}
-      <button class="btn soft" data-action="maison" data-value="nuit">${n.room_assumed ? 'Noter la chambre' : 'Préparer la nuit'}</button>
+      <button class="btn soft" data-action="maison" data-value="nuit">Détails</button>
     </section>`;
 }
 
@@ -489,11 +504,13 @@ function indoorCard(state, ctx) {
         <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}</ul>`
     : `<p>${esc(capitalize(i.wear.map((item) => labels.items[item]).join(', ')))}.</p>`;
   const sources = [...new Set(i.relays.flatMap((id) => M.messages[id]?.sources ?? []))];
-  // Avec ou sans pyjama : l'autre tenue en un geste ; le choix vaut aussi pour les sorties.
-  const other = i.styles?.length > 1 ? i.styles.find((st) => st.id !== i.day_style) : null;
-  const choice = other
-    ? `<div class="alts"><p class="alts-title">${i.day_style ? 'Sans pyjama la journée, dehors comme à la maison. Ou :' : 'Ou sans pyjama, dehors comme à la maison :'}</p>
-        ${altButton(state, other.wear.map((item) => ITEM_DRAWINGS[item]), `${other.id ? 'Sans pyjama' : 'Avec pyjama'} : ${other.wear.map((item) => labels.items_short[item]).join(', ')}`, `data-action="day-style" data-value="${esc(other.id ?? '')}"`)}</div>`
+  // Sans pyjama par défaut, ou avec : le choix vaut aussi pour les sorties.
+  const byDefault = state.bundle.rules.outfit.default_day_style;
+  const choice = i.styles?.length > 1
+    ? outfitChoice('Tenue de la journée, dehors comme à la maison', 'day-style', i.styles.map((st) => ({
+      value: st.id, selected: st.id === i.day_style,
+      text: `${st.id === 'pyjama' ? 'Avec pyjama' : 'Sans pyjama'} : ${st.wear.map((item) => labels.items_short[item]).join(', ')}${st.id === byDefault ? ' (par défaut)' : ''}`,
+    })))
     : '';
   return `<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('home', { size: 18 })}Pour la journée</h2><span class="tag">pratique</span></div>
@@ -565,15 +582,15 @@ function nightWearCard(state, n) {
     : `<p>Sous la gigoteuse : ${esc(n.wear.map((item) => labels.items[item]).join(' et '))}.</p>`;
   // Autres tenues publiées par les fabricants pour cette température, selon la gigoteuse qu'on a : plus légère, une couche
   // de plus dessous ; plus chaude, une de moins (contrôlé par lint). Le choix est gardé pour cette tranche seulement.
-  const others = (n.options ?? []).filter((o) => o.id !== n.option);
-  const chosen = (n.options ?? []).find((o) => o.id === n.option);
-  const otherBag = (n.options ?? []).some((o) => o.tog !== (n.options ?? [])[0].tog);
-  const choices = others.length
-    ? `<div class="alts night"><p class="alts-title">${n.option === 'principal' ? 'Ou, selon votre gigoteuse :' : 'Votre choix pour cette température. Ou :'}</p>
-        ${others.map((o) => altButton(state, [...o.wear.map((item) => ITEM_DRAWINGS[item]), 'gigoteuse'],
-          `${o.tog} TOG : ${o.wear.map((item) => labels.items_short[item]).join(' + ')}${o.id === 'principal' ? ' (habituelle)' : ''}`,
-          `data-action="night-option" data-bin="${esc(n.bin ?? '')}" data-value="${esc(o.id)}"`)).join('')}
-        ${otherBag ? `<p class="hint">${esc(render(state.bundle.messages, 'fabricant.night.compensation', 'short'))}.</p>` : ''}</div>`
+  const options = n.options ?? [];
+  const chosen = options.find((o) => o.id === n.option);
+  const otherBag = options.some((o) => o.tog !== options[0].tog);
+  const choices = options.length > 1
+    ? `${outfitChoice('Selon votre gigoteuse', 'night-option', options.map((o) => ({
+      value: o.id, selected: o.id === n.option,
+      text: `${o.tog} TOG : ${o.wear.map((item) => labels.items_short[item]).join(' + ')}${o.id === 'principal' ? ' (par défaut)' : ''}`,
+    })), ` data-bin="${esc(n.bin ?? '')}"`)}
+        ${otherBag ? `<p class="hint">${esc(render(state.bundle.messages, 'fabricant.night.compensation', 'short'))}.</p>` : ''}`
     : '';
   return `<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('bed', { size: 18 })}Pour la nuit</h2><span class="tag amber">fabricants</span></div>
@@ -787,8 +804,8 @@ export function viewChild(state) {
             `<button role="radio" aria-checked="${pref === v}" data-action="pref" data-value="${v}">${l}</button>`).join('')}</div>
         </div>
         ${pyjamas ? `<div class="row column"><span>La journée</span>
-          <div class="seg" role="radiogroup" aria-label="La journée">${[['', 'Avec pyjama'], ['sans_pyjama', 'Sans pyjama']].map(([v, l]) =>
-            `<button role="radio" aria-checked="${(d.dayStyle ?? '') === v}" data-action="day-style" data-value="${v}">${l}</button>`).join('')}</div>
+          <div class="seg" role="radiogroup" aria-label="La journée">${[['sans_pyjama', 'Sans pyjama'], ['pyjama', 'Avec pyjama']].map(([v, l]) =>
+            `<button role="radio" aria-checked="${(d.dayStyle ?? state.bundle.rules.outfit.default_day_style) === v}" data-action="day-style" data-value="${v}">${l}</button>`).join('')}</div>
         </div>` : ''}
       </div>
       <p class="group-note">« A chaud » allège toutes ses tenues d'un cran, « A froid » les réchauffe d'un cran. « À pied » apparaît à partir de 2 ans.${pyjamas ? ' « Sans pyjama » : pantalon et chaussettes à la place, dehors comme à la maison ; la nuit ne change pas.' : ''}</p>

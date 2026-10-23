@@ -126,6 +126,7 @@
         }
       }
     ],
+    "default_day_style": "sans_pyjama",
     "day_styles": {
       "sans_pyjama": {
         "replace_items": {
@@ -255,9 +256,9 @@
           ]
         },
         {
-          "id": "n20", "max_c": 20, "tog": "2,5", "wear": ["body_ml"], "sources": ["tommee-tippee-what-to-wear"],
+          "id": "n20", "max_c": 20, "tog": "2", "wear": ["body_ml", "pyjama"], "sources": ["petites-billes-tog"],
           "alternatives": [
-            { "id": "tog-2", "tog": "2", "wear": ["body_ml", "pyjama"], "sources": ["petites-billes-tog"] }
+            { "id": "tog-2-5", "tog": "2,5", "wear": ["body_ml"], "sources": ["tommee-tippee-what-to-wear"] }
           ]
         },
         {

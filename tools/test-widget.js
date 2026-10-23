@@ -495,7 +495,7 @@ await test('Widget Maison (iPhone) : « maison » dans Parameter, le jour la pi�
   assert(open.view?.url === `${APP}?hote=scriptable&enfant=leo1&onglet=maison#import=${FAMILLE}`, String(open.view?.url));
   const day = await run({ files, param: 'Léo maison', loaderConfig: FAMILLE, at: '2026-10-21T10:00:00+02:00' });
   assert(day.texts[0] === 'LÉO · CHEZ VOUS' && day.texts[1] === 'Chez vous 17°' && day.widget.url.endsWith('&enfant=leo1&onglet=maison'), `${day.texts.join(' | ')} ${day.widget.url}`);
-  assert(day.widget.rows[0].images.length === 3 && day.texts.includes('Sous 20 °C : une couche de plus'), JSON.stringify(day.texts));
+  assert(day.widget.rows[0].images.length === 4 && day.texts.includes('Sous 20 °C : une couche de plus'), JSON.stringify([day.texts, day.widget.rows[0].images.length]));
   const night = await run({ files, param: 'maison', loaderConfig: FAMILLE, at: '2026-10-21T20:30:00+02:00' });
   assert(night.texts[0] === 'LÉO · SA CHAMBRE' && night.texts[1] === 'Chambre 23°', night.texts.join(' | '));
   assert(night.widget.rows[0].texts[0].text.includes('1 TOG') && night.texts.includes('Un peu chaud pour dormir : au-dessus de 20 °C'), JSON.stringify(night.texts));
@@ -509,7 +509,7 @@ await test('Widget Maison (Android) : la tenue et l\'état pour chaque relevé, 
   const out = JSON.parse(vm.runInContext(`${android}\nsbAndroidAll(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {}, "2026-10-21", "10:00");`, vm.createContext({})));
   const leo = out.children[0].maison;
   assert(Object.keys(leo.jour.by).length === 51 && leo.jour.by['10.0'] && leo.nuit.by['35.0'] && leo.confirm === 'Touchez la température pour la noter', Object.keys(leo.jour.by).join());
-  assert(leo.nuit.by['19.5'].outfit.text === '≈ 2,5 TOG' && leo.nuit.by['19.5'].outfit.drawings.at(-1) === 'gigoteuse', JSON.stringify(leo.nuit.by['19.5']));
+  assert(leo.nuit.by['19.5'].outfit.text === '≈ 2 TOG' && leo.nuit.by['19.5'].outfit.drawings.at(-1) === 'gigoteuse', JSON.stringify(leo.nuit.by['19.5']));
   assert(leo.nuit.by['22.5'].status === 'Un peu chaud pour dormir : au-dessus de 20 °C' && leo.jour.by['28.0'].outfit.drawings.join() === 'body_sans_manches', JSON.stringify(leo.jour.by['28.0']));
   assert(leo.jour.unknown.status === 'Tenue pour 20 à 22 °C, le repère de jour', leo.jour.unknown.status);
   const zoe = out.children[1].maison;
@@ -553,12 +553,12 @@ await test('Android : le moteur embarqué renvoie le lieu et trois lignes, le jo
   const call = `${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {"offset": 0, "room": 19}, "2026-10-21", "20:30");`;
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
   assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit' && out.check === 'Touchez sa nuque, pas ses mains', JSON.stringify(out));
-  assert(out.lines.length === 3 && /^Demain /.test(out.lines[0]) && /nuit 19° : body ML \+ 2,5 TOG/i.test(out.lines[2]), JSON.stringify(out.lines));
+  assert(out.lines.length === 3 && /^Demain /.test(out.lines[0]) && /nuit 19° : body ML \+ pyjama \+ 2 TOG/i.test(out.lines[2]), JSON.stringify(out.lines));
   assert(out.lines[1].drawings?.length >= 3 && out.lines[1].label.startsWith('Body ML'), JSON.stringify(out.lines[1]));
   const day = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {}, "2026-10-21", "07:30");`, vm.createContext({})));
   assert(/^Ce matin /.test(day.lines[0]) && day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines));
   const texte = JSON.parse(vm.runInContext(call.replace(JSON.stringify(CONFIG), JSON.stringify(TEXTE)), vm.createContext({})));
-  assert(/^Body ML · /.test(texte.lines[1]) && texte.lines[2].includes('2,5 TOG'), JSON.stringify(texte.lines));
+  assert(/^Body ML · /.test(texte.lines[1]) && texte.lines[2].includes('2 TOG'), JSON.stringify(texte.lines));
   const bad = JSON.parse(vm.runInContext(`${android}\nsbAndroid({}, "SB1.@@", {}, "2026-10-21", "08:00");`, vm.createContext({})));
   assert(bad.error === 'configuration', JSON.stringify(bad));
 });

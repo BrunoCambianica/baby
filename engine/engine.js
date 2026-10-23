@@ -89,7 +89,7 @@ function planOuting(input, R, age) {
   });
 
   const byStart = new Map(slots.map((sl) => [sl.start, sl]));
-  let best = null;
+  const runs = [];
   if (!blocking.length) {
     for (const first of slots) {
       const run = [];
@@ -98,11 +98,18 @@ function planOuting(input, R, age) {
         if (!sl || sl.reasons.length) break;
         run.push(sl);
       }
-      if (run.length < duration) continue;
-      const score = Math.min(...run.map((sl) => sl.score));
-      if (!best || score > best.score) best = { run, score };
+      if (run.length === duration) runs.push({ run, score: Math.min(...run.map((sl) => sl.score)) });
     }
   }
+  // Le meilleur créneau (le premier à score égal), puis jusqu'à deux autres, séparés d'au moins une heure, par ordre chronologique.
+  const picked = [];
+  for (const r of [...runs].sort((a, b) => b.score - a.score)) {
+    if (picked.length === 3) break;
+    const start = r.run[0].start;
+    const end = r.run.at(-1).end;
+    if (picked.every((p) => end + 60 <= p.run[0].start || start >= p.run.at(-1).end + 60)) picked.push(r);
+  }
+  const best = picked[0] ?? null;
 
   const daySlots = slots.filter((sl) => !sl.reasons.includes('hors_plage') && !sl.reasons.includes('hors_jour'));
   let reason = null;
@@ -118,18 +125,20 @@ function planOuting(input, R, age) {
     }
   }
 
-  const window = best && {
-    start: fmtMin(best.run[0].start),
-    end: fmtMin(best.run.at(-1).end),
-    score: best.score,
-    feels_c: round1(mean(best.run.map((sl) => sl.feels_c))),
-    precip_prob_max: Math.max(...best.run.map((sl) => sl.precip_prob)),
-    uv_max: Math.max(...best.run.map((sl) => sl.uv)),
-    gust_max: Math.max(...best.run.map((sl) => sl.gust_kmh)),
-  };
+  const describe = (r) => ({
+    start: fmtMin(r.run[0].start),
+    end: fmtMin(r.run.at(-1).end),
+    score: r.score,
+    feels_c: round1(mean(r.run.map((sl) => sl.feels_c))),
+    precip_prob_max: Math.max(...r.run.map((sl) => sl.precip_prob)),
+    uv_max: Math.max(...r.run.map((sl) => sl.uv)),
+    gust_max: Math.max(...r.run.map((sl) => sl.gust_kmh)),
+  });
+  const window = best && describe(best);
+  const windows = picked.map((r) => ({ ...describe(r), best: r === best })).sort((a, b) => toMin(a.start) - toMin(b.start));
   const inPlage = slots.filter((sl) => !sl.reasons.includes('hors_plage'));
   const refSlots = best ? best.run : inPlage.slice(0, 1);
-  return { window, reason, blocking, heat, ozone, slots, inPlage, daySlots, refSlots, plage };
+  return { window, windows, reason, blocking, heat, ozone, slots, inPlage, daySlots, refSlots, plage };
 }
 
 // Mode de sortie retenu : un mode réservé aux plus grands (à pied) redevient la poussette avant l'âge prévu.
@@ -143,7 +152,9 @@ const ageVariant = (R, age) => (R.outfit.age_variants ?? []).filter((v) => age >
 
 // Style de la journée choisi pour l'enfant (« sans pyjama » : pantalon et chaussettes à la place, dehors comme
 // à la maison). Jamais plus chaud que la tenue d'origine (contrôlé par lint) ; la nuit n'est pas concernée.
-const dayStyle = (R, profile) => R.outfit.day_styles?.[profile.day_style] ?? null;
+// Sans choix fait, le style par défaut des règles (« sans pyjama ») ; « pyjama » garde la tenue d'origine.
+const dayStyleId = (R, profile) => profile.day_style ?? R.outfit.default_day_style ?? null;
+const dayStyle = (R, profile) => R.outfit.day_styles?.[dayStyleId(R, profile)] ?? null;
 const styled = (items, style) => (style ? [...new Set(items.flatMap((item) => style.replace_items[item] ?? [item]))] : items);
 
 // Vêtements d'une tranche, pour un âge et un mode de sortie. Certains modes remplacent des vêtements
@@ -455,10 +466,10 @@ function planIndoor(input, R, age) {
   const bin = (variant?.bins ?? I.bins).find((b) => b.max_c === null || t <= b.max_c);
   const hot = room !== null && room >= I.heat_room_c_at_least;
   // Tenues au choix : la tenue de la tranche, puis chaque style qui la change (sans pyjama…) ; celui de l'enfant, sinon la première.
-  const styles = [null, ...Object.keys(R.outfit.day_styles ?? {})]
-    .map((id) => ({ id, wear: styled(bin.wear, id ? R.outfit.day_styles[id] : null) }))
+  const styles = ['pyjama', ...Object.keys(R.outfit.day_styles ?? {})]
+    .map((id) => ({ id, wear: styled(bin.wear, R.outfit.day_styles?.[id] ?? null) }))
     .filter((st, k, all) => k === 0 || st.wear.join() !== all[0].wear.join());
-  const current = styles.find((st) => st.id === (input.profile.day_style ?? null)) ?? styles[0];
+  const current = styles.find((st) => st.id === dayStyleId(R, input.profile)) ?? styles[0];
   return {
     room_temp_c: room,
     room_assumed: room === null,
@@ -794,6 +805,7 @@ export function evaluate(input, bundle) {
     transport: transportFor(input.profile, age, R),
     outing: {
       window: plan.window,
+      windows: plan.windows,
       reason: plan.reason,
       slots: plan.inPlage.map((sl) => ({
         time: fmtMin(sl.start),

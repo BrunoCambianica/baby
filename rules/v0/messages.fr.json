@@ -331,8 +331,8 @@
     },
     "outing.none.journee_terminee": {
       "kind": "meteo",
-      "text": "Plus de créneau aujourd'hui dans votre plage horaire.",
-      "short": "Plus de sortie prévue aujourd'hui"
+      "text": "Plus de créneau aujourd'hui dans votre plage horaire : préparez plutôt la tenue de demain.",
+      "short": "Pas de sortie conseillée ce soir"
     },
     "outing.none.vigilance": {
       "kind": "meteo",

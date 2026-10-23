@@ -175,14 +175,18 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .band strong { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
 .band span { font-size: 0.88rem; color: var(--ink-3); }
 .dress-ico.night { background: var(--violet-soft); color: var(--violet); }
-/* Tenues au choix : une ligne par autre tenue, à adopter d'un geste */
-.alts { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+/* Tenues au choix : une liste déroulante */
+.alts { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
 .alts-title { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); }
-.alt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; background: var(--fill); text-align: left; }
-.alt-art { display: flex; gap: 4px; color: var(--blue); flex: none; }
-.alts.night .alt-art { color: var(--violet); }
-.alt-text { flex: 1; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
-.alt .chev { color: var(--ink-3); }
+.alts select { width: 100%; }
+/* Créneaux de sortie : jusqu'à trois, dans l'ordre de la journée, le meilleur en clair */
+.windows { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin: 14px 0 0; padding: 0; position: relative; }
+.windows li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 14px; color: #fff; min-width: 0; }
+.windows li.best { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; }
+.w-flag { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--blue); }
+.w-time { font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+.w-feels { font-size: 0.78rem; opacity: 0.85; }
+.status-pill.tonight { margin: 0 0 10px; }
 /* La journée en couches */
 .day-step { display: grid; gap: 10px; }
 .change-time { font-size: 0.86rem; font-weight: 650; color: var(--ink-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
