@@ -183,12 +183,12 @@
       "id": "ergopouch-what-to-wear",
       "publisher": "ergoPouch (fabricant)",
       "short": "ergoPouch",
-      "title": "What should your baby wear to bed?",
-      "url": "https://ergopouch.com.au/what-to-wear",
-      "published": null,
+      "title": "What to Wear Guide (tableau 2025)",
+      "url": "https://www.ergopouch.com.au/pages/what-to-wear-guide",
+      "published": "2025",
       "level": "C",
       "verification": "lu",
-      "notes": "Lu le 22/10/2026. 24 °C et plus : 0,2 TOG seul ou avec body manches courtes ; 20-24 °C : 0,2 ou 1 TOG avec une combinaison manches courtes ou longues ; 18-20 °C : 1 ou 2,5 TOG avec body manches longues ; 16-18 °C : 2,5 TOG avec combinaison manches longues et maillot ; 12-16 °C : 3,5 TOG avec couche chaude manches longues et maillot. Seule marque lue publiant sa tenue en ligne ; les autres (Tommee Tippee, Lässig) la renvoient à l'étiquette."
+      "notes": "Tableau (image) relu le 23/10/2026, degré par degré de 12 à 26 °C, une tenue par gigoteuse : plus la gigoteuse est légère, plus la couche dessous est chaude. 19 °C : 2,5 TOG + combinaison 1 TOG, ou 3,5 TOG + combinaison 0,2 TOG ; 17 °C : 2,5 TOG + combinaison 1 TOG + maillot, ou 3,5 TOG + combinaison 0,2 TOG + maillot ; la gigoteuse 1 TOG seulement à partir de 20 °C, avec une combinaison 2 TOG ; 26 °C : 0,2 TOG seule. Le résumé écrit de la page (« 18-20 °C : 1.0 or 2.5 TOG with a long-sleeve bodysuit ») ne le dit pas : ne pas s'y fier. Correspondance retenue : combinaison 0,2 TOG = pyjama léger, 1 TOG = pyjama, 2 TOG = pyjama chaud, maillot = body sans manches."
     },
     {
       "id": "tommee-tippee-what-to-wear",
@@ -200,6 +200,28 @@
       "level": "C",
       "verification": "lu",
       "notes": "Lu le 23/10/2026 (site néo-zélandais de la marque). 27 °C et plus : 0,2 TOG, couche seule ; 24-27 °C : 0,2 TOG, couche ou body sans manches ; 22-24 °C : 1 TOG, body sans manches ou à manches courtes ; 20-22 °C : 1 TOG, body à manches courtes ou longues ; 18-20 °C : 2,5 TOG, body à manches longues ; 16-18 °C : 2,5 TOG, pyjama ou grenouillère ; 14-16 °C : 2,5 TOG avec body et grenouillère ou pyjama, ou 3,5 TOG avec body à manches longues, grenouillère ou pyjama ; 14 °C et moins : 3,5 TOG avec body et grenouillère ou pyjama. Plusieurs tenues par plage : la base des tenues au choix de l'app, qui ne garde que celles jamais plus chaudes que la tenue principale."
+    },
+    {
+      "id": "petites-billes-tog",
+      "publisher": "Les Petites Billes (fabricant de gigoteuses)",
+      "short": "Les Petites Billes",
+      "title": "Gigoteuse TOG : tableau, signification et guide par température",
+      "url": "https://www.lespetitesbilles.com/gigoteuse-tog/",
+      "published": null,
+      "level": "C",
+      "verification": "lu",
+      "notes": "Lu le 23/10/2026 : « Gigoteuse TOG 2, le standard mi-saison », entre 18 et 20 °C, « body manches longues + pyjama » ; TOG 2,5 vers 17-18 °C avec un pyjama un peu plus épais."
+    },
+    {
+      "id": "henriette-tog",
+      "publisher": "Henriette & Co (fabricant de gigoteuses)",
+      "short": "Henriette & Co",
+      "title": "TOG gigoteuse : quel indice selon la température de la chambre",
+      "url": "https://henrietteandco.com/blogs/produits-personnalises-henrietteandco/tog-gigoteuse-temperature-chambre-bebe",
+      "published": null,
+      "level": "C",
+      "verification": "lu",
+      "notes": "Lu le 23/10/2026 : « le TOG ne tient compte que de la gigoteuse : ce qu'on met dessous s'additionne » ; à 19 °C, TOG 2 à 2,5 avec un pyjama en coton à manches longues, ou TOG 3 avec une tenue plus légère dessous."
     },
     {
       "id": "norme-nf-en-16781",

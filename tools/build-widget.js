@@ -56,7 +56,8 @@ const gradle = read('android/app/build.gradle.kts');
 const versionCode = Number(gradle.match(/versionCode = (\d+)/)[1]);
 const versionName = gradle.match(/versionName = "([^"]+)"/)[1];
 mkdirSync(join(ROOT, 'dist'), { recursive: true });
-writeFileSync(join(ROOT, 'dist', 'android-version.json'), `${JSON.stringify({ versionCode, versionName, apk: 'superbebe-android.apk' }, null, 2)}\n`);
+// Le numéro de version dans l'adresse de l'APK évite qu'un navigateur ou le CDN serve l'ancien fichier sous le même nom.
+writeFileSync(join(ROOT, 'dist', 'android-version.json'), `${JSON.stringify({ versionCode, versionName, apk: `superbebe-android.apk?v=${versionCode}` }, null, 2)}\n`);
 mkdirSync(assets, { recursive: true });
 writeFileSync(join(assets, 'superbebe-android.js'), `${android}\n`);
 

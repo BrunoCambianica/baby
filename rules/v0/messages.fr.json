@@ -310,6 +310,12 @@
       "text": "Sous la gigoteuse : {wear}. Repère des fabricants, à adapter à bébé ; l'étiquette de la gigoteuse fait foi.",
       "short": "{wear} + gigoteuse ≈ {tog} TOG"
     },
+    "fabricant.night.compensation": {
+      "kind": "fabricant",
+      "sources": ["henriette-tog", "ergopouch-what-to-wear"],
+      "text": "Ce qu'on met sous la gigoteuse s'additionne à son TOG : une gigoteuse plus légère demande une couche de plus dessous, une plus chaude une couche de moins.",
+      "short": "Gigoteuse plus légère : une couche de plus dessous ; plus chaude : une de moins"
+    },
     "fabricant.sleepbag.norm": {
       "kind": "fabricant",
       "sources": [

@@ -894,8 +894,9 @@ export function lint(bundle) {
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
   }
-  // Tenues au choix : jamais plus chaudes que la tenue d'origine (chaleur de journee.warmth), ni par la gigoteuse
-  // ni par les vêtements ; chaque tenue de nuit cite le fabricant qui la publie.
+  // Tenues au choix. Le jour : jamais plus chaudes que la tenue d'origine (chaleur de journee.warmth). La nuit, ce qu'on
+  // met dessous s'additionne au TOG : une gigoteuse plus légère va avec des vêtements plus chauds, une plus chaude avec
+  // des vêtements plus légers, et à gigoteuse égale, une couche fine d'écart au plus ; chaque tenue cite son fabricant.
   const heat = (list) => list.reduce((sum, item) => sum + (R.journee.warmth[item] ?? Number.NaN), 0);
   const togOf = (tog) => Number(String(tog).replace(',', '.'));
   for (const [id, style] of Object.entries(R.outfit.day_styles ?? {})) {
@@ -913,7 +914,10 @@ export function lint(bundle) {
     }
     for (const alt of bin.alternatives ?? []) {
       if (alt.id === 'principal') errors.push(`nuit ${bin.id} : identifiant réservé`);
-      if (!(togOf(alt.tog) <= togOf(bin.tog) && heat(alt.wear) <= heat(bin.wear))) errors.push(`nuit ${bin.id} : ${alt.id} plus chaude que la tenue principale`);
+      const dt = togOf(alt.tog) - togOf(bin.tog);
+      const dw = heat(alt.wear) - heat(bin.wear);
+      const compensated = dt < 0 ? dw > 0 : dt > 0 ? dw < 0 : Math.abs(dw) <= 0.5;
+      if (!compensated) errors.push(`nuit ${bin.id} : ${alt.id} non compensée (gigoteuse ${alt.tog} TOG au lieu de ${bin.tog}, vêtements ${dw >= 0 ? '+' : ''}${dw})`);
     }
   }
   for (const cat of R.purchases.categories) {

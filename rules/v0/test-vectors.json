@@ -884,24 +884,30 @@
     },
     {
       "id": "nuit-tenues-au-choix",
-      "description": "Chambre à 22 °C : la tenue principale et deux autres publiées (Tommee Tippee, ergoPouch), jamais plus chaudes",
+      "description": "Chambre à 22 °C : la tenue principale et le body manches courtes sous la même gigoteuse (Tommee Tippee)",
       "input": { "now": "20:30", "profile": { "room_temp_c": 22 } },
       "expect": {
         "night.bin": "n24", "night.option": "principal", "night.tog": "1", "night.wear": ["pyjama_leger"],
-        "night.options.*.id": ["principal", "body-mc", "tog-0-2"],
-        "night.options.*.tog": ["1", "1", "0,2"]
+        "night.options.*.id": ["principal", "body-mc"],
+        "night.options.*.tog": ["1", "1"]
       }
     },
     {
-      "id": "nuit-choix-1-tog",
-      "description": "Chambre à 19 °C, choix « 1 TOG + body ML » (ergoPouch) gardé pour cette tranche",
+      "id": "nuit-choix-2-tog",
+      "description": "Chambre à 19 °C, gigoteuse 2 TOG : un pyjama en plus du body (Les Petites Billes), gardé pour cette tranche",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-2" } } },
+      "expect": { "night.option": "tog-2", "night.tog": "2", "night.wear": ["body_ml", "pyjama"], "widget.lines.1.contains": "2 TOG" }
+    },
+    {
+      "id": "nuit-ancien-choix-1-tog",
+      "description": "Le choix « 1 TOG + body ML » de la 0.12, retiré car non compensé : la tenue principale revient",
       "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-1" } } },
-      "expect": { "night.option": "tog-1", "night.tog": "1", "night.wear": ["body_ml"], "widget.lines.1.contains": "1 TOG" }
+      "expect": { "night.option": "principal", "night.tog": "2,5", "night.wear": ["body_ml"], "night.options.*.id": ["principal", "tog-2"] }
     },
     {
       "id": "nuit-choix-autre-tranche",
       "description": "Le choix fait pour 18-20 °C ne change pas la tenue à 17 °C",
-      "input": { "now": "20:30", "profile": { "room_temp_c": 17, "night_options": { "n20": "tog-1" } } },
+      "input": { "now": "20:30", "profile": { "room_temp_c": 17, "night_options": { "n20": "tog-2" } } },
       "expect": { "night.bin": "n17", "night.option": "principal", "night.tog": "2,5", "night.wear": ["body_leger", "pyjama"] }
     },
     {

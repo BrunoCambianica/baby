@@ -339,6 +339,20 @@ await test('App Android 0.13 : widget Maison proposé, relevés notés sur le wi
   assert((await page.evaluate(() => window.calls)).some(([k, id]) => k === 'maison' && id === 'zoe222'), 'widget Maison non demandé');
 });
 
+await test('App Android ancienne (0.8) : pas de widget Maison, la mise à jour est proposée dans les réglages', async (use) => {
+  const bridge = `window.SuperbebeAndroid = { sync() {}, colors() {}, widgets: () => 1, version: () => '0.8.0', widgetChildren: () => '{}',
+    addWidget: () => true, addChildWidget: () => true, share: () => true, reminder: () => 'off', reminderState: () => 'off' };`;
+  const page = use(await phone({ init: `${bridge} if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await page.goto(`${APP}#reglages`);
+  await page.waitForSelector('text=Widget Maison : mettre à jour l\'app Android');
+  const latest = (await (await fetch(`${BASE}dist/android-version.json`)).json());
+  const link = page.locator('a.row', { hasText: 'Widget Maison' });
+  assert((await link.getAttribute('href')).endsWith(`dist/superbebe-android.apk?v=${latest.versionCode}`), await link.getAttribute('href'));
+  assert((await link.textContent()).includes(`0.8.0 → ${latest.versionName}`), await link.textContent());
+  assert(await page.isVisible('text=App Android installée') && await page.isVisible('a.row >> text=Mettre à jour l\'app Android'), 'version installée ou mise à jour absentes');
+  assert(!(await page.isVisible('text=Le widget Maison')), 'widget Maison proposé à une app qui ne l\'a pas');
+});
+
 await test('Assistant du widget iPhone : un widget par enfant, choisi par son prénom', async (use) => {
   const page = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.goto(`${APP}#widget`);
@@ -518,13 +532,15 @@ await test('Tenues au choix : sans pyjama la journée (maison et sorties), autre
   // La nuit : 19 °C par défaut (18-20 °C), une autre tenue publiée pour cette température.
   await page.click('.tabbar [data-value="nuit"]');
   await page.click('[data-action="maison"][data-value="nuit"]');
-  assert(await page.isVisible('text=Ou, selon vos gigoteuses'), 'autres tenues de nuit absentes');
-  await page.click('text=Body ML + 1 TOG');
+  assert(await page.isVisible('text=Ou, selon votre gigoteuse') && await page.isVisible('text=Gigoteuse plus légère : une couche de plus dessous'), 'autres tenues de nuit absentes');
+  await page.click('text=2 TOG : body ML + pyjama');
   await page.waitForSelector('text=Votre choix pour cette température');
-  assert((await page.textContent('.card:first-of-type .band strong')).includes('1 TOG') && await page.isVisible('text=Body ML + 2,5 TOG (habituelle)'), await page.textContent('.card:first-of-type'));
+  assert((await page.textContent('.card:first-of-type .band strong')).includes('2 TOG') && await page.isVisible('text=2,5 TOG : body ML (habituelle)'), await page.textContent('.card:first-of-type'));
+  const tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  assert(tiles.join() === 'Body ML,Pyjama,Gigoteuse 2 TOG', tiles.join());
   await shot(page, 'l6-nuit-choix');
   const h = await stored(page);
-  assert(h.children[0].day_style === 'sans_pyjama' && h.children[0].night_options.n20 === 'tog-1' && !h.children[1].day_style, JSON.stringify(h.children));
+  assert(h.children[0].day_style === 'sans_pyjama' && h.children[0].night_options.n20 === 'tog-2' && !h.children[1].day_style, JSON.stringify(h.children));
   // Fiche de l'enfant : le réglage « La journée » n'existe qu'avant 2 ans.
   await page.goto(`${APP}#enfant/leo111`);
   assert((await page.getAttribute('[data-action="day-style"][data-value="sans_pyjama"]', 'aria-checked')) === 'true', 'réglage absent de la fiche');

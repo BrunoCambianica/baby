@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.13.1';
+export const VERSION = '0.13.2';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -532,15 +532,17 @@ function nightWearCard(state, n) {
         <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}
         <li><span class="dress-ico night">${drawingSvg('gigoteuse', { size: 34 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
     : `<p>Sous la gigoteuse : ${esc(n.wear.map((item) => labels.items[item]).join(' et '))}.</p>`;
-  // Autres tenues publiées par les fabricants pour cette température, jamais plus chaudes : selon les gigoteuses qu'on a.
-  // Le choix est gardé pour cette tranche de température seulement.
+  // Autres tenues publiées par les fabricants pour cette température, selon la gigoteuse qu'on a : plus légère, une couche
+  // de plus dessous ; plus chaude, une de moins (contrôlé par lint). Le choix est gardé pour cette tranche seulement.
   const others = (n.options ?? []).filter((o) => o.id !== n.option);
   const chosen = (n.options ?? []).find((o) => o.id === n.option);
+  const otherBag = (n.options ?? []).some((o) => o.tog !== (n.options ?? [])[0].tog);
   const choices = others.length
-    ? `<div class="alts night"><p class="alts-title">${n.option === 'principal' ? 'Ou, selon vos gigoteuses :' : 'Votre choix pour cette température. Ou :'}</p>
+    ? `<div class="alts night"><p class="alts-title">${n.option === 'principal' ? 'Ou, selon votre gigoteuse :' : 'Votre choix pour cette température. Ou :'}</p>
         ${others.map((o) => altButton(state, [...o.wear.map((item) => ITEM_DRAWINGS[item]), 'gigoteuse'],
-          `${capitalize(o.wear.map((item) => labels.items_short[item]).join(' + '))} + ${o.tog} TOG${o.id === 'principal' ? ' (habituelle)' : ''}`,
-          `data-action="night-option" data-bin="${esc(n.bin ?? '')}" data-value="${esc(o.id)}"`)).join('')}</div>`
+          `${o.tog} TOG : ${o.wear.map((item) => labels.items_short[item]).join(' + ')}${o.id === 'principal' ? ' (habituelle)' : ''}`,
+          `data-action="night-option" data-bin="${esc(n.bin ?? '')}" data-value="${esc(o.id)}"`)).join('')}
+        ${otherBag ? `<p class="hint">${esc(render(state.bundle.messages, 'fabricant.night.compensation', 'short'))}.</p>` : ''}</div>`
     : '';
   return `<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('bed', { size: 18 })}Pour la nuit</h2><span class="tag amber">fabricants</span></div>
@@ -687,6 +689,7 @@ export function viewSettings(state) {
       <div class="group-body">
         <button class="row" data-action="check-update"><span>${state.updateReady ? 'Installer la mise à jour' : 'Rechercher une mise à jour'}</span><span class="value">v${VERSION}</span></button>
         ${state.androidVersion ? `<div class="row"><span>App Android installée</span><span class="value">${esc(state.androidVersion)}</span></div>` : ''}
+        ${apkUpdate(state) ? `<a class="row" href="${esc(state.apkLatest.url)}"><span>Mettre à jour l'app Android</span><span class="value">${esc(state.apkLatest.versionName)}</span></a>` : ''}
         <button class="row" data-action="copy-report"><span>Copier mes retours de test</span>${icon('share', { size: 20 })}</button>
         <a class="row" href="#apropos"><span>Charte, sources et confidentialité</span>${chev()}</a>
       </div>
@@ -820,12 +823,24 @@ export function viewReceive(state) {
     </div>`;
 }
 
+// L'app Android installée est plus ancienne que la dernière publiée (comparaison des numéros 0.13.1…).
+function apkUpdate(state) {
+  const parse = (v) => String(v ?? '').split('.').map((n) => Number.parseInt(n, 10) || 0);
+  if (!state.androidVersion || !state.apkLatest?.versionName) return false;
+  const [a, b] = [parse(state.androidVersion), parse(state.apkLatest.versionName)];
+  for (let k = 0; k < Math.max(a.length, b.length); k++) if ((a[k] ?? 0) !== (b[k] ?? 0)) return (a[k] ?? 0) < (b[k] ?? 0);
+  return false;
+}
+
 // Réglages : le widget selon le téléphone. Dans l'app Android, un seul bouton ; ouverte depuis le widget iPhone, rien.
+// Une app Android antérieure à la 0.13 n'a pas le widget Maison : on propose la mise à jour à sa place.
 function homeScreenGroup(state) {
   if (state.host === 'scriptable') return '';
+  const homeRows = state.androidHome
+    ? homeWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('home', { size: 20 })}</button>`)
+    : state.apkLatest ? `<a class="row" href="${esc(state.apkLatest.url)}"><span>Widget Maison : mettre à jour l'app Android</span><span class="value">${esc(state.androidVersion || '?')} → ${esc(state.apkLatest.versionName)}</span></a>` : '';
   const rows = state.host === 'android'
-    ? androidWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('plus', { size: 20 })}</button>`)
-      + (state.androidHome ? homeWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('home', { size: 20 })}</button>`) : '')
+    ? androidWidgetRows(state, (label, attrs) => `<button class="row" ${attrs}><span>${label}</span>${icon('plus', { size: 20 })}</button>`) + homeRows
     : `<a class="row" href="#widget"><span>Ajouter le widget</span>${chev()}</a>
         ${state.device === 'ios' && state.widgetReady && state.updateLink ? `<a class="row" href="${esc(state.updateLink)}"><span>Envoyer mes réglages au widget</span>${icon('refresh', { size: 20 })}</a>` : ''}
         ${state.installPrompt ? `<button class="row" data-action="install"><span>Installer l'app</span>${icon('download', { size: 20 })}</button>` : ''}`;
@@ -941,7 +956,7 @@ export function viewWidget(state, ctx) {
   const android = `
     <li class="step${done(1)}">${num(1)}<div class="step-body"><h3>Télécharger l'app Superbébé</h3>
       <p>L'app complète en plein écran, avec le widget.</p>
-      <a class="btn small tint" href="../dist/superbebe-android.apk" download data-step="1">Télécharger (6 Mo)</a></div></li>
+      <a class="btn small tint" href="../dist/superbebe-android.apk?v=${VERSION}" download data-step="1">Télécharger (6 Mo)</a></div></li>
     <li class="step${done(2)}">${num(2)}<div class="step-body"><h3>L'installer</h3>
       <p>Ouvrez le fichier depuis la notification de téléchargement. Si Android le demande, autorisez Chrome à installer des applications.</p></div></li>
     <li class="step${done(3)}">${num(3)}<div class="step-body"><h3>L'ouvrir avec vos réglages</h3>
@@ -990,7 +1005,7 @@ export function viewAbout(state) {
         <li>Les repères de santé et de sécurité sont relayés depuis des sources publiques, toujours citées.</li>
         <li>Tenues, créneaux et achats sont des suggestions pratiques.</li>
         <li>Les indications TOG viennent des fabricants : l'étiquette de la gigoteuse fait foi.</li>
-        <li>Tenues au choix : seulement celles publiées par un fabricant, jamais plus chaudes que la tenue proposée d'abord.</li>
+        <li>Tenues au choix : seulement celles publiées par un fabricant. La nuit, une gigoteuse plus légère va toujours avec une couche de plus dessous, une plus chaude avec une de moins.</li>
         <li>Jamais proposés : tour de lit, couverture, cale-bébé, crème solaire avant 1 an.</li>
         <li>Fièvre, maladie, symptômes : demandez conseil à un professionnel de santé. Urgence : 15 ou 112.</li>
       </ul></div></div>

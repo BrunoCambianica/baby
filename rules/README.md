@@ -50,8 +50,8 @@ Le profil ne quitte jamais le téléphone.
 ## Tenues au choix
 
 - `outfit.day_styles` : styles de la journée choisis pour l'enfant. `sans_pyjama` remplace le pyjama par un pantalon (et des chaussettes, sauf pour le pyjama léger), dehors comme à la maison ; la nuit ne change pas.
-- `night.tog_hint.bins[].alternatives` : pour une tranche de chambre, d'autres tenues publiées par un fabricant (`sources`, niveau C), au choix selon les gigoteuses qu'on a. Le choix est gardé pour la tranche (`id`) seulement ; un choix inconnu redonne la tenue principale.
-- Le contrôle de la charte refuse toute tenue au choix plus chaude que celle d'origine : ni gigoteuse d'un TOG plus élevé, ni vêtements plus chauds (indices `journee.warmth`).
+- `night.tog_hint.bins[].alternatives` : pour une tranche de chambre, d'autres tenues publiées par un fabricant (`sources`, niveau C), au choix selon la gigoteuse qu'on a. Le choix est gardé pour la tranche (`id`) seulement ; un choix inconnu (retiré des règles) redonne la tenue principale.
+- Ce qu'on met sous la gigoteuse s'additionne à son TOG : le contrôle de la charte refuse une tenue de nuit non compensée. Gigoteuse plus légère que la principale : vêtements plus chauds (indices `journee.warmth`) ; plus chaude : vêtements plus légers ; même TOG : une couche fine d'écart au plus. Le jour, un style ne rend jamais la tenue plus chaude.
 - Tailles : en mois jusqu'à 24 mois, puis en années ; plus de gigoteuse proposée après 36 mois.
 
 ## La journée en couches (`journee`)

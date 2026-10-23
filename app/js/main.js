@@ -86,8 +86,10 @@ const state = {
   widgets: host === 'android' ? ask(() => android.widgets(), 0) : 0,
   androidHome,
   homeWidgets: homeWidgets(),
-  // Version de l'app Android installée (affichée dans les réglages, utile pour savoir quel APK tourne).
+  // Version de l'app Android installée, et dernière version publiée (dist/android-version.json) : les réglages proposent
+  // la mise à jour tant qu'elle n'est pas faite (l'app elle-même ne la propose qu'une fois par jour).
   androidVersion: host === 'android' ? ask(() => android.version(), '') : '',
+  apkLatest: null,
   widgetKids: widgetKids(),
   reminder: store.reminder(),
   reminderHost,
@@ -575,7 +577,7 @@ const scriptableLink = () => (state.profile ? `scriptable:///run/${encodeURIComp
 // Lien qui ouvre l'app Android du widget avec la configuration ; sans l'app, Chrome propose de la télécharger.
 function androidLink() {
   const base = new URL('../', location.href).href;
-  const apk = new URL('../dist/superbebe-android.apk', location.href).href;
+  const apk = new URL(`../dist/superbebe-android.apk?v=${V.VERSION}`, location.href).href;
   return `intent://config/${configText()}?base=${encodeURIComponent(base)}`
     + `#Intent;scheme=superbebe;package=fr.superbebe.widget;S.browser_fallback_url=${encodeURIComponent(apk)};end`;
 }
@@ -1273,9 +1275,23 @@ window.sbOnglet = (tab) => {
   paint();
 };
 
+// App Android : la dernière version publiée de l'APK, pour proposer la mise à jour dans les réglages.
+function loadApkLatest() {
+  if (host !== 'android') return;
+  fetch(new URL(`../dist/android-version.json?t=${Date.now()}`, location.href), { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((latest) => {
+      if (!latest?.versionName) return;
+      state.apkLatest = { ...latest, url: new URL(`../dist/${latest.apk ?? 'superbebe-android.apk'}`, location.href).href };
+      if (currentView() === 'reglages') paint();
+    })
+    .catch(() => {});
+}
+
 async function boot() {
   takeImport();
   pullReadings();
+  loadApkLatest();
   paint();
   try {
     state.bundle = await loadBundle();
