@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.13.4';
+export const VERSION = '0.13.5';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -513,9 +513,15 @@ function homeWidgetPromo(state) {
     <div><h3>Le widget Maison</h3><p>${text}</p></div>
   </section>`;
   if (state.host === 'android') {
-    return state.androidHome && !state.homeWidgets
-      ? card(`La température à noter avec − et + depuis l'écran d'accueil, et la tenue qui va avec. <button class="link" data-action="add-home-widget" data-child="${esc(state.profile.id)}">Ajouter</button>`)
-      : '';
+    // App Android antérieure à la 0.13 : pas de widget Maison, ni dans l'app ni dans la liste des widgets du téléphone.
+    if (!state.androidHome) {
+      const url = state.apkLatest?.url ?? `../dist/superbebe-android.apk?v=${VERSION}`;
+      const versions = `${state.androidVersion || 'ancienne'}${state.apkLatest ? ` → ${state.apkLatest.versionName}` : ''}`;
+      return card(`Il faut la nouvelle version de l'app Android (${esc(versions)}) : téléchargez-la, puis ouvrez le fichier et touchez « Mettre à jour ». <a class="link" href="${esc(url)}">Mettre à jour l'app</a>`);
+    }
+    return state.homeWidgets
+      ? ''
+      : card(`La température à noter avec − et + depuis l'écran d'accueil, et la tenue qui va avec. <button class="link" data-action="add-home-widget" data-child="${esc(state.profile.id)}">Ajouter</button>`);
   }
   return state.device === 'android' && !state.host && state.androidLink
     ? card(`Il est dans l'app Android Superbébé (version 0.13 ou plus), pas dans cette version navigateur. <a class="link" href="${esc(state.androidLink)}">Ouvrir l'app</a>`)

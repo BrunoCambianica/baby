@@ -2,7 +2,7 @@
 // Changer VERSION à chaque mise en ligne pour que les téléphones récupèrent la nouvelle version.
 // sw-moteur.js (généré par tools/build-widget.js) : le moteur et les règles, pour calculer le rappel sans l'app.
 importScripts('sw-moteur.js');
-const VERSION = '0.13.4';
+const VERSION = '0.13.5';
 const CACHE = `superbebe-${VERSION}`;
 const ASSETS = [
   './',
@@ -31,8 +31,12 @@ const ASSETS = [
   '../widget/chargeur.js',
 ];
 
+// Fichiers de la nouvelle version demandés au réseau, pas au cache HTTP du navigateur : sinon un fichier encore
+// frais de la version précédente pourrait se mêler aux nouveaux.
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE)
+    .then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -45,9 +49,11 @@ self.addEventListener('activate', (event) => {
 
 // Fichiers de l'app : réponse immédiate depuis le cache, mise à jour en arrière-plan.
 // Météo et communes (autres domaines) : toujours le réseau, l'app gère elle-même son cache.
+// dist/ (APK Android et sa version publiée) : toujours le réseau, pour ne jamais annoncer une version dépassée.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.includes('/dist/')) return;
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(request, { ignoreSearch: true });

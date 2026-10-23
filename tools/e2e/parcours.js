@@ -354,6 +354,13 @@ await test('App Android ancienne (0.8) : pas de widget Maison, la mise à jour e
   assert((await link.textContent()).includes(`0.8.0 → ${latest.versionName}`), await link.textContent());
   assert(await page.isVisible('text=App Android installée') && await page.isVisible('a.row >> text=Mettre à jour l\'app Android'), 'version installée ou mise à jour absentes');
   assert(!(await page.isVisible('text=Le widget Maison')), 'widget Maison proposé à une app qui ne l\'a pas');
+  // L'onglet Maison le dit aussi, avec la version installée et le lien de mise à jour.
+  await page.goto(APP);
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.waitForSelector('.promo >> text=Le widget Maison');
+  const card = await page.textContent('.promo');
+  assert(card.includes(`0.8.0 → ${latest.versionName}`) && card.includes('Mettre à jour l\'app'), card);
+  assert((await page.getAttribute('.promo a.link', 'href')).endsWith(`dist/superbebe-android.apk?v=${latest.versionCode}`), await page.getAttribute('.promo a.link', 'href'));
 });
 
 await test('Android, version navigateur : le widget Maison renvoie vers l\'app Android, et les réglages disent où l\'on est', async (use) => {
