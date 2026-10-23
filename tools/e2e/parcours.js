@@ -462,7 +462,7 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
   await page.goto(APP);
   await page.waitForSelector('.day');
   assert((await page.textContent('.hero .tonight')).includes('Pas de sortie conseillée ce soir'), 'ce soir non dit');
-  assert((await page.textContent('.hero-label')).includes('Demain · la tenue à préparer ce soir'), await page.textContent('.hero-label'));
+  assert((await page.textContent('.hero-label')).includes('Demain'), await page.textContent('.hero-label'));
   // Demain : jusqu'à trois créneaux, dans l'ordre de la journée, un seul marqué idéal.
   const windows = await page.locator('.hero .windows .w-time').allTextContents();
   const starts = windows.map((t) => parseInt(t, 10));
@@ -470,7 +470,7 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
   assert((await page.locator('.hero .windows li.best').count()) === 1, 'créneau idéal non marqué');
   assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '5°→19°', await page.textContent('.hero-big'));
   assert(!(await page.isVisible('.days')), 'choix du jour affiché le soir');
-  assert((await page.textContent('#t-jour')).includes('À préparer ce soir'), await page.textContent('#t-jour'));
+  assert((await page.textContent('#t-jour')).includes('À préparer pour demain'), await page.textContent('#t-jour'));
   assert((await page.textContent('.day .change-time')).startsWith('Demain matin'), await page.textContent('.day .change-time'));
   assert(await page.isVisible('text=Ce soir') && await page.isVisible('text=Gigoteuse 2 TOG'), 'carte de la nuit absente');
   assert((await page.getAttribute('[data-value="sortir"]', 'aria-selected')) === 'true', 'l\'app doit rester sur Sorties');
@@ -573,6 +573,9 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   assert(tiles.join() === 'Body ML,Pyjama,Gigoteuse 2 TOG', `nuit par défaut : ${tiles.join()}`);
   const night = await page.locator('select[data-action="night-option"] option').allTextContents();
   assert(night.join(' | ') === '2 TOG : body ML + pyjama (par défaut) | 2,5 TOG : body ML' && await page.isVisible('text=Gigoteuse plus légère : une couche de plus dessous'), night.join(' | '));
+  // Toucher la liste l'ouvre seulement : rien ne change avant le choix.
+  await page.click('select[data-action="night-option"]');
+  assert(!(await stored(page)).children[0].night_options?.n20, 'tenue changée au simple toucher');
   await page.selectOption('select[data-action="night-option"]', 'tog-2-5');
   tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
   assert(tiles.join() === 'Body ML,Gigoteuse 2,5 TOG', tiles.join());

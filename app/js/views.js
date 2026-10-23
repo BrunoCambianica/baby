@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.14.0';
+export const VERSION = '0.14.1';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -196,7 +196,7 @@ function heroEvening(state, ctx) {
   // D'abord ce soir (pas de sortie), puis demain : on lit la journée qui vient comme une tenue à préparer, pas à mettre.
   return `<header class="hero hero--nuit">${heroArt('moonStars')}${heroTop(state, ctx.date)}
     <p class="status-pill glass tonight">${icon('moon', { size: 18 })}Pas de sortie conseillée ce soir</p>
-    <p class="hero-label">${who}Demain · la tenue à préparer ce soir</p>
+    <p class="hero-label">${who}Demain</p>
     <p class="hero-big">${range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`}</p>
     <p class="hero-sub"><span>${esc(slots.length ? conditions(slots) : '')}${esc(outing && slots.length ? ` · ${outing}` : outing)}</span></p>
     ${windowsRow(next.outing.windows, 'Demain, créneaux de sortie')}
@@ -314,7 +314,7 @@ function changeItem(state, item, sign) {
 }
 
 // La journée en couches : la tenue du matin, au plus deux changements, le sac, le geste de la nuque.
-// Au fil de la journée, l'étape en cours est marquée « maintenant ». La veille au soir : « À préparer ce soir ».
+// Au fil de la journée, l'étape en cours est marquée « maintenant ». La veille au soir : « À préparer pour demain ».
 function dayCard(state, ctx, { evening = false } = {}) {
   const M = state.bundle.messages;
   const labels = M.labels;
@@ -341,7 +341,7 @@ function dayCard(state, ctx, { evening = false } = {}) {
   const check = M.messages[j.check];
   return `<section class="card day" aria-labelledby="t-jour">
     <div class="card-head">
-      <h2 class="card-title" id="t-jour">${icon('shirt', { size: 18 })}${evening ? 'À préparer ce soir' : 'Habillez-le une fois'}</h2>
+      <h2 class="card-title" id="t-jour">${icon('shirt', { size: 18 })}${evening ? 'À préparer pour demain' : 'Habillez-le une fois'}</h2>
       <button class="icon-btn" data-action="share-fiche" aria-label="Envoyer la fiche du jour">${icon('share', { size: 18 })}</button>
     </div>
     ${modes(state, ctx.result.transport, state.profile.birth)}

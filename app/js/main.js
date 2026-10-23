@@ -1196,7 +1196,8 @@ document.addEventListener('click', (event) => {
     if (!step.dataset.action) setTimeout(paint, 400);
   }
   const el = event.target.closest('[data-action]');
-  if (!el || el.disabled) return;
+  // Une liste déroulante agit au choix (événement change), pas au toucher : sinon elle ne s'ouvre pas sur téléphone.
+  if (!el || el.disabled || el.tagName === 'SELECT') return;
   const handler = actions[el.dataset.action];
   if (!handler) return;
   event.preventDefault();
