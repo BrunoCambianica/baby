@@ -438,11 +438,11 @@ export function journeeAt(journee, hhmm) {
   return { items, next };
 }
 
-// À la maison, en journée : la tenue selon la température de la pièce (le même relevé que pour la nuit) ;
-// sans relevé, pour le milieu de la plage de 20 à 22 °C (Mieux vivre, Québec), en le disant.
+// À la maison, en journée : la tenue selon la température de la pièce où il passe la journée, relevée à part
+// de la chambre (day_room_temp_c) ; sans relevé, pour le milieu de la plage de 20 à 22 °C (Mieux vivre, Québec), en le disant.
 function planIndoor(input, R, age) {
   const I = R.indoor;
-  const room = input.profile.room_temp_c ?? null;
+  const room = input.profile.day_room_temp_c ?? null;
   const ref = room ?? (I.comfort_range_c.min + I.comfort_range_c.max) / 2;
   const t = I.round_room_temp ? Math.round(ref) : ref;
   const variant = (I.age_variants ?? []).filter((v) => age >= v.from_months).at(-1);
@@ -686,6 +686,11 @@ export function widgetShort(result, moment) {
 }
 
 export const momentOf = (now) => (toMin(now ?? '08:00') < toMin('18:00') ? 'jour' : 'soir');
+// Onglet et widget Maison : la journée de 6 h à 18 h, la nuit (sa chambre) le reste du temps.
+export const homeMoment = (now) => {
+  const m = toMin(now ?? '08:00');
+  return m >= toMin('06:00') && m < toMin('18:00') ? 'jour' : 'nuit';
+};
 // Ce qu'affichent l'app et les widgets : le soir dès 18 h, ou dès que la dernière sortie possible de la journée est passée.
 export const displayMoment = (result, now) => (momentOf(now) === 'soir' || result.outing.reason === 'journee_terminee' ? 'soir' : 'jour');
 

@@ -1,5 +1,5 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
-import { addDays, ageMonths, clamp, displayMoment, evaluate, hourFr, render, toMin } from '../../engine/engine.js';
+import { addDays, ageMonths, clamp, displayMoment, evaluate, homeMoment, hourFr, render, toMin } from '../../engine/engine.js';
 import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
@@ -66,6 +66,8 @@ const state = {
   today: parisNow().date,
   tab: 'sortir',
   day: 'aujourdhui',
+  // Onglet Maison : « jour » ou « nuit » choisi à la main ; sinon selon l'heure (voir homeView).
+  maison: null,
   draft: null,
   results: [],
   open: new Set(),
@@ -114,11 +116,16 @@ function currentView() {
   return state.received ? 'recevoir' : 'app';
 }
 
-const freshRoom = (profile) => (profile.room && Date.now() - profile.room.at < ROOM_TTL_MS ? profile.room.value : null);
+// Relevé encore valable (16 heures) : `nuit`, la chambre ; `jour`, la pièce où il passe la journée.
+const freshRoom = (profile, kind = 'nuit') => {
+  const reading = kind === 'jour' ? profile.room_day : profile.room;
+  return reading && Date.now() - reading.at < ROOM_TTL_MS ? reading.value : null;
+};
+const homeView = () => state.maison ?? homeMoment(parisNow().time);
 const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
   .format(new Date(ms)).replace(':', ' h ');
 
-// Les onglets Nuit et Prévoir parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Journée.
+// Les onglets Maison et Prévoir parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Sorties.
 function compute(day) {
   if (!state.forecast || !state.bundle) return null;
   const now = parisNow();
@@ -135,7 +142,8 @@ function compute(day) {
       outing_window: p.outing_window,
       outing_duration_h: p.outing_duration_h,
       outfit_offset: p.outfit_offset ?? 0,
-      room_temp_c: tomorrow ? null : freshRoom(p),
+      room_temp_c: tomorrow ? null : freshRoom(p, 'nuit'),
+      day_room_temp_c: tomorrow ? null : freshRoom(p, 'jour'),
       inventory: p.inventory ?? {},
     },
     date,
@@ -178,7 +186,7 @@ let lastKey = '';
 function paint() {
   const view = currentView();
   if (['onboarding', 'reglages', 'enfant'].includes(view) && !state.draft) state.draft = newDraft(view);
-  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.draft?.step ?? ''}`;
+  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.tab === 'nuit' ? homeView() : ''}|${state.draft?.step ?? ''}`;
   app.classList.toggle('anim', key !== lastKey);
   lastKey = key;
   let html;
@@ -224,7 +232,7 @@ function setThemeColor(view) {
   if (view === 'onboarding') color = SKY.clair;
   if (view === 'app') {
     const ctx = state.tab === 'sortir' ? compute(state.day) : null;
-    const house = state.tab === 'nuit' && compute('aujourdhui')?.moment !== 'soir' ? SKY.maison : SKY.nuit;
+    const house = homeView() === 'jour' ? SKY.maison : SKY.nuit;
     color = state.tab === 'nuit' ? house : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
   }
   meta.setAttribute('content', color);
@@ -380,11 +388,11 @@ function updateHousehold(patch) {
   saveHousehold();
 }
 
-// Réglages d'un enfant (l'enfant affiché par défaut) : prénom, naissance, mode, tendance, garde-robe, chambre.
-// Le relevé de la chambre a sa propre date : il ne compte pas comme un changement des réglages de l'enfant.
+// Réglages d'un enfant (l'enfant affiché par défaut) : prénom, naissance, mode, tendance, garde-robe, relevés.
+// Les relevés (chambre, pièce de jour) ont leur propre date : ils ne comptent pas comme un changement des réglages.
 function updateChild(patch, id = state.profile.id) {
   const now = Date.now();
-  const touched = Object.keys(patch).some((k) => k !== 'room');
+  const touched = Object.keys(patch).some((k) => k !== 'room' && k !== 'room_day');
   const children = state.household.children.map((c) => (c.id === id ? { ...c, ...patch, ...(touched ? { updated: now } : {}) } : c));
   state.household = { ...state.household, children, updated: now };
   saveHousehold();
@@ -630,6 +638,13 @@ const actions = {
     paint();
     window.scrollTo(0, 0);
   },
+  // Onglet Maison, jour ou nuit (aussi depuis « Ce soir » dans l'onglet Sorties).
+  maison(el) {
+    state.maison = el.dataset.value;
+    state.tab = 'nuit';
+    paint();
+    window.scrollTo(0, 0);
+  },
   day(el) {
     state.day = el.dataset.value;
     state.tab = 'sortir';
@@ -808,12 +823,15 @@ const actions = {
     updateHousehold({ outing_duration_h: d });
     paint();
   },
+  // Relevé du jour (pièce de vie) ou de la nuit (chambre). Sans relevé récent, on part de la valeur affichée :
+  // le dernier relevé, sinon 21 °C le jour et 19 °C la nuit.
   room(el) {
     const p = state.profile;
-    // Sans relevé récent, on part de la valeur affichée (21 °C le jour, 19 °C le soir).
-    const base = freshRoom(p) ?? (el.dataset.base ? Number(el.dataset.base) : p.room?.value ?? 19);
+    const kind = el.dataset.kind === 'jour' ? 'jour' : 'nuit';
+    const last = kind === 'jour' ? p.room_day : p.room;
+    const base = freshRoom(p, kind) ?? last?.value ?? Number(el.dataset.base || (kind === 'jour' ? 21 : 19));
     const value = clamp(Math.round((base + Number(el.dataset.value)) * 2) / 2, 10, 35);
-    updateChild({ room: { value, at: Date.now() } });
+    updateChild({ [kind === 'jour' ? 'room_day' : 'room']: { value, at: Date.now() } });
     paint();
   },
   own(el) {

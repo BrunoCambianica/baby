@@ -1,4 +1,5 @@
-// Le foyer : commune et horaires communs, puis les enfants, chacun avec ses réglages, sa garde-robe et sa chambre.
+// Le foyer : commune et horaires communs, puis les enfants, chacun avec ses réglages, sa garde-robe et deux relevés :
+// `room_day`, la pièce où il passe la journée, et `room`, sa chambre la nuit ({ value, at }, valables 16 heures).
 // Fonctions pures, testées par tools/test-foyer.js.
 import { configChildren } from '../../engine/adapter.js';
 
@@ -12,7 +13,7 @@ export function newId() {
 }
 
 export const newChild = ({ name = '', birth, transport = 'poussette', outfit_offset = 0 }) => ({
-  id: newId(), name, birth, transport, outfit_offset, inventory: {}, room: null,
+  id: newId(), name, birth, transport, outfit_offset, inventory: {}, room: null, room_day: null,
 });
 
 // Profil des versions à un seul enfant (jusqu'à 0.5) : il devient le premier enfant du foyer.
@@ -23,6 +24,7 @@ export function migrate(raw) {
     ...newChild({ birth: raw.birth, transport: raw.transport ?? 'poussette', outfit_offset: raw.outfit_offset ?? 0 }),
     inventory: raw.inventory ?? {},
     room: raw.room ?? null,
+    room_day: null,
   };
   return {
     v: 2,
@@ -65,7 +67,7 @@ export function fromShared(shared, local) {
   };
 }
 
-// Foyer décrit par une configuration : commune, horaires et enfants. Garde-robe et relevés des chambres
+// Foyer décrit par une configuration : commune, horaires et enfants. Garde-robe et relevés (jour et chambre)
 // des enfants déjà connus (même identifiant) sont gardés ; `keepView` garde l'affichage choisi sur ce téléphone.
 export function fromConfig(cfg, local, { keepView = false } = {}) {
   const known = new Map((local?.children ?? []).map((c) => [c.id, c]));
@@ -74,7 +76,7 @@ export function fromConfig(cfg, local, { keepView = false } = {}) {
     const before = known.get(id);
     return {
       id, name: c.name, birth: c.birth, transport: c.transport, outfit_offset: c.outfit_offset,
-      inventory: before?.inventory ?? {}, room: before?.room ?? null,
+      inventory: before?.inventory ?? {}, room: before?.room ?? null, room_day: before?.room_day ?? null,
     };
   });
   // Sans code Insee (anciennes configurations), la position sert de clé pour la météo en cache.

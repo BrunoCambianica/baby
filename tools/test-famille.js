@@ -52,14 +52,15 @@ await test('Partagé : commune, horaires, enfants ; pas l\'affichage, l\'enfant 
   assert(shared.children[0].name === 'Léo' && !('outfit_view' in shared) && !('current' in shared) && !('reminder' in shared), JSON.stringify(shared));
 });
 
-await test('Fusion : l\'enfant le plus récent, le relevé de chambre le plus récent, les réglages communs les plus récents', () => {
-  const local = household([child('leo', 'Léo', 10, { transport: 'porte_bebe', room: { value: 19, at: 100 } }), child('zoe', 'Zoé', 10)], { settings_at: 5 });
-  const remote = household([child('leo', 'Léo', 20, { transport: 'poussette', room: { value: 18, at: 50 } }), child('mia', 'Mia', 30)], {
+await test('Fusion : l\'enfant le plus récent, chaque relevé (chambre, pièce de jour) le plus récent, les réglages communs les plus récents', () => {
+  const local = household([child('leo', 'Léo', 10, { transport: 'porte_bebe', room: { value: 19, at: 100 }, room_day: { value: 20, at: 40 } }), child('zoe', 'Zoé', 10)], { settings_at: 5 });
+  const remote = household([child('leo', 'Léo', 20, { transport: 'poussette', room: { value: 18, at: 50 }, room_day: { value: 22.5, at: 60 } }), child('mia', 'Mia', 30)], {
     settings_at: 9, outing_window: { from: '08:00', to: '18:00' },
   });
   const merged = mergeHousehold(local, remote);
   assert(merged.children.map((c) => c.id).join() === 'leo,zoe,mia', merged.children.map((c) => c.id).join());
-  assert(merged.children[0].transport === 'poussette' && merged.children[0].room.value === 19, JSON.stringify(merged.children[0]));
+  assert(merged.children[0].transport === 'poussette' && merged.children[0].room.value === 19 && merged.children[0].room_day.value === 22.5, JSON.stringify(merged.children[0]));
+  assert(sharedPart(merged).children[0].room_day.value === 22.5, 'relevé du jour non partagé');
   assert(merged.outing_window.from === '08:00' && merged.outfit_view === 'dessins', 'réglages communs');
 });
 

@@ -55,7 +55,7 @@ export async function unseal(key, bloc) {
   return JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.subarray(0, 12) }, key, bytes.subarray(12))));
 }
 
-// Ce que partagent les parents : commune, horaires, enfants (avec garde-robe et chambre). L'affichage, l'enfant
+// Ce que partagent les parents : commune, horaires, enfants (avec garde-robe et relevés). L'affichage, l'enfant
 // affiché, le rappel du soir et les suggestions masquées restent propres à chaque téléphone.
 export function sharedPart(h) {
   return {
@@ -64,8 +64,8 @@ export function sharedPart(h) {
     outing_window: h.outing_window,
     outing_duration_h: h.outing_duration_h,
     settings_at: h.settings_at ?? 0,
-    children: h.children.map(({ id, name, birth, transport, outfit_offset, inventory, room, updated }) => ({
-      id, name, birth, transport, outfit_offset, inventory: inventory ?? {}, room: room ?? null, updated: updated ?? 0,
+    children: h.children.map(({ id, name, birth, transport, outfit_offset, inventory, room, room_day, updated }) => ({
+      id, name, birth, transport, outfit_offset, inventory: inventory ?? {}, room: room ?? null, room_day: room_day ?? null, updated: updated ?? 0,
     })),
     removed: h.removed ?? {},
   };
@@ -74,7 +74,7 @@ export function sharedPart(h) {
 const newestRoom = (a, b) => ((b?.at ?? 0) > (a?.at ?? 0) ? b : a) ?? null;
 
 // Fusion de deux versions : les réglages communs les plus récents, chaque enfant dans sa version la plus récente,
-// le relevé de chambre le plus récent, et les enfants retirés d'un côté ou de l'autre restent retirés.
+// les relevés (jour et chambre) les plus récents, et les enfants retirés d'un côté ou de l'autre restent retirés.
 export function mergeHousehold(local, remote) {
   const settings = (remote.settings_at ?? 0) > (local.settings_at ?? 0) ? remote : local;
   const removed = { ...(local.removed ?? {}) };
@@ -83,7 +83,7 @@ export function mergeHousehold(local, remote) {
   for (const child of [...local.children, ...remote.children]) {
     const before = byId.get(child.id);
     const newer = !before || (child.updated ?? 0) > (before.updated ?? 0) ? child : before;
-    byId.set(child.id, { ...newer, room: newestRoom(before?.room, child.room) });
+    byId.set(child.id, { ...newer, room: newestRoom(before?.room, child.room), room_day: newestRoom(before?.room_day, child.room_day) });
   }
   const order = [...new Set([...local.children, ...remote.children].map((c) => c.id))];
   const children = order.map((id) => byId.get(id)).filter((c) => !(removed[c.id] >= (c.updated ?? 0)));

@@ -151,7 +151,8 @@ await test('Reprise du profil 0.5 : il devient le premier enfant, garde-robe, ch
   assert(h.v === 2 && c && c.outfit_offset === 1 && c.inventory.gigoteuse_hiver[0] === '0-6m' && c.room.value === 20.5, JSON.stringify(h));
   const hidden = await page.evaluate(() => JSON.parse(localStorage.getItem('sb.masques')));
   assert(hidden[0] === `${c.id}|chanceliere:unique`, JSON.stringify(hidden));
-  await page.click('[data-value="nuit"]');
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.click('[data-action="maison"][data-value="nuit"]');
   assert((await page.textContent('.hero-big')).includes('20,5'), 'relevé de la chambre perdu');
 });
 
@@ -184,14 +185,15 @@ await test('Deuxième enfant : fiche, pastilles, tenue et mode propres à chacun
   assert(leoItems.some((t) => /Body/.test(t)), `tenue de Léo : ${leoItems.join(', ')}`);
   await shot(page, 'l1-leo');
   // Chambre de chacun.
-  await page.click('[data-value="nuit"]');
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.click('[data-action="maison"][data-value="nuit"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   await page.click('.kids >> text=Zoé');
-  assert(await page.isVisible("text=C'est la température chez vous"), 'relevé de Léo appliqué à Zoé');
+  assert(await page.isVisible("text=C'est la température de sa chambre"), 'relevé de Léo appliqué à Zoé');
   assert(!(await page.isVisible('text=Sur le dos, à plat')), 'repères du nourrisson affichés pour Zoé');
   await shot(page, 'l1-nuit-zoe');
   const h = await stored(page);
-  assert(h.children[0].room?.value === 21.5 && !h.children[1].room, JSON.stringify(h.children.map((c) => c.room)));
+  assert(h.children[0].room?.value === 19.5 && !h.children[1].room && !h.children[0].room_day, JSON.stringify(h.children.map((c) => [c.room, c.room_day])));
 });
 
 await test('Fiche d\'un enfant : prénom, naissance et retrait', async (use) => {
@@ -273,10 +275,11 @@ await test('Widget iPhone : l\'app s\'ouvre sur l\'enfant du widget ; une config
   const h = await stored(page);
   assert(h.children.length === 2 && h.children[0].transport === 'poussette', 'configuration plus ancienne appliquée');
   // Les changements partent vers le widget : configuration v2 et relevés par enfant.
-  await page.click('[data-value="nuit"]');
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.click('[data-action="maison"][data-value="nuit"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   const src = await page.getAttribute('#sb-sync', 'data-sync');
-  assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:21\.5@\d+&rappel=0$/.test(src), src);
+  assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+&rappel=0$/.test(src), src);
   const newer = encodeConfig(householdToConfig({ ...local, outing_duration_h: 2, updated: Date.now() + 60_000 }), toB64);
   await page.goto(`${APP}?hote=scriptable#import=${newer}`);
   await page.waitForSelector('.hero-big');
@@ -397,7 +400,7 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
   assert((await page.textContent('#t-jour')).includes('À préparer ce soir'), await page.textContent('#t-jour'));
   assert((await page.textContent('.day .change-time')).startsWith('Demain matin'), await page.textContent('.day .change-time'));
   assert(await page.isVisible('text=Ce soir') && await page.isVisible('text=Gigoteuse 2,5 TOG'), 'carte de la nuit absente');
-  assert((await page.getAttribute('[data-value="sortir"]', 'aria-selected')) === 'true', 'l\'app doit rester sur Journée');
+  assert((await page.getAttribute('[data-value="sortir"]', 'aria-selected')) === 'true', 'l\'app doit rester sur Sorties');
   await shot(page, 'l3-veille-au-soir');
   await page.goto(`${APP}#widget`);
   await page.waitForSelector('.widget-demo');
@@ -435,12 +438,13 @@ await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app An
   assert((await iphone.getAttribute('#sb-sync', 'data-sync')).endsWith('&rappel=0'), 'rappel non coupé');
 });
 
-await test('Maison : en journée la tenue pour la pièce, le soir la nuit', async (use) => {
+await test('Maison : le jour et la nuit, chacun avec son relevé ; la nuit par défaut le soir', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await page.goto(APP);
-  await page.click('[data-value="nuit"]');
-  await page.waitForSelector('text=En journée, à la maison');
-  assert((await page.textContent('.tabbar')).includes('Maison'), 'onglet Maison absent');
+  assert((await page.textContent('.tabbar')).includes('Sorties') && (await page.textContent('.tabbar')).includes('Maison'), 'onglets Sorties et Maison absents');
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.waitForSelector('text=Pour la journée');
+  assert((await page.getAttribute('[data-action="maison"][data-value="jour"]', 'aria-selected')) === 'true', 'le jour doit être choisi à 10 h');
   assert((await page.textContent('.hero-big')).startsWith('21,0'), await page.textContent('.hero-big'));
   await page.click("text=C'est la température chez vous");
   let names = await page.locator('.card:first-of-type .dress-name').allTextContents();
@@ -450,13 +454,23 @@ await test('Maison : en journée la tenue pour la pièce, le soir la nuit', asyn
   names = await page.locator('.card:first-of-type .dress-name').allTextContents();
   assert(names.join() === 'Body léger' && await page.isVisible('text=Protéger de la chaleur, hydrater régulièrement'), names.join());
   await shot(page, 'l5-maison-jour');
+  // La nuit garde son propre relevé : rien de noté pour la chambre.
+  await page.click('[data-action="maison"][data-value="nuit"]');
+  await page.waitForSelector('text=Pour la nuit');
+  assert((await page.textContent('.hero-big')).startsWith('19,0') && await page.isVisible("text=C'est la température de sa chambre"), await page.textContent('.hero-big'));
+  assert(await page.isVisible('text=Gigoteuse 2,5 TOG') && !(await page.isVisible('text=Pour la journée')), 'tenue de nuit');
+  const h = await stored(page);
+  assert(h.children[0].room_day?.value === 28 && !h.children[0].room, JSON.stringify(h.children[0]));
   await page.context().close();
   const evening = use(await phone({ at: '2026-10-21T20:30:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await evening.goto(APP);
-  await evening.click('[data-value="nuit"]');
+  // « Noter la chambre », dans la carte « Ce soir » de l'onglet Sorties, ouvre Maison côté nuit.
+  await evening.click('text=Noter la chambre');
   await evening.waitForSelector('text=Pour la nuit');
-  assert(!(await evening.isVisible('text=En journée, à la maison')) && (await evening.textContent('.hero-label')).includes('Ce soir'), 'carte du jour le soir');
+  assert(!(await evening.isVisible('text=Pour la journée')) && (await evening.textContent('.hero-label')).includes('La nuit, dans sa chambre'), 'la nuit attendue le soir');
   await shot(evening, 'l5-maison-soir');
+  await evening.click('[data-action="maison"][data-value="jour"]');
+  await evening.waitForSelector('text=Pour la journée');
 });
 
 // Parcours avec l'API locale (pas sur le site en ligne : l'API du VPS n'y est pas encore branchée).

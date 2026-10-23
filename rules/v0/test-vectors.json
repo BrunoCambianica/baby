@@ -832,7 +832,7 @@
     {
       "id": "maison-21",
       "description": "À la maison à 21 °C : body manches longues et pyjama, comme un adulte en pantalon et haut léger",
-      "input": { "profile": { "room_temp_c": 21 } },
+      "input": { "profile": { "day_room_temp_c": 21 } },
       "expect": {
         "indoor.wear": ["body_ml", "pyjama"],
         "indoor.room_status": "in_range",
@@ -843,13 +843,13 @@
     {
       "id": "maison-fraiche",
       "description": "Maison à 17 °C : un gilet fin en plus, et la pièce est sous 20 °C",
-      "input": { "profile": { "room_temp_c": 17 } },
+      "input": { "profile": { "day_room_temp_c": 17 } },
       "expect": { "indoor.wear": ["body_ml", "pyjama", "gilet_fin"], "indoor.room_status": "below" }
     },
     {
       "id": "maison-chaleur",
       "description": "Appartement à 28 °C : un vêtement court et léger suffit, repères de Santé publique France sur la chaleur",
-      "input": { "profile": { "room_temp_c": 28 } },
+      "input": { "profile": { "day_room_temp_c": 28 } },
       "expect": { "indoor.wear": ["body_leger"], "indoor.relays.include": ["relay.heat.protect", "relay.heat.shutters"] }
     },
     {
@@ -861,8 +861,26 @@
     {
       "id": "maison-enfant",
       "description": "Enfant de 2 ans et demi à 21 °C : haut et pantalon",
-      "input": { "profile": { "birth": "2024-03-15", "room_temp_c": 21 } },
+      "input": { "profile": { "birth": "2024-03-15", "day_room_temp_c": 21 } },
       "expect": { "indoor.wear": ["haut_ml", "pantalon"] }
+    },
+    {
+      "id": "maison-releves-separes",
+      "description": "Salon à 18 °C le jour, chambre à 23 °C la nuit : chaque tenue suit son relevé, jamais celui de l'autre pièce",
+      "input": { "now": "20:30", "profile": { "day_room_temp_c": 18, "room_temp_c": 23 } },
+      "expect": {
+        "indoor.wear": ["body_ml", "pyjama", "gilet_fin"],
+        "indoor.room_temp_c": 18,
+        "night.room_temp_c": 23,
+        "night.tog": "1",
+        "night.wear": ["pyjama_leger"]
+      }
+    },
+    {
+      "id": "maison-releve-chambre-seul",
+      "description": "Seule la chambre est relevée : la tenue de jour reste celle du repère de 20 à 22 °C",
+      "input": { "profile": { "room_temp_c": 16 } },
+      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pyjama"], "night.tog": "2,5" }
     },
     {
       "id": "produit-tour-de-lit",

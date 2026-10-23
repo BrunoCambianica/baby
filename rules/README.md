@@ -34,7 +34,7 @@ node tools/run-vectors.js --show creneau-fortes-chaleurs   # résultat complet d
 | Champ | Contenu |
 |---|---|
 | `date`, `now` | Jour (`AAAA-MM-JJ`) et heure locale (`HH:MM`) |
-| `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c`, `inventory` (`{ catégorie: [tailles possédées] }`). Plusieurs enfants : un appel par enfant |
+| `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c` (sa chambre, pour la nuit), `day_room_temp_c` (la pièce où il passe la journée, pour la tenue à la maison), `inventory` (`{ catégorie: [tailles possédées] }`). Plusieurs enfants : un appel par enfant |
 | `forecast` | `daylight` (`sunrise`, `sunset`), `hourly` (`time`, `temp_c`, `feels_c`, `precip_prob`, `precip_mm`, `gust_kmh`, `uv`), `daily.tmax_c` facultatif |
 | `alerts` | `vigilance` (`[{ phenomenon, color }]`, couleurs Météo-France), `air` (`{ episode, pollutant }`) |
 | `outlook` | Semaines à venir : `week_start`, `tmax_mean`, `tmean`, `rainy_days`, `uv_max_mean` |

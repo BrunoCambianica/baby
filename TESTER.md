@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.8)
+# Tester Superbébé (version 0.11)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -9,14 +9,14 @@ Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir
 
 Au premier lancement, trois questions : votre commune, le mois de naissance de votre enfant (et son prénom ou un surnom, si vous voulez), et comment vous sortez le plus souvent (poussette, porte-bébé, à pied à partir de 2 ans, ou voiture).
 
-**Plusieurs enfants ?** Réglages, **Ajouter un enfant**. Chacun a son mode de sortie, sa tendance, sa garde-robe et sa chambre ; des pastilles en haut de l'écran passent de l'un à l'autre. À partir de 2 ans, les tenues changent (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière) et les tailles passent en années.
+**Plusieurs enfants ?** Réglages, **Ajouter un enfant**. Chacun a son mode de sortie, sa tendance, sa garde-robe et ses relevés de température ; des pastilles en haut de l'écran passent de l'un à l'autre. À partir de 2 ans, les tenues changent (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière) et les tailles passent en années.
 
 L'app a trois onglets :
-- **Journée** : habillez-le une fois le matin. La tenue du matin en petits dessins (ou en texte : Réglages, Affichage, Tenues), puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus) et le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. La journée suit la plage horaire des réglages ; la sortie idéale est rappelée en haut. **Envoyer la fiche du jour** partage une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse) ;
-- **Maison** : la température chez vous (boutons − et +). En journée, la tenue pour rester à la maison ; le soir, quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir ;
+- **Sorties** : habillez-le une fois le matin. La tenue du matin en petits dessins (ou en texte : Réglages, Affichage, Tenues), puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus) et le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. La journée suit la plage horaire des réglages ; la sortie idéale est rappelée en haut. **Envoyer la fiche du jour** partage une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse) ;
+- **Maison** : **Jour** ou **Nuit**, chacun avec sa température (boutons − et +). Le jour, la pièce où il vit et la tenue pour rester à la maison ; la nuit, sa chambre, quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir. De 6 h à 18 h l'onglet s'ouvre sur le jour, ensuite sur la nuit ;
 - **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
 
-**La veille au soir**, après la dernière sortie possible de la journée, l'onglet Journée et le widget montrent la tenue et le sac de demain, « à préparer ce soir », à côté de la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).
+**La veille au soir**, après la dernière sortie possible de la journée, l'onglet Sorties et le widget montrent la tenue et le sac de demain, « à préparer ce soir », à côté de la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).
 
 ## 2. Ajouter le widget sur iPhone (5 minutes)
 
@@ -51,7 +51,7 @@ Réglages, **Envoyer les profils** : un lien part par la messagerie de votre cho
 ## 3. Ce qu'on vous demande
 
 - Regardez l'app ou le widget avant de sortir, et le soir avant le coucher.
-- Le soir, notez la température de la chambre (onglet Maison, boutons − et +) ; en journée, celle de la pièce si vous restez à la maison.
+- Le soir, notez la température de sa chambre (onglet Maison, Nuit) ; en journée, celle de la pièce où il vit si vous restez à la maison (Maison, Jour). Les deux relevés sont distincts : celui du salon ne sert jamais pour la nuit.
 - Dans l'onglet Prévoir, indiquez ce que vous avez déjà dans « Ma garde-robe ».
 - Si bébé a souvent trop chaud ou trop froid avec les tenues proposées, réglez « Tendance de bébé » dans les Réglages.
 - À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à cinq questions :

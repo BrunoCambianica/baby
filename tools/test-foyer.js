@@ -31,7 +31,7 @@ test('Profil à un seul enfant : il devient le premier enfant, sans rien perdre'
   assert(h.v === 2 && h.children.length === 1 && /^[a-z0-9]{6}$/.test(h.children[0].id), JSON.stringify(h));
   const c = h.children[0];
   assert(c.birth === '2026-05' && c.transport === 'porte_bebe' && c.outfit_offset === 1 && c.name === '', JSON.stringify(c));
-  assert(c.inventory.gigoteuse_hiver[0] === '6-18m' && c.room.value === 19.5, 'garde-robe ou chambre perdue');
+  assert(c.inventory.gigoteuse_hiver[0] === '6-18m' && c.room.value === 19.5 && c.room_day === null, 'garde-robe ou chambre perdue');
   assert(h.outing_window.from === '08:00' && h.outing_duration_h === 2 && h.outfit_view === 'texte' && h.created === 42, JSON.stringify(h));
   assert(migrate(h) === h && migrate(null) === null && migrate({ v: 2, commune: LYON, children: [] }) === null, 'reprise répétée');
 });
@@ -56,6 +56,9 @@ test('Configuration reçue : enfants remplacés, garde-robe et chambre gardées 
   const h = fromConfig(cfg, local);
   assert(h.children.map((c) => c.name).join() === 'Léo,Zoé' && h.children[0].id === id, JSON.stringify(h.children));
   assert(h.children[0].inventory.gigoteuse_hiver && h.children[0].room.value === 19.5 && h.children[0].transport === 'poussette', 'données locales perdues');
+  assert(h.children[0].room_day === null && h.children[1].room_day === null, 'relevé du jour inventé');
+  const day = fromConfig(cfg, { ...local, children: [{ ...local.children[0], room_day: { value: 21.5, at: 2 } }] });
+  assert(day.children[0].room_day.value === 21.5, 'relevé du jour perdu');
   assert(h.commune.cp === '69001' && h.updated === sent.updated, 'commune ou date');
   const kept = fromConfig(cfg, local, { keepView: true });
   assert(kept.outfit_view === 'texte', `affichage du téléphone remplacé : ${kept.outfit_view}`);
