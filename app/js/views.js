@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.13.2';
+export const VERSION = '0.13.3';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -505,8 +505,17 @@ function indoorCard(state, ctx) {
     </section>`;
 }
 
+// App Android 0.13 et plus, sans widget Maison posé : le poser d'ici, sans chercher dans la liste des widgets du téléphone.
+function homeWidgetPromo(state) {
+  if (state.host !== 'android' || !state.androidHome || state.homeWidgets) return '';
+  return `<section class="card promo">
+    <span class="promo-ico">${icon('home')}</span>
+    <div><h3>Le widget Maison</h3><p>La température à noter avec − et + depuis l'écran d'accueil, et la tenue qui va avec. <button class="link" data-action="add-home-widget" data-child="${esc(state.profile.id)}">Ajouter</button></p></div>
+  </section>`;
+}
+
 function maisonContent(state, ctx) {
-  if (maisonKind(state, ctx) === 'jour') return `${indoorCard(state, ctx)}${foot()}`;
+  if (maisonKind(state, ctx) === 'jour') return `${indoorCard(state, ctx)}${homeWidgetPromo(state)}${foot()}`;
   const M = state.bundle.messages;
   const n = ctx.result.night;
   // Les repères du couchage du nourrisson (liste détaillée) ne concernent que les moins de 2 ans.
@@ -519,6 +528,7 @@ function maisonContent(state, ctx) {
       <ul class="facts">${facts.map((f) => `<li>${icon('check', { size: 18 })}<span>${esc(capitalize(f))}</span></li>`).join('')}</ul>
       <p class="source">Sources : ${sourceLinks(state, sources)}</p>
     </section>
+    ${homeWidgetPromo(state)}
     ${foot()}`;
 }
 

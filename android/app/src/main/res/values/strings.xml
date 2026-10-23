@@ -4,4 +4,13 @@
     <string name="widget_description">Quand sortir avec bébé, comment l\'habiller, et le repère du soir.</string>
     <string name="widget_maison_name">Superbébé · Maison</string>
     <string name="widget_maison_description">La température chez vous le jour, de sa chambre la nuit, à noter avec − et +, et la tenue qui va avec.</string>
+    <!-- Aperçus dans la liste des widgets (Android 12 et plus). -->
+    <string name="widget_preview_title">SUPERBÉBÉ</string>
+    <string name="widget_preview_feels">Ce matin 6° → 14°</string>
+    <string name="widget_preview_plan">12 h : − combi pilote · sac : gilet</string>
+    <string name="widget_maison_preview_title">MAISON · CHEZ VOUS</string>
+    <string name="widget_maison_preview_value">21,0°</string>
+    <string name="widget_maison_preview_status">Bien pour la journée (20 à 22 °C)</string>
+    <string name="widget_step_minus">−</string>
+    <string name="widget_step_plus">+</string>
 </resources>

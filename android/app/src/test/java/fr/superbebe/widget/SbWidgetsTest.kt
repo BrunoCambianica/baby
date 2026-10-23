@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.RemoteViews
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.ui.unit.DpSize
@@ -137,6 +138,21 @@ class SbWidgetsTest {
         // Les relevés notés sur le widget reviennent à l'app.
         val all = JSONObject(SbStore.allReadings(context))
         assertEquals(20.5, all.getJSONObject("jour").getJSONObject("leo1").getDouble("value"), 0.0)
+    }
+
+    @Test
+    fun apercusDansLaListeDesWidgets() {
+        // Chaque widget a son aperçu (Android 12 et plus) : les deux ne se confondent plus dans la liste du téléphone.
+        val maison = texts(RemoteViews(context.packageName, R.layout.preview_maison).apply(context, FrameLayout(context)))
+        assertTrue(maison.toString(), "21,0°" in maison && "Bien pour la journée (20 à 22 °C)" in maison && "−" in maison)
+        val principal = texts(RemoteViews(context.packageName, R.layout.preview_widget).apply(context, FrameLayout(context)))
+        assertTrue(principal.toString(), "Ce matin 6° → 14°" in principal)
+        for ((xml, layout) in listOf(R.xml.superbebe_maison to R.layout.preview_maison, R.xml.superbebe_widget to R.layout.preview_widget)) {
+            val parser = context.resources.getXml(xml)
+            while (parser.name != "appwidget-provider") parser.next()
+            val preview = parser.getAttributeResourceValue("http://schemas.android.com/apk/res/android", "previewLayout", 0)
+            assertEquals(layout, preview)
+        }
     }
 
     @Test

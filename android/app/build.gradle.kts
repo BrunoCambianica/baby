@@ -14,8 +14,8 @@ android {
         applicationId = "fr.superbebe.widget"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.13.2"
+        versionCode = 13
+        versionName = "0.13.3"
     }
 
     buildFeatures {

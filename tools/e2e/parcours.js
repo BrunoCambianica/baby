@@ -334,6 +334,9 @@ await test('App Android 0.13 : widget Maison proposé, relevés notés sur le wi
   const calls = await page.evaluate(() => window.calls);
   const last = JSON.parse(calls.filter(([k]) => k === 'readings').at(-1)[1]);
   assert(last.jour.leo111.value === 21.5 && last.nuit.leo111.value === 23, JSON.stringify(last));
+  // Sans widget Maison posé, l'onglet Maison propose de le poser directement.
+  await page.click('.promo >> text=Ajouter');
+  assert((await page.evaluate(() => window.calls)).some(([k, id]) => k === 'maison' && id === 'leo111'), 'widget Maison non demandé depuis l\'onglet');
   await page.goto(`${APP}#reglages`);
   await page.click('text=Le widget Maison de Zoé');
   assert((await page.evaluate(() => window.calls)).some(([k, id]) => k === 'maison' && id === 'zoe222'), 'widget Maison non demandé');

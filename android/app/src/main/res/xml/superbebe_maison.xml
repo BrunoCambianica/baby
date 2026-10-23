@@ -3,6 +3,7 @@
     android:configure="fr.superbebe.widget.SbWidgetConfigure"
     android:description="@string/widget_maison_description"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/preview_maison"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="180dp"
