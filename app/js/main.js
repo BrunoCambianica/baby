@@ -86,6 +86,8 @@ const state = {
   widgets: host === 'android' ? ask(() => android.widgets(), 0) : 0,
   androidHome,
   homeWidgets: homeWidgets(),
+  // Version de l'app Android installée (affichée dans les réglages, utile pour savoir quel APK tourne).
+  androidVersion: host === 'android' ? ask(() => android.version(), '') : '',
   widgetKids: widgetKids(),
   reminder: store.reminder(),
   reminderHost,

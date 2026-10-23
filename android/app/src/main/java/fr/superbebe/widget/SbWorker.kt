@@ -1,7 +1,6 @@
 package fr.superbebe.widget
 
 import android.content.Context
-import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
@@ -102,8 +101,8 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
     }
 
     private suspend fun updateWidgets(c: Context) {
-        SbWidget().updateAll(c)
-        SbHomeWidget().updateAll(c)
+        refreshWidgets(c, SbWidget())
+        refreshWidgets(c, SbHomeWidget())
     }
 
     companion object {

@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.13.0';
+export const VERSION = '0.13.1';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -686,6 +686,7 @@ export function viewSettings(state) {
     <section class="group"><h2 class="group-title">Application</h2>
       <div class="group-body">
         <button class="row" data-action="check-update"><span>${state.updateReady ? 'Installer la mise à jour' : 'Rechercher une mise à jour'}</span><span class="value">v${VERSION}</span></button>
+        ${state.androidVersion ? `<div class="row"><span>App Android installée</span><span class="value">${esc(state.androidVersion)}</span></div>` : ''}
         <button class="row" data-action="copy-report"><span>Copier mes retours de test</span>${icon('share', { size: 20 })}</button>
         <a class="row" href="#apropos"><span>Charte, sources et confidentialité</span>${chev()}</a>
       </div>

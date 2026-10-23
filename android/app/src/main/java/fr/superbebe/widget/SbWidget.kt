@@ -9,10 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalState
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -20,6 +22,7 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -29,7 +32,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -43,10 +45,14 @@ class SbWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val render = SbStore.render(context, SbStore.widgetChild(context, widgetId))
-        // Une adresse par enfant, pour que chaque widget ouvre l'app sur le sien.
-        val open = Intent(context, MainActivity::class.java).setData(Uri.parse("superbebe://enfant/${Uri.encode(render.id)}"))
-        provideContent { Content(render, open) }
+        provideContent {
+            // Lu dans la composition, après l'état Glance : chaque mise à jour relit le rendu (voir refreshWidgets).
+            LocalState.current
+            val render = SbStore.render(context, SbStore.widgetChild(context, widgetId))
+            // Une adresse par enfant, pour que chaque widget ouvre l'app sur le sien.
+            val open = Intent(context, MainActivity::class.java).setData(Uri.parse("superbebe://enfant/${Uri.encode(render.id)}"))
+            Content(render, open)
+        }
     }
 
     @Composable
@@ -103,25 +109,45 @@ class SbWidget : GlanceAppWidget() {
 
 private const val MAX_DRAWINGS = 8
 
-/** Tenue en dessins (widgets principal et Maison) : jusqu'à huit vêtements, puis « +n » et le texte éventuel (TOG de la gigoteuse). */
+/**
+ * Tenue en dessins (widgets principal et Maison) : jusqu'à huit vêtements, puis « +n » et le texte éventuel (TOG de la gigoteuse).
+ * Les écarts sont des marges, pas des Spacer : Glance tronque une rangée au-delà de dix éléments.
+ */
 @Composable
 internal fun DrawingsRow(line: SbStore.Line, color: ColorProvider) {
     val shown = line.drawings.mapNotNull { SbDrawings.resource(it) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         shown.take(MAX_DRAWINGS).forEachIndexed { k, resource ->
-            if (k > 0) Spacer(GlanceModifier.width(6.dp))
             Image(
                 provider = ImageProvider(resource),
                 contentDescription = if (k == 0) line.label else null,
-                modifier = GlanceModifier.size(24.dp),
+                modifier = if (k == 0) GlanceModifier.size(24.dp) else GlanceModifier.size(30.dp, 24.dp).padding(start = 6.dp),
             )
         }
         val rest = shown.size - MAX_DRAWINGS
         val text = listOfNotNull(if (rest > 0) "+$rest" else null, line.text.ifEmpty { null }).joinToString("  ")
         if (text.isNotEmpty()) {
-            Spacer(GlanceModifier.width(8.dp))
-            Text(text = text, style = TextStyle(color = color, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(
+                text = text,
+                style = TextStyle(color = color, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                maxLines = 1,
+                modifier = GlanceModifier.padding(start = 8.dp),
+            )
         }
+    }
+}
+
+/**
+ * Glance ne relance provideGlance qu'à l'ouverture d'une session, qui dure au moins 45 secondes : pendant ce temps,
+ * une mise à jour ne recompose que si l'état Glance du widget change. Chaque mise à jour change donc ce compteur,
+ * et les widgets lisent leurs données dans la composition, après l'état (LocalState).
+ */
+private val SB_STAMP = longPreferencesKey("sb_maj")
+
+internal suspend fun refreshWidgets(context: Context, widget: GlanceAppWidget) {
+    for (id in GlanceAppWidgetManager(context).getGlanceIds(widget.javaClass)) {
+        updateAppWidgetState(context, id) { it[SB_STAMP] = (it[SB_STAMP] ?: 0L) + 1 }
+        widget.update(context, id)
     }
 }
 

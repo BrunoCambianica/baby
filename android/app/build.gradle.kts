@@ -14,12 +14,19 @@ android {
         applicationId = "fr.superbebe.widget"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.13.0"
+        versionCode = 11
+        versionName = "0.13.1"
     }
 
     buildFeatures {
         compose = true
+    }
+
+    // Tests des widgets sur l'ordinateur (Robolectric) : rendu Glance réel, avec les ressources de l'app.
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 
     compileOptions {
@@ -46,4 +53,8 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.5")
     implementation("androidx.javascriptengine:javascriptengine:1.0.0")
     implementation("androidx.concurrent:concurrent-futures-ktx:1.2.0")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
 }

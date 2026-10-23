@@ -11,18 +11,20 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
+import androidx.glance.LocalState
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -33,7 +35,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -50,13 +51,20 @@ import java.util.Locale
  */
 class SbHomeWidget : GlanceAppWidget() {
 
+    // Taille réelle du widget : sur un widget bas, le geste de la nuque en pied laisse la place au reste.
+    override val sizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val home = SbStore.home(context, SbStore.widgetChild(context, widgetId))
-        val kind = if (ZonedDateTime.now(PARIS).hour in 6..17) "jour" else "nuit"
-        val reading = home?.let { SbStore.reading(context, it.id, kind) }
-        val open = Intent(context, MainActivity::class.java).setData(Uri.parse("superbebe://maison/${Uri.encode(home?.id ?: "")}"))
-        provideContent { Content(home, kind, reading, open) }
+        provideContent {
+            // Lu dans la composition, après l'état Glance : chaque mise à jour relit relevé et tenues (voir refreshWidgets).
+            LocalState.current
+            val home = SbStore.home(context, SbStore.widgetChild(context, widgetId))
+            val kind = if (clock().hour in 6..17) "jour" else "nuit"
+            val reading = home?.let { SbStore.reading(context, it.id, kind) }
+            val open = Intent(context, MainActivity::class.java).setData(Uri.parse("superbebe://maison/${Uri.encode(home?.id ?: "")}"))
+            Content(home, kind, reading, open)
+        }
     }
 
     @Composable
@@ -69,11 +77,12 @@ class SbHomeWidget : GlanceAppWidget() {
                 .fillMaxSize()
                 .background(ImageProvider(if (night) R.drawable.widget_bg_nuit else R.drawable.widget_bg_maison))
                 .cornerRadius(22.dp)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
                 .clickable(actionStartActivity(open)),
         ) {
             if (home == null) {
-                Text(text = "Ouvrez Superbébé pour choisir votre commune.", style = TextStyle(color = white, fontSize = 14.sp), maxLines = 3)
+                // Avant le premier calcul de la 0.13 : il arrive quelques secondes après la pose du widget.
+                Text(text = "Ouvrez Superbébé pour préparer le widget Maison.", style = TextStyle(color = white, fontSize = 14.sp), maxLines = 3)
                 return@Column
             }
             // Sans relevé de moins de 16 heures : la dernière valeur en grisé, la tenue du repère, et comment noter.
@@ -86,34 +95,34 @@ class SbHomeWidget : GlanceAppWidget() {
                 style = TextStyle(color = soft, fontSize = 10.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
             )
-            Spacer(GlanceModifier.height(6.dp))
+            Spacer(GlanceModifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Step(home.id, kind, "-0.5", "−")
-                Spacer(GlanceModifier.width(10.dp))
                 Text(
                     text = String.format(Locale.FRANCE, "%.1f°", value),
-                    style = TextStyle(color = if (fresh) white else ColorProvider(Color(0x8CFFFFFF)), fontSize = 30.sp, fontWeight = FontWeight.Bold),
-                    modifier = GlanceModifier.clickable(step(home.id, kind, "0")),
+                    style = TextStyle(color = if (fresh) white else ColorProvider(Color(0x8CFFFFFF)), fontSize = 28.sp, fontWeight = FontWeight.Bold),
+                    modifier = GlanceModifier.padding(horizontal = 10.dp).clickable(step(home.id, kind, "0")),
                     maxLines = 1,
                 )
-                Spacer(GlanceModifier.width(10.dp))
                 Step(home.id, kind, "0.5", "+")
             }
-            Spacer(GlanceModifier.height(6.dp))
+            Spacer(GlanceModifier.height(4.dp))
             val outfit = SbStore.line(entry?.opt("outfit"))
             if (outfit.drawings.isNotEmpty()) {
                 DrawingsRow(outfit, white)
             } else {
                 Text(text = outfit.text, style = TextStyle(color = white, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 2)
             }
-            Spacer(GlanceModifier.height(4.dp))
+            Spacer(GlanceModifier.height(3.dp))
             Text(
                 text = if (fresh) entry?.optString("status").orEmpty() else home.table.optString("confirm"),
                 style = TextStyle(color = soft, fontSize = 12.sp),
                 maxLines = 2,
             )
-            Spacer(GlanceModifier.defaultWeight())
-            if (home.check.isNotEmpty()) Text(text = home.check, style = TextStyle(color = soft, fontSize = 10.sp), maxLines = 1)
+            if (home.check.isNotEmpty() && LocalSize.current.height >= 150.dp) {
+                Spacer(GlanceModifier.defaultWeight())
+                Text(text = home.check, style = TextStyle(color = soft, fontSize = 10.sp), maxLines = 1)
+            }
         }
     }
 
@@ -121,9 +130,9 @@ class SbHomeWidget : GlanceAppWidget() {
     private fun Step(child: String, kind: String, delta: String, sign: String) {
         Box(
             modifier = GlanceModifier
-                .size(36.dp)
+                .size(34.dp)
                 .background(ImageProvider(R.drawable.widget_step_bg))
-                .cornerRadius(18.dp)
+                .cornerRadius(17.dp)
                 .clickable(step(child, kind, delta)),
             contentAlignment = Alignment.Center,
         ) {
@@ -139,6 +148,9 @@ class SbHomeWidget : GlanceAppWidget() {
 
     companion object {
         private val PARIS: ZoneId = ZoneId.of("Europe/Paris")
+
+        // Heure de Paris (remplacée dans les tests).
+        internal var clock: () -> ZonedDateTime = { ZonedDateTime.now(PARIS) }
     }
 }
 
@@ -151,7 +163,7 @@ class SbRoomStep : ActionCallback {
         // Comme dans l'app : on part de la valeur affichée (le dernier relevé, même ancien ; sinon 21 °C le jour, 19 °C la nuit).
         val base = SbStore.reading(context, child, kind)?.value ?: if (kind == "jour") 21.0 else 19.0
         SbStore.saveReading(context, child, kind, (Math.round((base + delta) * 2) / 2.0).coerceIn(10.0, 35.0))
-        SbHomeWidget().updateAll(context)
+        refreshWidgets(context, SbHomeWidget())
         // La ligne de la nuit du widget principal suit la chambre : un calcul quelques secondes après la dernière touche.
         if (kind == "nuit") SbWorker.refreshSoon(context)
     }

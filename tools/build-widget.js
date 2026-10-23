@@ -4,6 +4,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import vm from 'node:vm';
+import { encodeConfig } from '../engine/adapter.js';
 import { loadRules, readJSON, ROOT } from './load-rules.js';
 
 const read = (path) => readFileSync(join(ROOT, path), 'utf8');
@@ -58,6 +59,18 @@ mkdirSync(join(ROOT, 'dist'), { recursive: true });
 writeFileSync(join(ROOT, 'dist', 'android-version.json'), `${JSON.stringify({ versionCode, versionName, apk: 'superbebe-android.apk' }, null, 2)}\n`);
 mkdirSync(assets, { recursive: true });
 writeFileSync(join(assets, 'superbebe-android.js'), `${android}\n`);
+
+// Données des tests des widgets Android (Robolectric, android/app/src/test) : la sortie de ce moteur pour Léo (5 mois)
+// et Zoé (2 ans et demi), à Lyon le 21 octobre 2026 à 10 h, avec la météo enregistrée.
+const familyConfig = encodeConfig({
+  v: 2, n: 'Lyon', c: '69123', la: 45.758, lo: 4.8351, f: '09:00', u: '18:00', d: 1, i: 1,
+  k: [{ id: 'leo1', p: 'Léo', b: '2026-05', t: 'poussette', o: 0 }, { id: 'zoe2', p: 'Zoé', b: '2024-03', t: 'a_pied', o: 0 }],
+}, (s) => Buffer.from(s, 'binary').toString('base64'));
+const recorded = read('tools/fixtures/forecast-lyon-2026-10-21.json');
+const engineOut = JSON.parse(vm.runInContext(`${android}\nsbAndroidAll(${recorded}, ${JSON.stringify(familyConfig)}, {}, "2026-10-21", "10:00");`, vm.createContext({})));
+const testResources = join(ROOT, 'android', 'app', 'src', 'test', 'resources');
+mkdirSync(testResources, { recursive: true });
+writeFileSync(join(testResources, 'moteur.json'), `${JSON.stringify({ config: familyConfig, children: engineOut.children })}\n`);
 
 // Variante service worker de l'app : le rappel du soir (Web Push, sans contenu) est calculé sur le téléphone.
 const sw = [

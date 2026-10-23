@@ -9,8 +9,8 @@ Le plus simple : ouvrir le dossier `android/` dans Android Studio, puis Build, B
 En ligne de commande, avec le JDK 17 et le SDK Android 36, installés au besoin par `tools/installer-android.sh` :
 
 ```sh
-npm run build              # à la racine : régénère le moteur embarqué
-tools/compiler-apk.sh      # compile, puis copie l'APK dans dist/superbebe-android.apk
+npm run build              # à la racine : régénère le moteur embarqué (et les données des tests des widgets)
+tools/compiler-apk.sh      # teste les widgets (Robolectric), compile, puis copie l'APK dans dist/superbebe-android.apk
 ```
 
 ## Fonctionnement
@@ -32,4 +32,5 @@ tools/compiler-apk.sh      # compile, puis copie l'APK dans dist/superbebe-andro
 - APK signé avec une clé de débogage. Si la clé change d'un ordinateur à l'autre, il faut désinstaller avant de réinstaller.
 - Nécessite Android 8 ou plus et une « Android System WebView » à jour, qui affiche l'app et fournit le bac à sable JavaScript.
 - Les données de l'app (réglages, garde-robe) sont celles de l'app Android, distinctes de celles d'une app installée depuis Chrome.
-- Pas encore testé sur un vrai téléphone au moment de l'écriture : premier test à faire avant de diffuser.
+- Les widgets sont testés sur l'ordinateur (`app/src/test`, Robolectric : rendu Glance réel, boutons du widget Maison), pas l'app elle-même ; les essais sur un vrai téléphone restent indispensables.
+- Glance ne relance `provideGlance` qu'à l'ouverture d'une session (45 secondes au moins) : les widgets lisent leurs données dans la composition, et chaque mise à jour passe par `refreshWidgets`, qui change leur état Glance (sinon le widget reste sur son premier affichage).
