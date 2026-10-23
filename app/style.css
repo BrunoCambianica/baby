@@ -169,12 +169,20 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .dress li { display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center; }
 .dress-ico { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: var(--blue-soft); color: var(--blue); flex: none; }
 .dress .extra .dress-ico { background: var(--fill); color: var(--ink-2); }
-.dress-name { font-size: 0.76rem; font-weight: 600; line-height: 1.25; color: var(--ink-2); overflow-wrap: anywhere; }
+.dress-name { font-size: 0.76rem; font-weight: 600; line-height: 1.25; color: var(--ink-2); overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
 .dress-hint { font-size: 0.7rem; color: var(--ink-3); margin-top: -4px; }
 .band { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .band strong { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
 .band span { font-size: 0.88rem; color: var(--ink-3); }
 .dress-ico.night { background: var(--violet-soft); color: var(--violet); }
+/* Tenues au choix : une ligne par autre tenue, à adopter d'un geste */
+.alts { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.alts-title { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); }
+.alt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; background: var(--fill); text-align: left; }
+.alt-art { display: flex; gap: 4px; color: var(--blue); flex: none; }
+.alts.night .alt-art { color: var(--violet); }
+.alt-text { flex: 1; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+.alt .chev { color: var(--ink-3); }
 /* La journée en couches */
 .day-step { display: grid; gap: 10px; }
 .change-time { font-size: 0.86rem; font-weight: 650; color: var(--ink-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

@@ -191,6 +191,17 @@
       "notes": "Lu le 22/10/2026. 24 °C et plus : 0,2 TOG seul ou avec body manches courtes ; 20-24 °C : 0,2 ou 1 TOG avec une combinaison manches courtes ou longues ; 18-20 °C : 1 ou 2,5 TOG avec body manches longues ; 16-18 °C : 2,5 TOG avec combinaison manches longues et maillot ; 12-16 °C : 3,5 TOG avec couche chaude manches longues et maillot. Seule marque lue publiant sa tenue en ligne ; les autres (Tommee Tippee, Lässig) la renvoient à l'étiquette."
     },
     {
+      "id": "tommee-tippee-what-to-wear",
+      "publisher": "Tommee Tippee (fabricant, Grobag)",
+      "short": "Tommee Tippee",
+      "title": "Sleepbag & Steppee What to Wear Guide",
+      "url": "https://www.tommeetippee.co.nz/product-support/sleeping/sleepbag",
+      "published": null,
+      "level": "C",
+      "verification": "lu",
+      "notes": "Lu le 23/10/2026 (site néo-zélandais de la marque). 27 °C et plus : 0,2 TOG, couche seule ; 24-27 °C : 0,2 TOG, couche ou body sans manches ; 22-24 °C : 1 TOG, body sans manches ou à manches courtes ; 20-22 °C : 1 TOG, body à manches courtes ou longues ; 18-20 °C : 2,5 TOG, body à manches longues ; 16-18 °C : 2,5 TOG, pyjama ou grenouillère ; 14-16 °C : 2,5 TOG avec body et grenouillère ou pyjama, ou 3,5 TOG avec body à manches longues, grenouillère ou pyjama ; 14 °C et moins : 3,5 TOG avec body et grenouillère ou pyjama. Plusieurs tenues par plage : la base des tenues au choix de l'app, qui ne garde que celles jamais plus chaudes que la tenue principale."
+    },
+    {
       "id": "norme-nf-en-16781",
       "publisher": "AFNOR",
       "title": "NF EN 16781 : articles textiles de puériculture, gigoteuses (exigences de sécurité)",

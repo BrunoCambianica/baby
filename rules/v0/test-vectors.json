@@ -883,6 +883,82 @@
       "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pyjama"], "night.tog": "2,5" }
     },
     {
+      "id": "nuit-tenues-au-choix",
+      "description": "Chambre à 22 °C : la tenue principale et deux autres publiées (Tommee Tippee, ergoPouch), jamais plus chaudes",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 22 } },
+      "expect": {
+        "night.bin": "n24", "night.option": "principal", "night.tog": "1", "night.wear": ["pyjama_leger"],
+        "night.options.*.id": ["principal", "body-mc", "tog-0-2"],
+        "night.options.*.tog": ["1", "1", "0,2"]
+      }
+    },
+    {
+      "id": "nuit-choix-1-tog",
+      "description": "Chambre à 19 °C, choix « 1 TOG + body ML » (ergoPouch) gardé pour cette tranche",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "tog-1" } } },
+      "expect": { "night.option": "tog-1", "night.tog": "1", "night.wear": ["body_ml"], "widget.lines.1.contains": "1 TOG" }
+    },
+    {
+      "id": "nuit-choix-autre-tranche",
+      "description": "Le choix fait pour 18-20 °C ne change pas la tenue à 17 °C",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 17, "night_options": { "n20": "tog-1" } } },
+      "expect": { "night.bin": "n17", "night.option": "principal", "night.tog": "2,5", "night.wear": ["body_leger", "pyjama"] }
+    },
+    {
+      "id": "nuit-choix-inconnu",
+      "description": "Un choix qui n'existe plus (règles mises à jour) : la tenue principale",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 19, "night_options": { "n20": "ancien" } } },
+      "expect": { "night.option": "principal", "night.tog": "2,5" }
+    },
+    {
+      "id": "nuit-couche-seule",
+      "description": "Chambre à 28 °C, choix « couche seule » sous 0,2 TOG (Tommee Tippee)",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 28, "night_options": { "chaud": "couche" } } },
+      "expect": { "night.tog": "0,2", "night.wear": ["couche"] }
+    },
+    {
+      "id": "maison-sans-pyjama",
+      "description": "Style « sans pyjama » à 21 °C : body ML, pantalon et chaussettes ; l'autre tenue reste proposée",
+      "input": { "profile": { "day_room_temp_c": 21, "day_style": "sans_pyjama" } },
+      "expect": {
+        "indoor.wear": ["body_ml", "pantalon", "chaussettes"], "indoor.day_style": "sans_pyjama",
+        "indoor.styles.*.id": [null, "sans_pyjama"]
+      }
+    },
+    {
+      "id": "maison-sans-pyjama-froid",
+      "description": "Sans pyjama à 15 °C : pantalon et chaussettes chauds à la place du pyjama chaud, le gilet reste",
+      "input": { "profile": { "day_room_temp_c": 15, "day_style": "sans_pyjama" } },
+      "expect": { "indoor.wear": ["body_ml", "pantalon_chaud", "chaussettes_chaudes", "gilet"] }
+    },
+    {
+      "id": "maison-sans-pyjama-leger",
+      "description": "Sans pyjama à 24 °C : un pantalon léger, sans chaussettes",
+      "input": { "profile": { "day_room_temp_c": 24, "day_style": "sans_pyjama" } },
+      "expect": { "indoor.wear": ["body_mc", "pantalon_leger"] }
+    },
+    {
+      "id": "maison-chaleur-sans-choix",
+      "description": "À 28 °C, rien à remplacer : une seule tenue, pas de choix proposé",
+      "input": { "profile": { "day_room_temp_c": 28, "day_style": "sans_pyjama" } },
+      "expect": { "indoor.wear": ["body_leger"], "indoor.day_style": null, "indoor.styles.length": 1 }
+    },
+    {
+      "id": "sortie-sans-pyjama",
+      "description": "6 °C en poussette, style « sans pyjama » : pantalon et chaussettes chauds sous la combinaison, toute la journée",
+      "input": { "profile": { "day_style": "sans_pyjama" } },
+      "expect": {
+        "outfit.items.include": ["pantalon_chaud", "chaussettes_chaudes", "combi_pilote"], "outfit.items.exclude": ["pyjama", "pyjama_chaud"],
+        "journee.morning.include": ["pantalon_chaud", "chaussettes_chaudes"], "journee.morning.exclude": ["pyjama", "pyjama_chaud"]
+      }
+    },
+    {
+      "id": "sans-pyjama-nuit-inchangee",
+      "description": "Le style de la journée ne touche pas à la nuit : pyjama sous la gigoteuse à 17 °C",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 17, "day_style": "sans_pyjama" } },
+      "expect": { "night.wear": ["body_leger", "pyjama"] }
+    },
+    {
       "id": "produit-tour-de-lit",
       "description": "Un tour de lit n'est jamais proposé",
       "input": { "check_product": "tour_de_lit" },

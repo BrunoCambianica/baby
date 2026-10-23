@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.11)
+# Tester Superbébé (version 0.12)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -13,7 +13,7 @@ Au premier lancement, trois questions : votre commune, le mois de naissance de v
 
 L'app a trois onglets :
 - **Sorties** : habillez-le une fois le matin. La tenue du matin en petits dessins (ou en texte : Réglages, Affichage, Tenues), puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus) et le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. La journée suit la plage horaire des réglages ; la sortie idéale est rappelée en haut. **Envoyer la fiche du jour** partage une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse) ;
-- **Maison** : **Jour** ou **Nuit**, chacun avec sa température (boutons − et +). Le jour, la pièce où il vit et la tenue pour rester à la maison ; la nuit, sa chambre, quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir. De 6 h à 18 h l'onglet s'ouvre sur le jour, ensuite sur la nuit ;
+- **Maison** : **Jour** ou **Nuit**, chacun avec sa température (boutons − et +). Le jour, la pièce où il vit et la tenue pour rester à la maison ; la nuit, sa chambre, quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir. De 6 h à 18 h l'onglet s'ouvre sur le jour, ensuite sur la nuit. **Tenues au choix** : le jour, « sans pyjama » (pantalon et chaussettes à la place, dehors aussi) ; la nuit, d'autres tenues publiées par les fabricants selon les gigoteuses que vous avez (par exemple 1 TOG plutôt que 2,5 TOG), gardées pour cette température. Jamais plus chaudes que la tenue proposée d'abord ;
 - **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
 
 **La veille au soir**, après la dernière sortie possible de la journée, l'onglet Sorties et le widget montrent la tenue et le sac de demain, « à préparer ce soir », à côté de la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).

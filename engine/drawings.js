@@ -55,6 +55,9 @@ const BODY_MC = [{ d: sym(`M12 5 Q13.7 5 14.6 3.6 L17.2 4.6 L20.6 7.7 L19 9.7 L1
 const BODY_ML = [{ d: sym(`M12 5 Q13.7 5 14.6 3.6 L17.2 4.6 Q19.8 5.9 20.8 12.6 L19 13.1 L17.2 8.9 ${BODY_BOTTOM}`) }, ...SNAPS];
 const BODY_SANS_MANCHES = [{ d: sym(`M12 6.6 Q14.3 6.6 14.6 3.6 L16.6 3.6 Q16.5 7.4 17.4 8.8 L17.4 14.6 C16.6 16.8 14.4 17.4 13.9 20.4 L12 20.4`) }, ...SNAPS];
 
+// Couche seule (nuits très chaudes) : la ceinture et ses deux attaches.
+const COUCHE = [{ d: sym('M12 6.2 L19.8 6.2 L19.8 8.6 C19.8 13 17.4 16.8 14.2 18.2 L12 18.2') }, { d: 'M4.2 8.6 L19.8 8.6' }, ...dots(17.8, 7.4, 0.5)];
+
 const PYJAMA_OUTLINE = sym('M12 4.2 Q13.5 4.2 14.2 2.8 L16.7 3.6 Q19.4 4.9 20.4 11.1 L18.6 11.6 L16.9 7.8 L16.9 18.4 '
   + 'C18.3 18.6 19 19.4 18.8 20.3 C18.6 21.1 17.8 21.4 16.7 21.4 L13.6 21.4 C13.1 21.4 12.8 21.1 12.8 20.6 '
   + 'L12.8 15 C12.8 14.4 12.5 14.1 12 14.1');
@@ -180,6 +183,7 @@ export const DRAWINGS = {
   body_mc: BODY_MC,
   body_ml: BODY_ML,
   body_sans_manches: BODY_SANS_MANCHES,
+  couche: COUCHE,
   tunique: TUNIQUE,
   tenue_legere: TENUE_LEGERE,
   haut_ml: HAUT_ML,
@@ -217,6 +221,7 @@ export const DRAWINGS = {
 
 // Vêtement de la tenue → dessin. Les variantes chaudes portent des piqûres de doudoune.
 export const ITEM_DRAWINGS = {
+  couche: 'couche',
   body_leger: 'body_sans_manches',
   body_mc: 'body_mc',
   body_ml: 'body_ml',

@@ -224,8 +224,9 @@ export function profileToConfig(profile) {
   };
 }
 
-// Configuration v2 : commune et horaires communs, un enfant par entrée de k (identifiant, prénom, naissance, mode, tendance)
-// et m, date du dernier changement : la plus récente l'emporte entre l'app et les widgets.
+// Configuration v2 : commune et horaires communs, un enfant par entrée de k (identifiant, prénom, naissance, mode, tendance,
+// et s'il y a lieu s, style de la journée, et g, tenues de nuit choisies par tranche) et m, date du dernier changement :
+// la plus récente l'emporte entre l'app et les widgets.
 export function householdToConfig(household) {
   return {
     v: 2,
@@ -238,7 +239,11 @@ export function householdToConfig(household) {
     u: household.outing_window.to,
     d: household.outing_duration_h,
     i: household.outfit_view === 'texte' ? 0 : 1,
-    k: household.children.map((c) => ({ id: c.id, p: c.name ?? '', b: c.birth, t: c.transport, o: c.outfit_offset ?? 0 })),
+    k: household.children.map((c) => ({
+      id: c.id, p: c.name ?? '', b: c.birth, t: c.transport, o: c.outfit_offset ?? 0,
+      ...(c.day_style ? { s: c.day_style } : {}),
+      ...(Object.keys(c.night_options ?? {}).length ? { g: c.night_options } : {}),
+    })),
     m: household.updated ?? 0,
   };
 }
@@ -248,6 +253,8 @@ export function configChildren(cfg) {
   const list = cfg.v === 2 ? cfg.k : [{ id: '', p: '', b: cfg.b, t: cfg.t, o: cfg.o }];
   return list.map((c) => ({
     id: String(c.id ?? ''), name: String(c.p ?? ''), birth: c.b, transport: c.t ?? 'poussette', outfit_offset: c.o ?? 0,
+    day_style: typeof c.s === 'string' ? c.s : null,
+    night_options: c.g && typeof c.g === 'object' && !Array.isArray(c.g) ? { ...c.g } : {},
   }));
 }
 
@@ -280,8 +287,11 @@ export function configToProfile(cfg, ref = '') {
     outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
     outing_duration_h: cfg.d ?? 1,
     outfit_offset: child.outfit_offset,
+    day_style: child.day_style,
+    night_options: child.night_options,
     outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
     room_temp_c: null,
+    day_room_temp_c: null,
     inventory: {},
   };
 }

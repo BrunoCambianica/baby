@@ -34,7 +34,7 @@ node tools/run-vectors.js --show creneau-fortes-chaleurs   # résultat complet d
 | Champ | Contenu |
 |---|---|
 | `date`, `now` | Jour (`AAAA-MM-JJ`) et heure locale (`HH:MM`) |
-| `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c` (sa chambre, pour la nuit), `day_room_temp_c` (la pièce où il passe la journée, pour la tenue à la maison), `inventory` (`{ catégorie: [tailles possédées] }`). Plusieurs enfants : un appel par enfant |
+| `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c` (sa chambre, pour la nuit), `day_room_temp_c` (la pièce où il passe la journée, pour la tenue à la maison), `day_style` (`sans_pyjama` ou rien), `night_options` (tenue de nuit choisie par tranche : `{ n20: 'tog-1' }`), `inventory` (`{ catégorie: [tailles possédées] }`). Plusieurs enfants : un appel par enfant |
 | `forecast` | `daylight` (`sunrise`, `sunset`), `hourly` (`time`, `temp_c`, `feels_c`, `precip_prob`, `precip_mm`, `gust_kmh`, `uv`), `daily.tmax_c` facultatif |
 | `alerts` | `vigilance` (`[{ phenomenon, color }]`, couleurs Météo-France), `air` (`{ episode, pollutant }`) |
 | `outlook` | Semaines à venir : `week_start`, `tmax_mean`, `tmean`, `rainy_days`, `uv_max_mean` |
@@ -46,6 +46,12 @@ Le profil ne quitte jamais le téléphone.
 - `outfit.age_variants` : tenues propres aux enfants de 2 ans et plus (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière), tranche par tranche.
 - `outfit.transport` : chaque mode décale la tranche (`band_shift`), remplace ou retire des vêtements et choisit la protection contre la pluie (`rain_gear`). `a_pied` n'existe qu'à partir de `min_age_m` ; plus jeune, l'enfant est habillé comme en poussette. En voiture, combinaison et manteau deviennent une couverture par-dessus le harnais.
 - `night.baby_only` : repères du couchage du nourrisson, affichés jusqu'à `baby_until_months`.
+
+## Tenues au choix
+
+- `outfit.day_styles` : styles de la journée choisis pour l'enfant. `sans_pyjama` remplace le pyjama par un pantalon (et des chaussettes, sauf pour le pyjama léger), dehors comme à la maison ; la nuit ne change pas.
+- `night.tog_hint.bins[].alternatives` : pour une tranche de chambre, d'autres tenues publiées par un fabricant (`sources`, niveau C), au choix selon les gigoteuses qu'on a. Le choix est gardé pour la tranche (`id`) seulement ; un choix inconnu redonne la tenue principale.
+- Le contrôle de la charte refuse toute tenue au choix plus chaude que celle d'origine : ni gigoteuse d'un TOG plus élevé, ni vêtements plus chauds (indices `journee.warmth`).
 - Tailles : en mois jusqu'à 24 mois, puis en années ; plus de gigoteuse proposée après 36 mois.
 
 ## La journée en couches (`journee`)

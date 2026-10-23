@@ -304,6 +304,7 @@
       "kind": "fabricant",
       "sources": [
         "ergopouch-what-to-wear",
+        "tommee-tippee-what-to-wear",
         "fabricants-tog"
       ],
       "text": "Sous la gigoteuse : {wear}. Repère des fabricants, à adapter à bébé ; l'étiquette de la gigoteuse fait foi.",
@@ -391,6 +392,7 @@
       "kind": "fabricant",
       "sources": [
         "ergopouch-what-to-wear",
+        "tommee-tippee-what-to-wear",
         "fabricants-tog"
       ],
       "text": "Cette nuit : {wear} sous une gigoteuse d'environ {tog} TOG (repère des fabricants).",
@@ -424,6 +426,7 @@
   },
   "labels": {
     "items": {
+      "couche": "couche seule",
       "body_leger": "body léger",
       "body_mc": "body manches courtes",
       "body_ml": "body manches longues",
@@ -465,6 +468,7 @@
       "capuche": "capuche ou parapluie"
     },
     "items_short": {
+      "couche": "couche seule",
       "body_leger": "body léger",
       "body_mc": "body MC",
       "body_ml": "body ML",
@@ -506,6 +510,7 @@
       "capuche": "capuche"
     },
     "item_layers": {
+      "couche": "peau",
       "body_leger": "peau",
       "body_mc": "peau",
       "body_ml": "peau",

@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.11.0';
+export const VERSION = '0.12.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -285,6 +285,12 @@ function outfitCard(state, ctx) {
   </section>`;
 }
 
+// Une tenue au choix : ses dessins (ou rien, en mode texte) et son nom, à adopter d'un geste.
+function altButton(state, drawings, text, attrs) {
+  const art = drawingsOn(state) ? `<span class="alt-art">${drawings.map((id) => drawingSvg(id, { size: 22 })).join('')}</span>` : '';
+  return `<button class="alt" ${attrs}>${art}<span class="alt-text">${esc(text)}</span>${chev(16)}</button>`;
+}
+
 // Un vêtement du plan : dessin et nom, avec « − » (on l'enlève) ou « + » (on le remet).
 function changeItem(state, item, sign) {
   const labels = state.bundle.messages.labels;
@@ -486,10 +492,17 @@ function indoorCard(state, ctx) {
         <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}</ul>`
     : `<p>${esc(capitalize(i.wear.map((item) => labels.items[item]).join(', ')))}.</p>`;
   const sources = [...new Set(i.relays.flatMap((id) => M.messages[id]?.sources ?? []))];
+  // Avec ou sans pyjama : l'autre tenue en un geste ; le choix vaut aussi pour les sorties.
+  const other = i.styles?.length > 1 ? i.styles.find((st) => st.id !== i.day_style) : null;
+  const choice = other
+    ? `<div class="alts"><p class="alts-title">${i.day_style ? 'Sans pyjama la journée, dehors comme à la maison. Ou :' : 'Ou sans pyjama, dehors comme à la maison :'}</p>
+        ${altButton(state, other.wear.map((item) => ITEM_DRAWINGS[item]), `${other.id ? 'Sans pyjama' : 'Avec pyjama'} : ${other.wear.map((item) => labels.items_short[item]).join(', ')}`, `data-action="day-style" data-value="${esc(other.id ?? '')}"`)}</div>`
+    : '';
   return `<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('home', { size: 18 })}Pour la journée</h2><span class="tag">pratique</span></div>
       <p class="band"><strong>${esc(room)}</strong></p>
       ${wear}
+      ${choice}
       <ul class="facts">${i.relays.filter((id) => id !== 'relay.indoor.temperature').map((id) => `<li>${icon('check', { size: 18 })}<span>${esc(render(M, id, 'short'))}</span></li>`).join('')}</ul>
       <p class="source">Sources : ${sourceLinks(state, sources)}</p>
     </section>`;
@@ -522,11 +535,23 @@ function nightWearCard(state, n) {
         <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}
         <li><span class="dress-ico night">${drawingSvg('gigoteuse', { size: 34 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
     : `<p>Sous la gigoteuse : ${esc(n.wear.map((item) => labels.items[item]).join(' et '))}.</p>`;
+  // Autres tenues publiées par les fabricants pour cette température, jamais plus chaudes : selon les gigoteuses qu'on a.
+  // Le choix est gardé pour cette tranche de température seulement.
+  const others = (n.options ?? []).filter((o) => o.id !== n.option);
+  const chosen = (n.options ?? []).find((o) => o.id === n.option);
+  const choices = others.length
+    ? `<div class="alts night"><p class="alts-title">${n.option === 'principal' ? 'Ou, selon vos gigoteuses :' : 'Votre choix pour cette température. Ou :'}</p>
+        ${others.map((o) => altButton(state, [...o.wear.map((item) => ITEM_DRAWINGS[item]), 'gigoteuse'],
+          `${capitalize(o.wear.map((item) => labels.items_short[item]).join(' + '))} + ${o.tog} TOG${o.id === 'principal' ? ' (habituelle)' : ''}`,
+          `data-action="night-option" data-bin="${esc(n.bin ?? '')}" data-value="${esc(o.id)}"`)).join('')}</div>`
+    : '';
   return `<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('bed', { size: 18 })}Pour la nuit</h2><span class="tag amber">fabricants</span></div>
       <p class="band"><strong>≈ ${esc(n.tog)} TOG</strong><span>${room}</span></p>
       ${wear}
+      ${choices}
       <p class="hint">Repère des fabricants, à adapter à bébé : l'étiquette de la gigoteuse fait foi.${n.room_assumed ? ' Notez la température de sa chambre ci-dessus pour l\'ajuster.' : ''}</p>
+      ${chosen?.sources.length ? `<p class="source">Source : ${sourceLinks(state, chosen.sources)}</p>` : ''}
     </section>`;
 }
 
@@ -712,6 +737,8 @@ export function viewChild(state) {
   const title = fresh ? 'Nouvel enfant' : childName({ name: d.name }, index);
   const birth = `${d.birthYear}-${d.birthMonth}`;
   const pref = Math.sign(d.offset ?? 0);
+  // Avec ou sans pyjama la journée : seulement tant que ses tenues en comportent un (avant 2 ans).
+  const pyjamas = ageMonths(birth, state.today) < (state.bundle.rules.outfit.age_variants?.[0]?.from_months ?? 24);
   const remove = !fresh && state.household.children.length > 1
     ? `<section class="group"><div class="group-body"><button class="row danger" data-action="child-remove">${d.confirmRemove ? 'Toucher à nouveau pour retirer ce profil' : `Retirer ${esc(title)}`}</button></div></section>`
     : '';
@@ -726,8 +753,12 @@ export function viewChild(state) {
           <div class="seg" role="radiogroup" aria-label="Tendance">${[[-1, 'A chaud'], [0, 'Normal'], [1, 'A froid']].map(([v, l]) =>
             `<button role="radio" aria-checked="${pref === v}" data-action="pref" data-value="${v}">${l}</button>`).join('')}</div>
         </div>
+        ${pyjamas ? `<div class="row column"><span>La journée</span>
+          <div class="seg" role="radiogroup" aria-label="La journée">${[['', 'Avec pyjama'], ['sans_pyjama', 'Sans pyjama']].map(([v, l]) =>
+            `<button role="radio" aria-checked="${(d.dayStyle ?? '') === v}" data-action="day-style" data-value="${v}">${l}</button>`).join('')}</div>
+        </div>` : ''}
       </div>
-      <p class="group-note">« A chaud » allège toutes ses tenues d'un cran, « A froid » les réchauffe d'un cran. « À pied » apparaît à partir de 2 ans.</p>
+      <p class="group-note">« A chaud » allège toutes ses tenues d'un cran, « A froid » les réchauffe d'un cran. « À pied » apparaît à partir de 2 ans.${pyjamas ? ' « Sans pyjama » : pantalon et chaussettes à la place, dehors comme à la maison ; la nuit ne change pas.' : ''}</p>
     </section>
     ${fresh ? '<button class="btn" data-action="child-add">Ajouter</button>' : remove}
   </div>`;
@@ -941,6 +972,7 @@ export function viewAbout(state) {
         <li>Les repères de santé et de sécurité sont relayés depuis des sources publiques, toujours citées.</li>
         <li>Tenues, créneaux et achats sont des suggestions pratiques.</li>
         <li>Les indications TOG viennent des fabricants : l'étiquette de la gigoteuse fait foi.</li>
+        <li>Tenues au choix : seulement celles publiées par un fabricant, jamais plus chaudes que la tenue proposée d'abord.</li>
         <li>Jamais proposés : tour de lit, couverture, cale-bébé, crème solaire avant 1 an.</li>
         <li>Fièvre, maladie, symptômes : demandez conseil à un professionnel de santé. Urgence : 15 ou 112.</li>
       </ul></div></div>

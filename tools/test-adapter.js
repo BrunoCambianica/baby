@@ -1,6 +1,6 @@
 // Tests de l'adaptateur Open-Meteo sur des réponses réelles enregistrées (Lyon, 21 octobre 2026).
 import { join } from 'node:path';
-import { evaluate } from '../engine/engine.js';
+import { evaluate, lint } from '../engine/engine.js';
 import {
   buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
   householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, weeklyOutlook, widgetView,
@@ -153,6 +153,36 @@ test('Configuration v2 : plusieurs enfants, choisis par numéro, prénom ou iden
   assert(one.length === 1 && one[0].transport === 'voiture' && one[0].name === '', 'configuration v1 relue comme un enfant');
   assert(decodeConfig(encodeConfig({ v: 2, n: 'Lyon', la: 45.758, lo: 4.8351, k: [] }, toB64), fromB64) === null, 'v2 sans enfant acceptée');
   assert(decodeConfig(encodeConfig({ v: 2, n: 'Lyon', la: 45.758, lo: 4.8351, k: [{ b: 'mai' }] }, toB64), fromB64) === null, 'naissance invalide acceptée');
+});
+
+test('Tenues au choix : style de la journée et tenue de nuit passent par la configuration jusqu\'au widget', () => {
+  const household = {
+    commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 },
+    outing_window: { from: '09:00', to: '18:00' }, outing_duration_h: 1, outfit_view: 'dessins', updated: 5,
+    children: [
+      { id: 'leo', name: 'Léo', birth: '2026-05', transport: 'poussette', outfit_offset: 0, day_style: 'sans_pyjama', night_options: { n20: 'tog-1' } },
+      { id: 'zoe', name: 'Zoé', birth: '2024-03', transport: 'a_pied', outfit_offset: 0 },
+    ],
+  };
+  const cfg = decodeConfig(encodeConfig(householdToConfig(household), toB64), fromB64);
+  assert(cfg.k[0].s === 'sans_pyjama' && cfg.k[0].g.n20 === 'tog-1' && !('s' in cfg.k[1]) && !('g' in cfg.k[1]), JSON.stringify(cfg.k));
+  const [leo, zoe] = configChildren(cfg);
+  assert(leo.day_style === 'sans_pyjama' && leo.night_options.n20 === 'tog-1' && zoe.day_style === null && !Object.keys(zoe.night_options).length, JSON.stringify([leo, zoe]));
+  const profile = { ...configToProfile(cfg, 'leo'), room_temp_c: 19 };
+  const view = widgetView({ forecast, profile, date: '2026-10-21', time: '20:30', lat: 45.758 }, bundle, { drawings: false });
+  assert(view.today.night.tog === '1' && view.lines[2].includes('1 TOG'), view.lines.join(' | '));
+  assert(!view.tomorrow.journee.morning.some((i) => i.startsWith('pyjama')), view.tomorrow.journee.morning.join());
+});
+
+test('Charte : une tenue au choix plus chaude que la tenue d\'origine est refusée', () => {
+  const warmer = structuredClone(bundle);
+  warmer.rules.night.tog_hint.bins.find((b) => b.id === 'n20').alternatives.push({ id: 'trop', tog: '2,5', wear: ['body_ml', 'pyjama'], sources: ['ergopouch-what-to-wear'] });
+  warmer.rules.outfit.day_styles.sans_pyjama.replace_items.pyjama = ['pantalon_chaud', 'chaussettes_chaudes'];
+  const { errors } = lint(warmer);
+  assert(errors.some((e) => e.includes('n20 : trop plus chaude')) && errors.some((e) => e.includes('style sans_pyjama')), errors.join(' | '));
+  const unsourced = structuredClone(bundle);
+  unsourced.rules.night.tog_hint.bins[0].alternatives[0].sources = ['carnet-1000-jours'];
+  assert(lint(unsourced).errors.some((e) => e.includes('sans fabricant cité')), 'tenue de nuit sans fabricant acceptée');
 });
 
 test('Configuration du widget : texte invalide refusé', () => {

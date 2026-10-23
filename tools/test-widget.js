@@ -544,5 +544,15 @@ await test('Android : un rendu par enfant, avec la chambre de chacun', async () 
   assert(JSON.parse(vm.runInContext(call, vm.createContext({}))).reminder.lines.length === 0, 'rappel calculé sans être dû');
 });
 
+await test('Android : la tenue de nuit choisie et le style sans pyjama arrivent jusqu\'au widget', async () => {
+  const choix = encodeConfig({
+    v: 2, n: 'Lyon', c: '69123', la: 45.758, lo: 4.8351, f: '09:00', u: '18:00', d: 1, i: 0,
+    k: [{ id: 'leo1', p: 'Léo', b: '2026-05', t: 'poussette', o: 0, s: 'sans_pyjama', g: { n20: 'tog-1' } }],
+  }, toB64);
+  const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
+  const out = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(choix)}, {"rooms": {"leo1": 19}}, "2026-10-21", "20:30");`, vm.createContext({})));
+  assert(/nuit 19° : body ML \+ 1 TOG/i.test(out.lines[2]) && !/pyjama/i.test(out.lines[1]) && /pantalon/i.test(out.lines[1]), JSON.stringify(out.lines));
+});
+
 console.log(`\n${failed ? `${failed} test(s) en échec` : 'Widgets iPhone et Android : tous les tests OK'}`);
 process.exit(failed ? 1 : 0);

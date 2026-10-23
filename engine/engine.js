@@ -141,13 +141,18 @@ export function transportFor(profile, age, R) {
 // Tenues propres à un âge (à partir de 2 ans : haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison).
 const ageVariant = (R, age) => (R.outfit.age_variants ?? []).filter((v) => age >= v.from_months).at(-1) ?? null;
 
+// Style de la journée choisi pour l'enfant (« sans pyjama » : pantalon et chaussettes à la place, dehors comme
+// à la maison). Jamais plus chaud que la tenue d'origine (contrôlé par lint) ; la nuit n'est pas concernée.
+const dayStyle = (R, profile) => R.outfit.day_styles?.[profile.day_style] ?? null;
+const styled = (items, style) => (style ? [...new Set(items.flatMap((item) => style.replace_items[item] ?? [item]))] : items);
+
 // Vêtements d'une tranche, pour un âge et un mode de sortie. Certains modes remplacent des vêtements
 // (porte-bébé : pas de pyjama à pieds ni de combinaison ; voiture : couverture par-dessus le harnais).
-function bandItems(idx, mode, variant, R) {
+function bandItems(idx, mode, variant, R, style = null) {
   const band = R.outfit.bands[idx];
   const t = R.outfit.transport[mode];
   const items = (variant?.bands[band.id] ?? band.items).flatMap((item) => t.replace_items?.[item] ?? [item]);
-  return [...new Set(items)].filter((item) => !t.remove_items.includes(item));
+  return styled([...new Set(items)].filter((item) => !t.remove_items.includes(item)), style);
 }
 
 // Tranche portée pour un ressenti : celle du ressenti, décalée par la tendance et par le mode de sortie.
@@ -166,7 +171,7 @@ function chooseOutfit(feels, profile, R, age) {
     base_band: R.outfit.bands[base].id,
     feels_c: feels,
     transport: mode,
-    items: bandItems(idx, mode, ageVariant(R, age), R),
+    items: bandItems(idx, mode, ageVariant(R, age), R, dayStyle(R, profile)),
     notes: [...R.outfit.transport[mode].notes],
   };
 }
@@ -277,6 +282,7 @@ function planJournee(input, R, age, plan) {
   const mode = transportFor(profile, age, R);
   const t = R.outfit.transport[mode];
   const variant = ageVariant(R, age);
+  const style = dayStyle(R, profile);
   const win = profile.outing_window ?? R.outing.default_window;
   const hours = plan.slots.filter((sl) => sl.start >= toMin(win.from) && sl.end <= toMin(win.to));
   if (!hours.length) return null;
@@ -284,7 +290,7 @@ function planJournee(input, R, age, plan) {
   const segs = segmentDay(needs, J);
   const b0 = segs[0].band;
   const isFixed = (item) => J.fixed_slots.includes(slotOf(J, item));
-  const layers = (idx) => new Map(bandItems(idx, mode, variant, R).filter((i) => !isFixed(i)).map((i) => [slotOf(J, i), i]));
+  const layers = (idx) => new Map(bandItems(idx, mode, variant, R, style).filter((i) => !isFixed(i)).map((i) => [slotOf(J, i), i]));
 
   // Body et pyjama (ou haut et pantalon) ne changent pas dans la journée : ceux de la période la plus douce,
   // au plus base_max_drop tranche sous ceux du matin (deux sous une combinaison, qui couvre tout).
@@ -292,7 +298,7 @@ function planJournee(input, R, age, plan) {
   const worn = layers(b0);
   const drop = variant?.base_max_drop ?? (worn.has('dessus') ? J.base_max_drop_under_dessus : J.base_max_drop);
   const baseIdx = Math.max(Math.min(...segs.map((sg) => sg.band)), b0 - drop);
-  const base = bandItems(baseIdx, mode, variant, R).filter(isFixed);
+  const base = bandItems(baseIdx, mode, variant, R, style).filter(isFixed);
   const morning = [...base, ...worn.values()];
 
   // Changements. Tête, mains et pieds suivent la tranche : bonnet, moufles, chaussons et chancelière restent tant
@@ -308,7 +314,7 @@ function planJournee(input, R, age, plan) {
   const changes = segs.slice(1).map((sg, i) => {
     const warmer = sg.band < segs[i].band;
     const target = layers(sg.band);
-    const goal = warmthOf(bandItems(sg.band, mode, variant, R));
+    const goal = warmthOf(bandItems(sg.band, mode, variant, R, style));
     const cost = (heat) => (heat > goal ? J.over_weight * (heat - goal) : J.under_weight * (goal - heat));
     const allowed = (heat) => heat >= goal - J.warmth_under_tolerance;
     let heat = warmthOf([...base, ...worn.values()]);
@@ -391,7 +397,7 @@ function planJournee(input, R, age, plan) {
     const target = layers(need);
     const handy = (sl) => changes.some((ch) => ch.from <= k && ch.remove.some((r) => slotOf(J, r) === sl));
     const missing = (sl) => target.has(sl) && !now.has(sl) && !sun(target.get(sl)) && !handy(sl);
-    const short = warmthOf([...base, ...now.values()]) < warmthOf(bandItems(need, mode, variant, R)) - J.warmth_under_tolerance;
+    const short = warmthOf([...base, ...now.values()]) < warmthOf(bandItems(need, mode, variant, R, style)) - J.warmth_under_tolerance;
     const torso = short ? J.add_order.find((sl) => !J.extremities.includes(sl) && missing(sl)) : null;
     for (const sl of [torso, ...J.extremities.filter(missing)].filter(Boolean)) {
       bag.push({ item: target.get(sl), reason: 'si_frais', time: fmtMin(hours[k].start) });
@@ -448,16 +454,25 @@ function planIndoor(input, R, age) {
   const variant = (I.age_variants ?? []).filter((v) => age >= v.from_months).at(-1);
   const bin = (variant?.bins ?? I.bins).find((b) => b.max_c === null || t <= b.max_c);
   const hot = room !== null && room >= I.heat_room_c_at_least;
+  // Tenues au choix : la tenue de la tranche, puis chaque style qui la change (sans pyjama…) ; celui de l'enfant, sinon la première.
+  const styles = [null, ...Object.keys(R.outfit.day_styles ?? {})]
+    .map((id) => ({ id, wear: styled(bin.wear, id ? R.outfit.day_styles[id] : null) }))
+    .filter((st, k, all) => k === 0 || st.wear.join() !== all[0].wear.join());
+  const current = styles.find((st) => st.id === (input.profile.day_style ?? null)) ?? styles[0];
   return {
     room_temp_c: room,
     room_assumed: room === null,
     room_status: room === null ? 'unknown' : room < I.comfort_range_c.min ? 'below' : room > I.comfort_range_c.max ? 'above' : 'in_range',
-    wear: [...bin.wear],
+    wear: [...current.wear],
+    day_style: current.id,
+    styles,
     relays: sortByPriority([...(hot ? I.when_hot : []), ...I.always], R.relay_priority),
   };
 }
 
 // Gigoteuse (TOG) et tenue dessous selon la chambre ; sans relevé, pour le repère officiel (milieu de 18-20 °C), en le disant.
+// Chaque tranche a sa tenue principale et, parfois, d'autres publiées par les fabricants, jamais plus chaudes (lint) :
+// le choix fait pour une tranche (night_options : { tranche: tenue }) vaut pour elle seule.
 // Les repères du couchage du nourrisson ne s'affichent plus à partir de 2 ans.
 function planNight(input, R, heat, age) {
   const n = R.night;
@@ -472,12 +487,18 @@ function planNight(input, R, heat, age) {
   const t = n.tog_hint.round_room_temp ? Math.round(ref) : ref;
   const bin = n.tog_hint.bins.find((b) => b.max_c === null || t <= b.max_c);
   if (heat || (room !== null && room >= n.heat_room_c_at_least)) relays.push('relay.heat.shutters');
+  const options = [{ id: 'principal', tog: bin.tog, wear: bin.wear ?? [], sources: bin.sources ?? [] }, ...(bin.alternatives ?? [])]
+    .map((o) => ({ id: o.id, tog: o.tog, wear: [...o.wear], sources: [...(o.sources ?? [])] }));
+  const chosen = options.find((o) => o.id === input.profile.night_options?.[bin.id]) ?? options[0];
   return {
     room_temp_c: room,
     room_status: status,
     room_assumed: room === null,
-    tog: bin.tog,
-    wear: [...(bin.wear ?? [])],
+    tog: chosen.tog,
+    wear: [...chosen.wear],
+    bin: bin.id ?? null,
+    option: chosen.id,
+    options,
     relays: sortByPriority(relays, R.relay_priority),
   };
 }
@@ -821,9 +842,32 @@ export function lint(bundle) {
     if (!M.labels.layers[M.labels.item_layers[item]]) errors.push(`couche inconnue pour : ${item}`);
     if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
   }
-  for (const item of [...R.night.tog_hint.bins, ...R.indoor.bins, ...R.indoor.age_variants.flatMap((v) => v.bins)].flatMap((b) => b.wear ?? [])) {
+  const nightWear = R.night.tog_hint.bins.flatMap((b) => [b, ...(b.alternatives ?? [])]);
+  for (const item of [...nightWear, ...R.indoor.bins, ...R.indoor.age_variants.flatMap((v) => v.bins)].flatMap((b) => b.wear ?? [])) {
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
+  }
+  // Tenues au choix : jamais plus chaudes que la tenue d'origine (chaleur de journee.warmth), ni par la gigoteuse
+  // ni par les vêtements ; chaque tenue de nuit cite le fabricant qui la publie.
+  const heat = (list) => list.reduce((sum, item) => sum + (R.journee.warmth[item] ?? Number.NaN), 0);
+  const togOf = (tog) => Number(String(tog).replace(',', '.'));
+  for (const [id, style] of Object.entries(R.outfit.day_styles ?? {})) {
+    for (const [item, replacement] of Object.entries(style.replace_items)) {
+      if (!(heat(replacement) <= heat([item]))) errors.push(`style ${id} : ${replacement.join(' + ')} plus chaud que ${item}`);
+      for (const r of replacement) if (!M.labels.items_short[r] || !DRAWINGS[ITEM_DRAWINGS[r]]) errors.push(`style ${id} : ${r} sans libellé ou dessin`);
+    }
+  }
+  const binIds = new Set();
+  for (const bin of R.night.tog_hint.bins) {
+    if (!bin.id || binIds.has(bin.id)) errors.push(`tranche de nuit sans identifiant unique : ${bin.max_c}`);
+    binIds.add(bin.id);
+    for (const option of [bin, ...(bin.alternatives ?? [])]) {
+      if (!option.sources?.length || option.sources.some((sid) => sourceById.get(sid)?.level !== 'C')) errors.push(`nuit ${bin.id} : ${option.id ?? 'principale'} sans fabricant cité`);
+    }
+    for (const alt of bin.alternatives ?? []) {
+      if (alt.id === 'principal') errors.push(`nuit ${bin.id} : identifiant réservé`);
+      if (!(togOf(alt.tog) <= togOf(bin.tog) && heat(alt.wear) <= heat(bin.wear))) errors.push(`nuit ${bin.id} : ${alt.id} plus chaude que la tenue principale`);
+    }
   }
   for (const cat of R.purchases.categories) {
     if (!M.labels.categories[cat.id]) errors.push(`libellé manquant : ${cat.id}`);

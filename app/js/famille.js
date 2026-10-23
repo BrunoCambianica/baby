@@ -64,8 +64,9 @@ export function sharedPart(h) {
     outing_window: h.outing_window,
     outing_duration_h: h.outing_duration_h,
     settings_at: h.settings_at ?? 0,
-    children: h.children.map(({ id, name, birth, transport, outfit_offset, inventory, room, room_day, updated }) => ({
-      id, name, birth, transport, outfit_offset, inventory: inventory ?? {}, room: room ?? null, room_day: room_day ?? null, updated: updated ?? 0,
+    children: h.children.map(({ id, name, birth, transport, outfit_offset, day_style, night_options, inventory, room, room_day, updated }) => ({
+      id, name, birth, transport, outfit_offset, day_style: day_style ?? null, night_options: night_options ?? {},
+      inventory: inventory ?? {}, room: room ?? null, room_day: room_day ?? null, updated: updated ?? 0,
     })),
     removed: h.removed ?? {},
   };

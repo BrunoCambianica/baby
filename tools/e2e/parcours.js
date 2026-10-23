@@ -473,6 +473,38 @@ await test('Maison : le jour et la nuit, chacun avec son relevé ; la nuit par d
   await evening.waitForSelector('text=Pour la journée');
 });
 
+await test('Tenues au choix : sans pyjama la journée (maison et sorties), autre gigoteuse pour la nuit', async (use) => {
+  const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
+  await page.goto(APP);
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.click('text=Sans pyjama : body ML, pantalon, chaussettes');
+  let names = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  assert(names.join() === 'Body ML,Pantalon,Chaussettes', names.join());
+  assert(await page.isVisible('text=Avec pyjama : body ML, pyjama'), 'retour au pyjama non proposé');
+  await shot(page, 'l6-maison-sans-pyjama');
+  await page.click('.tabbar [data-value="sortir"]');
+  const morning = await page.locator('.day-step .dress-name').allTextContents();
+  assert(!morning.some((t) => /Pyjama/.test(t)) && morning.some((t) => /Pantalon/.test(t)), `sorties : ${morning.join(', ')}`);
+  // La nuit : 19 °C par défaut (18-20 °C), une autre tenue publiée pour cette température.
+  await page.click('.tabbar [data-value="nuit"]');
+  await page.click('[data-action="maison"][data-value="nuit"]');
+  assert(await page.isVisible('text=Ou, selon vos gigoteuses'), 'autres tenues de nuit absentes');
+  await page.click('text=Body ML + 1 TOG');
+  await page.waitForSelector('text=Votre choix pour cette température');
+  assert((await page.textContent('.card:first-of-type .band strong')).includes('1 TOG') && await page.isVisible('text=Body ML + 2,5 TOG (habituelle)'), await page.textContent('.card:first-of-type'));
+  await shot(page, 'l6-nuit-choix');
+  const h = await stored(page);
+  assert(h.children[0].day_style === 'sans_pyjama' && h.children[0].night_options.n20 === 'tog-1' && !h.children[1].day_style, JSON.stringify(h.children));
+  // Fiche de l'enfant : le réglage « La journée » n'existe qu'avant 2 ans.
+  await page.goto(`${APP}#enfant/leo111`);
+  assert((await page.getAttribute('[data-action="day-style"][data-value="sans_pyjama"]', 'aria-checked')) === 'true', 'réglage absent de la fiche');
+  await page.click('[data-action="day-style"][data-value=""]');
+  assert(!(await stored(page)).children[0].day_style, 'retour au pyjama non enregistré');
+  await page.goto(`${APP}#enfant/zoe222`);
+  await page.waitForSelector('text=Tendance');
+  assert(!(await page.isVisible('text=Sans pyjama')), 'choix du pyjama proposé à 2 ans et demi');
+});
+
 // Parcours avec l'API locale (pas sur le site en ligne : l'API du VPS n'y est pas encore branchée).
 const local = !process.env.SB_SITE;
 

@@ -2,7 +2,7 @@
 // Changer VERSION à chaque mise en ligne pour que les téléphones récupèrent la nouvelle version.
 // sw-moteur.js (généré par tools/build-widget.js) : le moteur et les règles, pour calculer le rappel sans l'app.
 importScripts('sw-moteur.js');
-const VERSION = '0.11.0';
+const VERSION = '0.12.0';
 const CACHE = `superbebe-${VERSION}`;
 const ASSETS = [
   './',
@@ -91,7 +91,8 @@ async function eveningReminder() {
         const fresh = child.room && Date.now() - child.room.at < 16 * 3600 * 1000;
         const profile = {
           birth: child.birth, transport: child.transport, outing_window: h.outing_window, outing_duration_h: h.outing_duration_h,
-          outfit_offset: child.outfit_offset ?? 0, room_temp_c: fresh ? child.room.value : null, inventory: child.inventory ?? {},
+          outfit_offset: child.outfit_offset ?? 0, day_style: child.day_style ?? null, night_options: child.night_options ?? {},
+          room_temp_c: fresh ? child.room.value : null, inventory: child.inventory ?? {},
         };
         const view = widgetView({ forecast, profile, date, time, lat: h.commune.lat }, SB_RULES, { drawings: false, reminder: true });
         return view.reminder && `${h.children.length > 1 ? `${child.name || `Enfant ${k + 1}`} : ` : ''}${view.reminder}`;

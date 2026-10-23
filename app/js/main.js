@@ -142,6 +142,8 @@ function compute(day) {
       outing_window: p.outing_window,
       outing_duration_h: p.outing_duration_h,
       outfit_offset: p.outfit_offset ?? 0,
+      day_style: p.day_style ?? null,
+      night_options: p.night_options ?? {},
       room_temp_c: tomorrow ? null : freshRoom(p, 'nuit'),
       day_room_temp_c: tomorrow ? null : freshRoom(p, 'jour'),
       inventory: p.inventory ?? {},
@@ -168,6 +170,7 @@ function newDraft(view) {
       birthYear: child?.birth.slice(0, 4) ?? now.slice(0, 4),
       transport: child?.transport ?? 'poussette',
       offset: child?.outfit_offset ?? 0,
+      dayStyle: child?.day_style ?? null,
     };
   }
   const settings = view === 'reglages';
@@ -667,6 +670,24 @@ const actions = {
     if (sheet?.child !== 'nouveau') updateChild({ outfit_offset: Number(el.dataset.value) }, sheet?.child);
     paint();
   },
+  // Avec ou sans pyjama la journée (dehors comme à la maison), depuis l'onglet Maison ou la fiche de l'enfant.
+  'day-style'(el) {
+    const sheet = currentView() === 'enfant' ? state.draft : null;
+    const value = el.dataset.value || null;
+    if (sheet) sheet.dayStyle = value;
+    if (sheet?.child !== 'nouveau') updateChild({ day_style: value }, sheet?.child);
+    if (!sheet) toast(value ? 'Sans pyjama la journée, dehors comme à la maison.' : 'Avec pyjama la journée.');
+    paint();
+  },
+  // Tenue de nuit choisie pour une tranche de température ; « principal » revient à la tenue habituelle.
+  'night-option'(el) {
+    const options = { ...(state.profile.night_options ?? {}) };
+    if (el.dataset.value === 'principal') delete options[el.dataset.bin];
+    else options[el.dataset.bin] = el.dataset.value;
+    updateChild({ night_options: options });
+    toast(el.dataset.value === 'principal' ? 'Tenue habituelle pour cette température.' : 'Gardée pour cette température de chambre.');
+    paint();
+  },
   'outfit-view'(el) {
     updateHousehold({ outfit_view: el.dataset.value });
     paint();
@@ -682,7 +703,9 @@ const actions = {
       paint();
       return;
     }
-    const child = { ...newChild({ name: d.name.trim().slice(0, 24), birth, transport: d.transport, outfit_offset: d.offset }), updated: Date.now() };
+    const child = {
+      ...newChild({ name: d.name.trim().slice(0, 24), birth, transport: d.transport, outfit_offset: d.offset }), day_style: d.dayStyle ?? null, updated: Date.now(),
+    };
     updateHousehold({ children: [...state.household.children, child] });
     showChild(child.id);
     toast(`Profil de ${childName(child, state.household.children.length - 1)} ajouté.`);

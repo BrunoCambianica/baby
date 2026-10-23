@@ -7,6 +7,7 @@ object SbDrawings {
         "body_mc" to R.drawable.drawing_body_mc,
         "body_ml" to R.drawable.drawing_body_ml,
         "body_sans_manches" to R.drawable.drawing_body_sans_manches,
+        "couche" to R.drawable.drawing_couche,
         "tunique" to R.drawable.drawing_tunique,
         "tenue_legere" to R.drawable.drawing_tenue_legere,
         "haut_ml" to R.drawable.drawing_haut_ml,
