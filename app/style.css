@@ -334,11 +334,25 @@ p.check { display: block; }
 .wardrobe summary .chev { margin-left: auto; color: var(--ink-3); transition: transform 0.2s; }
 .wardrobe[open] summary .chev { transform: rotate(90deg); }
 .cat { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
-.cat:first-of-type { margin-top: 12px; }
+.cat-group + .cat { border-top: 0; padding-top: 6px; }
 .cat-name { font-size: 0.95rem; font-weight: 600; }
-.sizes { display: flex; flex-wrap: wrap; gap: 6px; }
-.sizes button { padding: 6px 12px; border-radius: 999px; background: var(--fill); font-size: 0.85rem; font-weight: 600; color: var(--ink-2); }
-.sizes button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+/* Combien on en a : − et +, dans la garde-robe comme dans les suggestions */
+.counter { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.counter .step-btn { width: 34px; height: 34px; }
+.counter .step-btn:disabled { opacity: 0.35; cursor: default; }
+.counter-n { min-width: 2ch; text-align: center; font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.size-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; font-size: 0.92rem; color: var(--ink-2); }
+.size-row .tag { margin-left: 4px; }
+.cat-name .hint { font-weight: 500; }
+.size-title { font-size: 0.86rem; font-weight: 650; color: var(--ink-2); margin-top: 4px; }
+.wash { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-weight: 600; font-size: 0.95rem; }
+.wash select { width: auto; min-height: 40px; padding: 6px 12px; }
+.wardrobe > .hint { margin-top: 6px; }
+.cat-group { margin-top: 16px; font-size: 0.78rem; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.buy-count { font-size: 0.95rem; }
+.buy-actions { align-items: center; flex-wrap: wrap; }
+.buy-have { font-size: 0.88rem; color: var(--ink-2); }
+.buy-actions .btn.soft { margin-left: auto; }
 
 /* Boutons */
 .btn {

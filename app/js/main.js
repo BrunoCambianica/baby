@@ -158,6 +158,7 @@ function compute(day) {
       room_temp_c: tomorrow ? null : freshRoom(p, 'nuit'),
       day_room_temp_c: tomorrow ? null : freshRoom(p, 'jour'),
       inventory: p.inventory ?? {},
+      wash_days: p.wash_days ?? null,
     },
     date,
     now: time,
@@ -399,7 +400,7 @@ function writeSwData() {
 // Réglages du foyer : commune, horaires, affichage. Les dates de changement servent à fusionner avec l'autre parent.
 function updateHousehold(patch) {
   const now = Date.now();
-  const shared = ['commune', 'outing_window', 'outing_duration_h'].some((k) => k in patch);
+  const shared = ['commune', 'outing_window', 'outing_duration_h', 'wash_days'].some((k) => k in patch);
   state.household = { ...state.household, ...patch, updated: now, ...(shared ? { settings_at: now } : {}) };
   saveHousehold();
 }
@@ -904,25 +905,39 @@ const actions = {
     updateChild({ [kind === 'jour' ? 'room_day' : 'room']: { value, at: Date.now() } });
     paint();
   },
-  own(el) {
+  // Garde-robe : une pièce de plus ou de moins dans une taille. La liste garde une taille par pièce (« 6m » trois fois :
+  // trois), que les versions précédentes lisent toujours comme « j'en ai ».
+  count(el) {
+    const { cat, size } = el.dataset;
     const inventory = { ...(state.profile.inventory ?? {}) };
-    inventory[el.dataset.cat] = [...new Set([...(inventory[el.dataset.cat] ?? []), el.dataset.size])];
+    const list = [...(inventory[cat] ?? [])];
+    // Une gigoteuse notée avant la 0.16, sans TOG, compte comme chaude (2,5 TOG) ou légère (1 TOG) : c'est elle qu'on
+    // retire quand il n'y en a pas de notée avec ce TOG.
+    const S = state.bundle.rules.purchases.sleepbags;
+    const [code, tog] = size.split('|');
+    const legacy = cat === S.inventory && Object.entries(S.legacy).find(([id, t]) => t === tog && (inventory[id] ?? []).includes(code))?.[0];
+    if (Number(el.dataset.value) > 0) list.push(size);
+    else if (list.includes(size)) list.splice(list.lastIndexOf(size), 1);
+    else if (legacy) {
+      const old = [...inventory[legacy]];
+      old.splice(old.lastIndexOf(code), 1);
+      if (old.length) inventory[legacy] = old;
+      else delete inventory[legacy];
+    }
+    if (list.length) inventory[cat] = list;
+    else delete inventory[cat];
     updateChild({ inventory });
-    toast('Ajouté à votre garde-robe.');
+    if (Number(el.dataset.value) > 0 && el.classList.contains('btn')) toast('Ajouté à votre garde-robe.');
+    paint();
+  },
+  // Rythme de lessive, commun au foyer : il fixe les quantités conseillées des vêtements de tous les jours.
+  wash(el) {
+    updateHousehold({ wash_days: Number(el.dataset.value) });
     paint();
   },
   hide(el) {
     store.hide(`${state.profile.id}|${el.dataset.key}`);
     toast('Suggestion masquée.');
-    paint();
-  },
-  inv(el) {
-    const inventory = { ...(state.profile.inventory ?? {}) };
-    const sizes = new Set(inventory[el.dataset.cat] ?? []);
-    if (sizes.has(el.dataset.size)) sizes.delete(el.dataset.size);
-    else sizes.add(el.dataset.size);
-    inventory[el.dataset.cat] = [...sizes];
-    updateChild({ inventory });
     paint();
   },
   // Fiche du jour pour la nounou, la crèche ou les grands-parents : image et lien (les données sont après le #).

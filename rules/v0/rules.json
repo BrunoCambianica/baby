@@ -284,6 +284,18 @@
     "lead_days": 14,
     "size_lookahead_days": 28,
     "max_suggestions": 3,
+    "quantities": {
+      "wash_days_default": 3,
+      "wash_days_choices": [2, 3, 4, 7],
+      "spare": 1,
+      "note": "Suggestion pratique : de quoi tenir entre deux lessives, plus une pièce de rechange (per_day × jours entre deux lessives + spare), ou un nombre fixe (quantity : deux gigoteuses, une portée et une au lavage). suggest_once_noted : proposé seulement quand le parent en a noté dans sa garde-robe."
+    },
+    "sleepbags": {
+      "inventory": "gigoteuse",
+      "togs": ["0,2", "0,5", "1", "2", "2,5", "3,5"],
+      "legacy": { "gigoteuse_hiver": "2,5", "gigoteuse_ete": "1" },
+      "note": "Gigoteuses notées par TOG et par taille (« 6-18m|2,5 »). Chaque saison a ses TOG, pris dans le tableau de nuit des fabricants (night.tog_hint) : une gigoteuse compte pour chaque saison où son TOG sert. Celles notées avant la 0.16 comptent comme 2,5 TOG (chaude) ou 1 TOG (légère)."
+    },
     "size_systems": {
       "vetement": [
         { "code": "1m", "label": "1 mois", "max_age_m": 2 },
@@ -317,13 +329,19 @@
     "size_note": "Correspondance âge/taille indicative (convention des étiquettes) ; la taille réellement portée, saisie par le parent, prime.",
     "categories": [
       {
-        "id": "gigoteuse_hiver", "size_system": "gigoteuse", "priority": 1, "max_age_m": 36,
+        "id": "gigoteuse_hiver", "size_system": "gigoteuse", "priority": 1, "max_age_m": 36, "quantity": 2, "togs": ["2", "2,5", "3,5"],
         "need_if": { "week_tmean_below": 15 },
         "reason": "nuits_fraiches",
         "relays": ["relay.sleep.size_adapted", "fabricant.sleepbag.norm"]
       },
       {
-        "id": "gigoteuse_ete", "size_system": "gigoteuse", "priority": 2, "max_age_m": 36,
+        "id": "gigoteuse_mi_saison", "size_system": "gigoteuse", "priority": 2, "max_age_m": 36, "quantity": 2, "togs": ["1", "2"],
+        "need_if": { "week_tmean_at_least": 15, "week_tmax_below": 27 },
+        "reason": "nuits_douces",
+        "relays": ["relay.sleep.size_adapted", "fabricant.sleepbag.norm"]
+      },
+      {
+        "id": "gigoteuse_ete", "size_system": "gigoteuse", "priority": 2, "max_age_m": 36, "quantity": 2, "togs": ["0,2", "0,5", "1"],
         "need_if": { "week_tmax_at_least": 27 },
         "reason": "nuits_chaudes",
         "relays": ["relay.sleep.size_adapted", "fabricant.sleepbag.norm"]
@@ -367,7 +385,7 @@
         "relays_from_12m": ["relay.sun.protect"]
       },
       {
-        "id": "vetements_longs_legers", "size_system": "vetement", "priority": 2,
+        "id": "vetements_longs_legers", "size_system": "vetement", "priority": 2, "per_day": 1,
         "need_if": { "week_uv_max_at_least": 3, "week_tmax_at_least": 22 },
         "reason": "soleil",
         "relays": [],
@@ -387,6 +405,26 @@
         "need_if": { "week_uv_max_at_least": 3, "week_tmax_at_least": 18 },
         "reason": "soleil",
         "relays": ["relay.sun.protect"]
+      },
+      {
+        "id": "bodies", "size_system": "vetement", "priority": 3, "max_age_m": 24, "per_day": 2, "suggest_once_noted": true,
+        "need_if": {}, "reason": "lessive", "relays": []
+      },
+      {
+        "id": "hauts", "size_system": "vetement", "priority": 3, "per_day": 1, "suggest_once_noted": true,
+        "need_if": {}, "reason": "lessive", "relays": []
+      },
+      {
+        "id": "pantalons", "size_system": "vetement", "priority": 3, "per_day": 1, "suggest_once_noted": true,
+        "need_if": {}, "reason": "lessive", "relays": []
+      },
+      {
+        "id": "pyjamas", "size_system": "vetement", "priority": 3, "per_day": 1, "per_day_by_style": { "pyjama": 2 }, "suggest_once_noted": true,
+        "need_if": {}, "reason": "lessive", "relays": []
+      },
+      {
+        "id": "chaussettes", "size_system": "accessoire", "priority": 3, "per_day": 1, "suggest_once_noted": true,
+        "need_if": {}, "reason": "lessive", "relays": []
       }
     ],
     "never_suggest": [

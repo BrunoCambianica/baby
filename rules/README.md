@@ -34,7 +34,7 @@ node tools/run-vectors.js --show creneau-fortes-chaleurs   # résultat complet d
 | Champ | Contenu |
 |---|---|
 | `date`, `now` | Jour (`AAAA-MM-JJ`) et heure locale (`HH:MM`) |
-| `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c` (sa chambre, pour la nuit), `day_room_temp_c` (la pièce où il passe la journée, pour la tenue à la maison), `day_style` (`sans_pyjama` ou rien), `night_options` (tenue de nuit choisie par tranche : `{ n20: 'tog-1' }`), `inventory` (`{ catégorie: [tailles possédées] }`). Plusieurs enfants : un appel par enfant |
+| `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c` (sa chambre, pour la nuit), `day_room_temp_c` (la pièce où il passe la journée, pour la tenue à la maison), `day_style` (`sans_pyjama` ou rien), `night_options` (tenue de nuit choisie par tranche : `{ n20: 'tog-1' }`), `inventory` (`{ catégorie: [tailles] }`, une taille par pièce possédée : `['6m', '6m', '6m']`, trois en 6 mois), `wash_days` (jours entre deux lessives, commun au foyer ; sinon `purchases.quantities.wash_days_default`). Plusieurs enfants : un appel par enfant |
 | `forecast` | `daylight` (`sunrise`, `sunset`), `hourly` (`time`, `temp_c`, `feels_c`, `precip_prob`, `precip_mm`, `gust_kmh`, `uv`), `daily.tmax_c` facultatif |
 | `alerts` | `vigilance` (`[{ phenomenon, color }]`, couleurs Météo-France), `air` (`{ episode, pollutant }`) |
 | `outlook` | Semaines à venir : `week_start`, `tmax_mean`, `tmean`, `rainy_days`, `uv_max_mean` |
@@ -51,8 +51,17 @@ Le profil ne quitte jamais le téléphone.
 
 - `outfit.day_styles` : styles de la journée choisis pour l'enfant. `sans_pyjama` remplace le pyjama par son équivalent en vêtements de jour, pas par une couche de moins : un haut (t-shirt pour le pyjama léger, haut ML sinon), un pantalon, et des chaussettes sauf pour le pyjama léger ; dehors comme à la maison ; la nuit ne change pas.
 - `night.tog_hint.bins[].alternatives` : pour une tranche de chambre, d'autres tenues publiées par un fabricant (`sources`, niveau C), au choix selon la gigoteuse qu'on a. Le choix est gardé pour la tranche (`id`) seulement ; un choix inconnu (retiré des règles) redonne la tenue principale.
-- Ce qu'on met sous la gigoteuse s'additionne à son TOG : le contrôle de la charte refuse une tenue de nuit non compensée. Gigoteuse plus légère que la principale : vêtements plus chauds (indices `journee.warmth`) ; plus chaude : vêtements plus légers ; même TOG : une couche fine d'écart au plus. Le jour, un style ne rend jamais la tenue plus chaude.
+- Ce qu'on met sous la gigoteuse s'additionne à son TOG : le contrôle de la charte refuse une tenue de nuit non compensée. Gigoteuse plus légère que la principale : vêtements plus chauds (indices `journee.warmth`) ; plus chaude : vêtements plus légers ; même TOG : une couche fine d'écart au plus. Le jour, un style (et le porte-bébé) couvre autant que le pyjama qu'il remplace : un haut, un pantalon, et des chaussettes pour un pyjama à pieds.
 - Tailles : en mois jusqu'à 24 mois, puis en années ; plus de gigoteuse proposée après 36 mois.
+
+## Achats à prévoir et quantités (`purchases`)
+
+Suggestions pratiques, sans portée sanitaire, sur `horizon_weeks` semaines : la catégorie dont la saison arrive (`need_if`) ou dont la taille change, dans la taille qui servira encore `size_lookahead_days` jours plus tard, à prévoir `lead_days` jours avant.
+
+- Quantité conseillée : pour les vêtements de tous les jours (`per_day`), de quoi tenir entre deux lessives plus une pièce de rechange, `per_day` × `wash_days` + `quantities.spare` (7 bodies pour une lessive tous les 3 jours) ; les pyjamas comptent double portés aussi la journée (`per_day_by_style`). Sinon un nombre fixe, `quantity` (deux gigoteuses : une portée, une au lavage), 1 par défaut.
+- Une catégorie est proposée tant qu'il en manque dans la taille du moment ou la suivante : la suggestion dit combien (`quantity`, `owned`).
+- Gigoteuses (`sleepbags`) : notées par taille et par TOG (`gigoteuse: ['6-18m|2,5']`). Chaque saison a sa catégorie et ses TOG (`togs`), pris dans le tableau de nuit des fabricants (contrôlé par lint) : hiver (`week_tmean_below`) 2 à 3,5 TOG, mi-saison 1 à 2 TOG, été (`week_tmax_at_least`) 0,2 à 1 TOG ; une gigoteuse compte pour chaque saison où son TOG sert. Celles notées avant la 0.16 sans TOG (`legacy`) comptent comme 2,5 TOG (chaude) ou 1 TOG (légère).
+- `suggest_once_noted` (bodies, hauts, pantalons, pyjamas, chaussettes) : proposé seulement quand le parent en a noté dans sa garde-robe ; sans rien noté, on ne sait pas ce qu'il a.
 
 ## La journée en couches (`journee`)
 

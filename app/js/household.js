@@ -60,6 +60,7 @@ export function fromShared(shared, local) {
     commune: shared.commune,
     outing_window: shared.outing_window,
     outing_duration_h: shared.outing_duration_h,
+    wash_days: shared.wash_days ?? null,
     settings_at: shared.settings_at ?? 0,
     children: shared.children,
     removed: shared.removed ?? {},
@@ -89,6 +90,8 @@ export function fromConfig(cfg, local, { keepView = false } = {}) {
     commune: same ? local.commune : { nom: cfg.n ?? '', code: cfg.c || `${cfg.la},${cfg.lo}`, dep: cfg.dp ?? '', cp: '', lat: cfg.la, lon: cfg.lo },
     outing_window: { from: cfg.f ?? DEFAULT_WINDOW.from, to: cfg.u ?? DEFAULT_WINDOW.to },
     outing_duration_h: cfg.d ?? 1,
+    // Le rythme de lessive n'est pas dans la configuration des widgets : celui du téléphone est gardé.
+    wash_days: local?.wash_days ?? null,
     outfit_view: keepView && local ? local.outfit_view : cfg.i === 0 ? 'texte' : 'dessins',
     children,
     created: local?.created ?? Date.now(),

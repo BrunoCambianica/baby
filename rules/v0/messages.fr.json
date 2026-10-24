@@ -489,6 +489,11 @@
       "text": "Touchez la température pour la noter : − et + la changent d'un demi-degré.",
       "short": "Touchez la température pour la noter"
     },
+    "purchase.quantity_rule": {
+      "kind": "pratique",
+      "text": "Quantités conseillées : de quoi tenir entre deux lessives, plus une pièce de rechange ; deux gigoteuses par saison, une portée et une au lavage.",
+      "short": "De quoi tenir entre deux lessives, plus une de rechange"
+    },
     "purchase.suggestion": {
       "kind": "pratique",
       "text": "À prévoir avant le {order_by} : {label}{size}, utile à partir du {needed_from}.",
@@ -649,8 +654,9 @@
       "accessoire": "Et aussi"
     },
     "categories": {
-      "gigoteuse_hiver": "gigoteuse chaude (≈ 2,5 TOG)",
-      "gigoteuse_ete": "gigoteuse légère (≈ 0,5-1 TOG)",
+      "gigoteuse_hiver": "gigoteuse d'hiver (2 à 3,5 TOG)",
+      "gigoteuse_mi_saison": "gigoteuse de mi-saison (1 à 2 TOG)",
+      "gigoteuse_ete": "gigoteuse d'été (0,2 à 1 TOG)",
       "combi_pilote": "combinaison pilote",
       "manteau_hiver": "manteau chaud",
       "accessoires_hiver": "bonnet, moufles et chaussons",
@@ -659,15 +665,27 @@
       "chapeau_soleil": "chapeau à larges bords",
       "vetements_longs_legers": "vêtements longs et légers",
       "lunettes_soleil": "lunettes de soleil enveloppantes",
-      "creme_solaire_enfant": "crème solaire adaptée aux enfants"
+      "creme_solaire_enfant": "crème solaire adaptée aux enfants",
+      "bodies": "bodies",
+      "hauts": "hauts",
+      "pantalons": "pantalons",
+      "pyjamas": "pyjamas",
+      "chaussettes": "paires de chaussettes"
+    },
+    "sleepbag_seasons": {
+      "gigoteuse_hiver": "hiver",
+      "gigoteuse_mi_saison": "mi-saison",
+      "gigoteuse_ete": "été"
     },
     "reasons": {
       "nuits_fraiches": "nuits fraîches",
       "nuits_chaudes": "nuits chaudes",
+      "nuits_douces": "nuits douces",
       "froid": "froid",
       "pluie": "pluie fréquente",
       "soleil": "soleil",
-      "taille": "changement de taille"
+      "taille": "changement de taille",
+      "lessive": "pour tenir entre deux lessives"
     },
     "vigilance_colors": {
       "jaune": "jaune",

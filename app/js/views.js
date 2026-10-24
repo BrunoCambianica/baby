@@ -1,5 +1,5 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { ageMonths, homeStatus, hourFr, journeeRange, render, skyTheme, toMin, widgetLines } from '../../engine/engine.js';
+import { addDays, ageMonths, homeStatus, hourFr, journeeRange, needMet, ownedCount, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
 import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.15.1';
+export const VERSION = '0.16.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -682,35 +682,100 @@ function heroPrevoir(state, ctx) {
   </header>`;
 }
 
+// Combien on en a dans une taille, avec − et + : la garde-robe et les suggestions se règlent de la même façon.
+function counter(label, cat, size, n) {
+  return `<div class="counter" role="group" aria-label="${esc(label)} : combien vous en avez">
+      <button class="step-btn" data-action="count" data-cat="${cat}" data-size="${size}" data-value="-1" aria-label="Un de moins"${n ? '' : ' disabled'}>${icon('minus', { size: 16 })}</button>
+      <span class="counter-n" aria-live="polite">${n}</span>
+      <button class="step-btn" data-action="count" data-cat="${cat}" data-size="${size}" data-value="1" aria-label="Un de plus">${icon('plus', { size: 16 })}</button>
+    </div>`;
+}
+
+// Achats à prévoir, avec leur quantité conseillée (suggestion pratique) : de quoi tenir entre deux lessives plus une
+// pièce de rechange pour les vêtements de tous les jours, deux gigoteuses (une portée, une au lavage), une combinaison.
+// La garde-robe note combien il en a par taille ; le rythme de lessive, commun au foyer, se règle en tête.
 function prevoirContent(state, ctx) {
   const M = state.bundle.messages;
   const R = state.bundle.rules;
+  const P = R.purchases;
   const inv = state.profile.inventory ?? {};
   const owned = Object.values(inv).reduce((a, sizes) => a + sizes.length, 0);
+  const name = (catId) => capitalize(M.labels.categories[catId]);
+  const bagCat = (catId) => P.categories.find((c) => c.id === catId && c.togs);
   const items = ctx.result.purchases.map((x) => {
     const when = buyWhen(x, ctx.date);
     const why = x.reasons.map((r) => M.labels.reasons[r] ?? r).join(' · ');
     const official = x.relays.find((id) => M.messages[id]?.kind === 'officiel');
+    const many = x.quantity > 1;
+    const label = `${name(x.category)}${x.size === 'unique' ? '' : `, ${x.size_label}`}`;
     return `<article class="buy">
-      <div class="buy-head"><h3>${drawingsOn(state) ? `<span class="buy-ico">${drawingSvg(CATEGORY_DRAWINGS[x.category], { size: 26 })}</span>` : ''}${esc(capitalize(M.labels.categories[x.category]))}</h3>${x.size === 'unique' ? '' : `<span class="tag blue">${esc(x.size_label)}</span>`}</div>
+      <div class="buy-head"><h3>${drawingsOn(state) ? `<span class="buy-ico">${drawingSvg(CATEGORY_DRAWINGS[x.category], { size: 26 })}</span>` : ''}${esc(name(x.category))}</h3>${x.size === 'unique' ? '' : `<span class="tag blue">${esc(x.size_label)}</span>`}</div>
+      ${many ? `<p class="buy-count"><strong>Il en manque ${x.quantity - x.owned}</strong><span class="hint"> · conseillé : ${x.quantity}</span></p>` : ''}
       <div class="buy-meta"><span class="tag${when.urgent ? ' amber' : ''}">${esc(when.text)}</span><span class="buy-why">${esc(capitalize(why))}</span></div>
       ${official ? `<p class="source">${esc(render(M, official, 'short'))} · ${sourceLinks(state, M.messages[official].sources ?? [])}</p>` : ''}
       <div class="buy-actions">
-        <button class="btn small tint" data-action="own" data-cat="${x.category}" data-size="${x.size}">${icon('check', { size: 18 })}Je l'ai déjà</button>
+        ${bagCat(x.category)
+    ? `<span class="buy-have">J'en ai une de</span>${bagCat(x.category).togs.map((tog) => `<button class="btn small tint" data-action="count" data-cat="${P.sleepbags.inventory}" data-size="${x.size}|${tog}" data-value="1">${tog} TOG</button>`).join('')}`
+    : many
+    ? `<span class="buy-have">Vous en avez</span>${counter(label, x.category, x.size, x.owned)}`
+    : `<button class="btn small tint" data-action="count" data-cat="${x.category}" data-size="${x.size}" data-value="1">${icon('check', { size: 18 })}Je l'ai déjà</button>`}
         <button class="btn small soft" data-action="hide" data-key="${esc(x.key)}">Masquer</button>
       </div>
     </article>`;
   }).join('');
-  const cats = R.purchases.categories.map((cat) => {
+  // Les catégories de son âge (et des semaines qui viennent), en deux groupes : tous les jours, puis selon la saison.
+  // Pour chacune : sa taille, la suivante s'il y passe d'ici six semaines, et celles où il en a déjà.
+  const age = ageMonths(state.profile.birth, state.today);
+  const later = ageMonths(state.profile.birth, addDays(state.today, P.horizon_weeks * 7));
+  const fits = (cat) => !(cat.min_age_m && later < cat.min_age_m) && !(cat.max_age_m && age >= cat.max_age_m);
+  const catBlock = (cat) => {
+    const system = P.size_systems[cat.size_system];
+    const now = system.find((sz) => age < sz.max_age_m) ?? system.at(-1);
+    const soon = system.find((sz) => later < sz.max_age_m) ?? system.at(-1);
     const have = inv[cat.id] ?? [];
-    return `<div class="cat"><p class="cat-name">${esc(capitalize(M.labels.categories[cat.id]))}</p><div class="sizes">${R.purchases.size_systems[cat.size_system].map(
-      (s) => `<button data-action="inv" data-cat="${cat.id}" data-size="${s.code}" aria-pressed="${have.includes(s.code)}">${esc(s.code === 'unique' ? "J'en ai" : s.label)}</button>`,
-    ).join('')}</div></div>`;
-  }).join('');
+    const sizes = system.filter((sz) => sz === now || sz === soon || have.includes(sz.code));
+    const rows = sizes.map((sz) => `<div class="size-row">
+        <span>${esc(sz.code === 'unique' ? 'Vous en avez' : sz.label)}${sz === now || sz.code === 'unique' ? '' : ' <span class="tag">bientôt</span>'}</span>
+        ${counter(`${name(cat.id)}${sz.code === 'unique' ? '' : `, ${sz.label}`}`, cat.id, sz.code, ownedCount(inv, cat.id, sz.code))}
+      </div>`).join('');
+    return `<div class="cat"><p class="cat-name">${esc(name(cat.id))}<span class="hint"> · conseillé : ${quantityFor(cat, state.profile, R)}</span></p>${rows}</div>`;
+  };
+  // Gigoteuses : par taille, une ligne par TOG utile aux saisons des semaines qui viennent (ou déjà notée), avec les
+  // saisons où il sert ; deux conseillées par saison.
+  const bags = P.categories.filter((c) => c.togs && fits(c));
+  const sleepbagBlock = () => {
+    if (!bags.length) return '';
+    const system = P.size_systems.gigoteuse;
+    const now = system.find((sz) => age < sz.max_age_m) ?? system.at(-1);
+    const soon = system.find((sz) => later < sz.max_age_m) ?? system.at(-1);
+    const noted = (inv[P.sleepbags.inventory] ?? []).map((e) => e.split('|'));
+    const weeks = (ctx.input.outlook ?? []).slice(0, P.horizon_weeks);
+    const coming = bags.filter((c) => !weeks.length || weeks.some((w) => needMet(c.need_if, w, null, state.profile.transport)));
+    const seasonsOf = (tog) => bags.filter((c) => c.togs.includes(tog)).map((c) => M.labels.sleepbag_seasons[c.id]).join(', ');
+    const sizes = system.filter((sz) => sz === now || sz === soon || noted.some(([code]) => code === sz.code)
+      || Object.keys(P.sleepbags.legacy).some((id) => (inv[id] ?? []).includes(sz.code)));
+    const rows = sizes.map((sz) => {
+      const togs = P.sleepbags.togs.filter((tog) => coming.some((c) => c.togs.includes(tog)) || sleepbagCount(inv, sz.code, [tog], R));
+      return `<p class="size-title">${esc(sz.label)}${sz === now ? '' : ' <span class="tag">bientôt</span>'}</p>${togs.map((tog) => `<div class="size-row">
+          <span>${tog} TOG<span class="hint"> · ${esc(seasonsOf(tog))}</span></span>
+          ${counter(`Gigoteuse ${tog} TOG, ${sz.label}`, P.sleepbags.inventory, `${sz.code}|${tog}`, sleepbagCount(inv, sz.code, [tog], R))}
+        </div>`).join('')}`;
+    }).join('');
+    return `<div class="cat"><p class="cat-name">Gigoteuses<span class="hint"> · conseillé : 2 par saison</span></p>${rows}</div>`;
+  };
+  const group = (title, list, first = '') => (list.length || first ? `<p class="cat-group">${title}</p>${first}${list.map(catBlock).join('')}` : '');
+  const cats = group('Tous les jours', P.categories.filter((c) => c.suggest_once_noted && fits(c)))
+    + group('Selon la saison', P.categories.filter((c) => !c.suggest_once_noted && !c.togs && fits(c)), sleepbagBlock());
+  const wash = state.profile.wash_days ?? P.quantities.wash_days_default;
+  const washPick = `<label class="wash"><span>Lessive tous les</span>
+      <select data-action="wash" aria-label="Lessive tous les combien de jours">${P.quantities.wash_days_choices.map((d) =>
+        `<option value="${d}"${d === wash ? ' selected' : ''}>${d} jours</option>`).join('')}</select></label>
+    <p class="hint">${esc(render(M, 'purchase.quantity_rule', 'text'))}</p>`;
   return `${owned ? '' : `<section class="card"><p class="tip">${icon('hanger', { size: 20 })}<span>Indiquez d'abord ce que vous avez déjà dans « Ma garde-robe » : les suggestions seront plus justes.</span></p></section>`}
-    ${items ? `<section class="card">${items}</section>` : `<section class="card"><p class="hint">Rien à prévoir pour l'instant${state.climateReady ? '' : ' (calcul en cours)'}. On vous préviendra ici quand la saison ou la taille changent.</p></section>`}
+    ${items ? `<section class="card">${items}</section>` : `<section class="card"><p class="hint">Rien à prévoir pour l'instant${state.climateReady ? '' : ' (calcul en cours)'}. On vous préviendra ici quand la saison ou la taille changent, ou s'il vous en manque.</p></section>`}
     <details class="card wardrobe" data-details="garde-robe"${state.open.has('garde-robe') ? ' open' : ''}>
       <summary>${icon('hanger', { size: 20 })}Ma garde-robe <span class="tag">${owned}</span>${chev()}</summary>
+      ${washPick}
       ${cats}
     </details>
     <p class="hint" style="padding:0 6px">Calcul sur 6 semaines : prévisions, puis moyennes des trois dernières années. Tailles indicatives selon l'âge.</p>

@@ -636,6 +636,41 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   assert(!(await page.isVisible('text=Sans pyjama')), 'choix du pyjama proposé à 2 ans et demi');
 });
 
+await test('Achats : quantités conseillées, garde-robe comptée par taille, rythme de lessive', async (use) => {
+  const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await page.goto(APP);
+  await page.click('.tabbar [data-value="prevoir"]');
+  // Rien de noté pour les bodies : ils ne sont pas proposés. Gigoteuse d'hiver : deux conseillées, de 2 à 3,5 TOG.
+  assert(!(await page.isVisible('.buy h3:has-text("Bodies")')), 'bodies proposés sans rien de noté');
+  const sleepbag = page.locator('.buy', { hasText: 'Gigoteuse d\'hiver' });
+  assert((await sleepbag.textContent()).includes('Il en manque 2'), await sleepbag.textContent());
+  // Une 2 TOG achetée, notée depuis la suggestion : elle compte pour l'hiver, il en manque une.
+  await page.click('.buy:has-text("Gigoteuse d\'hiver") button:text-is("2 TOG")');
+  assert((await page.locator('.buy', { hasText: 'Gigoteuse d\'hiver' }).textContent()).includes('Il en manque 1'), 'gigoteuse 2 TOG non comptée');
+  assert((await stored(page)).children[0].inventory.gigoteuse.join() === '6-18m|2', JSON.stringify((await stored(page)).children[0].inventory));
+  // Trois bodies 6 mois notés dans la garde-robe : sept conseillés (2 par jour, lessive tous les 3 jours, plus un).
+  await page.click('summary:has-text("Ma garde-robe")');
+  const bodies = page.locator('.cat', { hasText: 'Bodies' });
+  assert((await bodies.textContent()).includes('conseillé : 7'), await bodies.textContent());
+  // Gigoteuses par TOG, avec leurs saisons : la 2 TOG notée est là.
+  assert((await page.textContent('.cat:has-text("Gigoteuses")')).includes('2 TOG · hiver, mi-saison'), await page.textContent('.cat:has-text("Gigoteuses")'));
+  for (let k = 0; k < 3; k++) await page.click('.cat:has-text("Bodies") .step-btn[data-value="1"]');
+  const buy = page.locator('.buy', { hasText: 'Bodies' });
+  assert((await buy.textContent()).includes('Il en manque 4'), await buy.textContent());
+  let h = await stored(page);
+  assert(h.children[0].inventory.bodies.join() === '6m,6m,6m', JSON.stringify(h.children[0].inventory));
+  // Lessive tous les 2 jours : cinq conseillés ; deux de plus depuis la suggestion, elle disparaît.
+  await page.selectOption('select[data-action="wash"]', '2');
+  assert((await page.locator('.buy', { hasText: 'Bodies' }).textContent()).includes('Il en manque 2'), 'quantité non recalculée');
+  for (let k = 0; k < 2; k++) await page.click('.buy:has-text("Bodies") .step-btn[data-value="1"]');
+  assert(!(await page.isVisible('.buy h3:has-text("Bodies")')), 'suggestion gardée alors qu\'il en a assez');
+  h = await stored(page);
+  assert(h.wash_days === 2 && h.children[0].inventory.bodies.length === 5, JSON.stringify([h.wash_days, h.children[0].inventory]));
+  const width = await page.evaluate(() => [document.scrollingElement.scrollWidth, document.scrollingElement.clientWidth]);
+  assert(width[0] === width[1], `page ${width.join(' / ')}`);
+  await shot(page, 'l7-achats-quantites');
+});
+
 // Parcours avec l'API locale (pas sur le site en ligne : l'API du VPS n'y est pas encore branchée).
 const local = !process.env.SB_SITE;
 

@@ -268,6 +268,7 @@ export const ITEM_DRAWINGS = {
 // Achat à prévoir → dessin.
 export const CATEGORY_DRAWINGS = {
   gigoteuse_hiver: 'gigoteuse_chaude',
+  gigoteuse_mi_saison: 'gigoteuse',
   gigoteuse_ete: 'gigoteuse',
   combi_pilote: 'combi_chaude',
   manteau_hiver: 'manteau_chaud',
@@ -278,6 +279,11 @@ export const CATEGORY_DRAWINGS = {
   vetements_longs_legers: 'haut_ml',
   lunettes_soleil: 'lunettes',
   creme_solaire_enfant: 'creme',
+  bodies: 'body_ml',
+  hauts: 'haut_ml',
+  pantalons: 'pantalon',
+  pyjamas: 'pyjama',
+  chaussettes: 'chaussettes',
 };
 
 // Dessin au format SVG (app web).

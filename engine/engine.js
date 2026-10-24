@@ -515,14 +515,41 @@ function planNight(input, R, heat, age) {
   };
 }
 
-function needMet(need, week, band, transport) {
+export function needMet(need, week, band, transport) {
   if (need.week_tmean_below != null && !(week.tmean < need.week_tmean_below)) return false;
   if (need.week_tmax_at_least != null && !(week.tmax_mean >= need.week_tmax_at_least)) return false;
+  if (need.week_tmean_at_least != null && !(week.tmean >= need.week_tmean_at_least)) return false;
+  if (need.week_tmax_below != null && !(week.tmax_mean < need.week_tmax_below)) return false;
   if (need.week_band_in && !need.week_band_in.includes(band)) return false;
   if (need.week_rainy_days_at_least != null && !(week.rainy_days >= need.week_rainy_days_at_least)) return false;
   if (need.week_uv_max_at_least != null && !(week.uv_max_mean >= need.week_uv_max_at_least)) return false;
   if (need.transport_in && !need.transport_in.includes(transport)) return false;
   return true;
+}
+
+// Quantité conseillée d'une catégorie (suggestion pratique) : pour les vêtements de tous les jours, de quoi tenir entre
+// deux lessives plus une pièce de rechange (le rythme de lessive se règle : wash_days) ; sinon un nombre fixe, deux
+// gigoteuses (une portée, une au lavage), une combinaison. Les pyjamas comptent double portés aussi la journée.
+export function quantityFor(cat, profile, R) {
+  const Q = R.purchases.quantities;
+  if (!cat.per_day) return cat.quantity ?? 1;
+  const perDay = cat.per_day_by_style?.[dayStyleId(R, profile)] ?? cat.per_day;
+  return Math.ceil(perDay * (profile.wash_days ?? Q.wash_days_default)) + Q.spare;
+}
+
+// Combien on en a dans une taille : la garde-robe note une taille par pièce (« 6m » trois fois : trois). Les versions
+// précédentes, qui ne notaient qu'une fois chaque taille, lisent toujours la même liste.
+export const ownedCount = (inventory, catId, size) => (inventory?.[catId] ?? []).filter((code) => code === size).length;
+
+// Gigoteuses d'une taille dont le TOG est dans la liste : notées par TOG (« 6-18m|2,5 »), et celles notées avant la
+// 0.16 sans TOG, comptées comme chaude (2,5 TOG) ou légère (1 TOG).
+export function sleepbagCount(inventory, size, togs, R) {
+  const S = R.purchases.sleepbags;
+  const noted = (inventory?.[S.inventory] ?? []).filter((entry) => {
+    const [code, tog] = entry.split('|');
+    return code === size && togs.includes(tog);
+  }).length;
+  return noted + Object.entries(S.legacy).filter(([, tog]) => togs.includes(tog)).reduce((n, [id]) => n + ownedCount(inventory, id, size), 0);
 }
 
 function planPurchases(input, R) {
@@ -539,11 +566,15 @@ function planPurchases(input, R) {
       if (cat.max_age_m && ageWeek >= cat.max_age_m) continue;
       if (!needMet(cat.need_if, week, band, transportFor(profile, ageWeek, R))) continue;
       const system = P.size_systems[cat.size_system];
-      const owned = profile.inventory?.[cat.id] ?? [];
-      if (owned.includes(sizeFor(system, ageWeek).code)) continue;
+      // Les vêtements de tous les jours ne sont proposés qu'une fois notés dans la garde-robe : sans rien noté, on ne
+      // sait pas ce qu'il a déjà.
+      if (cat.suggest_once_noted && !(profile.inventory?.[cat.id] ?? []).length) continue;
+      const need = quantityFor(cat, profile, R);
+      const owned = (code) => (cat.togs ? sleepbagCount(profile.inventory, code, cat.togs, R) : ownedCount(profile.inventory, cat.id, code));
+      if (owned(sizeFor(system, ageWeek).code) >= need) continue;
       // On achète la taille qui servira encore dans quelques semaines.
       const buy = sizeFor(system, ageMonths(profile.birth, addDays(week.week_start, P.size_lookahead_days)));
-      if (owned.includes(buy.code)) continue;
+      if (owned(buy.code) >= need) continue;
       const reasons = [cat.reason];
       if (buy.code !== sizeFor(system, ageMonths(profile.birth, date)).code) reasons.push('taille');
       found.set(cat.id, {
@@ -554,6 +585,8 @@ function planPurchases(input, R) {
         needed_from: week.week_start,
         order_by: laterDay(addDays(week.week_start, -P.lead_days), date),
         priority: cat.priority,
+        quantity: need,
+        owned: owned(buy.code),
         reasons,
         relays: [...cat.relays, ...((ageWeek < under1y ? cat.relays_under_12m : cat.relays_from_12m) ?? [])],
       });
@@ -942,7 +975,11 @@ export function lint(bundle) {
       if (!compensated) errors.push(`nuit ${bin.id} : ${alt.id} non compensée (gigoteuse ${alt.tog} TOG au lieu de ${bin.tog}, vêtements ${dw >= 0 ? '+' : ''}${dw})`);
     }
   }
+  // Les TOG des gigoteuses par saison sont ceux du tableau de nuit des fabricants.
+  const nightTogs = new Set(R.night.tog_hint.bins.flatMap((b) => [b.tog, ...(b.alternatives ?? []).map((a) => a.tog)]));
+  for (const tog of R.purchases.sleepbags.togs) if (!nightTogs.has(tog)) errors.push(`gigoteuse ${tog} TOG absente du tableau de nuit`);
   for (const cat of R.purchases.categories) {
+    for (const tog of cat.togs ?? []) if (!R.purchases.sleepbags.togs.includes(tog)) errors.push(`${cat.id} : ${tog} TOG inconnu`);
     if (!M.labels.categories[cat.id]) errors.push(`libellé manquant : ${cat.id}`);
     if (!DRAWINGS[CATEGORY_DRAWINGS[cat.id]]) errors.push(`dessin manquant : ${cat.id}`);
   }
