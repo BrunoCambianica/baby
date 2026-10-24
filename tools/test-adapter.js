@@ -155,6 +155,22 @@ test('Configuration v2 : plusieurs enfants, choisis par numéro, prénom ou iden
   assert(decodeConfig(encodeConfig({ v: 2, n: 'Lyon', la: 45.758, lo: 4.8351, k: [{ b: 'mai' }] }, toB64), fromB64) === null, 'naissance invalide acceptée');
 });
 
+test('Chancelière de la garde-robe : signalée aux widgets, qui l\'utilisent à la place de la combinaison', () => {
+  const household = {
+    commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 },
+    outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_view: 'dessins', updated: 5,
+    children: [
+      { id: 'leo', name: 'Léo', birth: '2026-05', transport: 'poussette', outfit_offset: 0, inventory: { chanceliere: ['unique'] } },
+      { id: 'ema', name: 'Ema', birth: '2026-05', transport: 'poussette', outfit_offset: 0, inventory: {} },
+    ],
+  };
+  const cfg = decodeConfig(encodeConfig(householdToConfig(household), toB64), fromB64);
+  assert(cfg.k[0].cm === 1 && !('cm' in cfg.k[1]), JSON.stringify(cfg.k));
+  const morning = (ref) => widgetView({ forecast, profile: configToProfile(cfg, ref), date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle).today.journee.morning;
+  assert(morning('leo').includes('chanceliere') && !morning('leo').includes('combi_pilote'), morning('leo').join());
+  assert(morning('ema').includes('combi_pilote') && !morning('ema').includes('chanceliere'), morning('ema').join());
+});
+
 test('Tenues au choix : style de la journée et tenue de nuit passent par la configuration jusqu\'au widget', () => {
   const household = {
     commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 },

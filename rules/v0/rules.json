@@ -74,6 +74,20 @@
     ],
     "transport": {
       "poussette": { "band_shift": 0, "remove_items": [], "notes": [], "rain_gear": "habillage_pluie" },
+      "poussette_chanceliere": {
+        "base": "poussette",
+        "max_age_m": 24,
+        "band_shift": 0,
+        "remove_items": ["chaussons"],
+        "replace_items": {
+          "combi_legere": ["chanceliere"],
+          "combi_pilote": ["chanceliere"],
+          "combi_pilote_doublee": ["veste", "chanceliere"]
+        },
+        "carry_reason": "hors_poussette",
+        "notes": ["practical.stroller_muff"],
+        "rain_gear": "habillage_pluie"
+      },
       "porte_bebe": {
         "band_shift": -1,
         "remove_items": ["chanceliere"],
@@ -185,7 +199,7 @@
       "chapeau_si_soleil": 0, "chapeau": 0, "bonnet_fin": 0.5, "bonnet": 1,
       "moufles": 0.5, "chaussons": 0.5, "chanceliere": 1.5
     },
-    "carry_dessus_for": ["a_pied", "voiture"],
+    "carry_dessus_for": ["a_pied", "voiture", "poussette_chanceliere"],
     "bag": {
       "max_items": 3,
       "rain_prob_at_least": 50,

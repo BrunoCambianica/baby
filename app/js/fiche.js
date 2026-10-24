@@ -55,6 +55,7 @@ export function bagReason([, reason, time]) {
     pluie: at ? `pluie vers ${at}` : 'pluie',
     soleil: at ? `soleil vers ${at}` : 'soleil',
     pause: "s'il s'arrête",
+    hors_poussette: "s'il sort de la poussette",
     voiture: 'en sortant de la voiture',
     si_frais: at ? `si ça fraîchit vers ${at}` : 'si ça fraîchit',
   }[reason] ?? '';

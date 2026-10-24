@@ -651,7 +651,7 @@ await test('Achats : quantités conseillées, garde-robe comptée par taille, ry
   // Trois bodies 6 mois notés dans la garde-robe : sept conseillés (2 par jour, lessive tous les 3 jours, plus un).
   await page.click('summary:has-text("Ma garde-robe")');
   const bodies = page.locator('.cat', { hasText: 'Bodies' });
-  assert((await bodies.textContent()).includes('conseillé : 7'), await bodies.textContent());
+  assert(/conseillé\s:\s7/.test(await bodies.textContent()), await bodies.textContent());
   // Gigoteuses par TOG, avec leurs saisons : la 2 TOG notée est là.
   assert((await page.textContent('.cat:has-text("Gigoteuses")')).includes('2 TOG · hiver, mi-saison'), await page.textContent('.cat:has-text("Gigoteuses")'));
   for (let k = 0; k < 3; k++) await page.click('.cat:has-text("Bodies") .step-btn[data-value="1"]');
@@ -669,6 +669,13 @@ await test('Achats : quantités conseillées, garde-robe comptée par taille, ry
   const width = await page.evaluate(() => [document.scrollingElement.scrollWidth, document.scrollingElement.clientWidth]);
   assert(width[0] === width[1], `page ${width.join(' / ')}`);
   await shot(page, 'l7-achats-quantites');
+  // Une chancelière notée : dans la poussette, elle remplace la combinaison, et la combinaison va dans le sac.
+  await page.click('.cat:has-text("Chancelière") .step-btn[data-value="1"]');
+  await page.click('.tabbar [data-value="sortir"]');
+  const outside = await page.textContent('.day');
+  assert(outside.includes('Chancelière') && /Combi[^]*s'il sort de la poussette/.test(outside), outside);
+  assert(!(await page.locator('.day-step .dress-name', { hasText: 'Combi' }).count()), 'combinaison gardée avec la chancelière');
+  await shot(page, 'l7-chanceliere');
 });
 
 // Parcours avec l'API locale (pas sur le site en ligne : l'API du VPS n'y est pas encore branchée).

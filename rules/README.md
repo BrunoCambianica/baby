@@ -44,7 +44,7 @@ Le profil ne quitte jamais le téléphone.
 ## Âges et modes de sortie
 
 - `outfit.age_variants` : tenues propres aux enfants de 2 ans et plus (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière), tranche par tranche.
-- `outfit.transport` : chaque mode décale la tranche (`band_shift`), remplace ou retire des vêtements et choisit la protection contre la pluie (`rain_gear`). `a_pied` n'existe qu'à partir de `min_age_m` ; plus jeune, l'enfant est habillé comme en poussette. En voiture, combinaison et manteau deviennent une couverture par-dessus le harnais.
+- `outfit.transport` : chaque mode décale la tranche (`band_shift`), remplace ou retire des vêtements et choisit la protection contre la pluie (`rain_gear`). `a_pied` n'existe qu'à partir de `min_age_m` ; plus jeune, l'enfant est habillé comme en poussette. En voiture, combinaison et manteau deviennent une couverture par-dessus le harnais. `poussette_chanceliere` : la poussette quand une chancelière est notée dans la garde-robe (`inventory.chanceliere`, ou `stroller_muff` reçu par les widgets), avant `max_age_m` : la chancelière remplace la combinaison, sans chaussons, et la combinaison va dans le sac (`carry_reason`) ; `base` : le mode choisi par le parent, pour l'affichage et les achats.
 - `night.baby_only` : repères du couchage du nourrisson, affichés jusqu'à `baby_until_months`.
 
 ## Tenues au choix

@@ -667,6 +667,29 @@
       "expect": { "purchases.*.key": ["gigoteuse_hiver:0-6m"], "purchases.0.owned": 1, "purchases.0.quantity": 2 }
     },
     {
+      "id": "poussette-chanceliere-froid",
+      "description": "Chancelière notée dans la garde-robe, 6 °C en poussette : elle remplace la combinaison, sans chaussons ; la combinaison dans le sac",
+      "input": { "profile": { "inventory": { "chanceliere": ["unique"] } } },
+      "expect": {
+        "transport": "poussette_chanceliere",
+        "journee.morning.include": ["chanceliere", "pull", "bonnet"], "journee.morning.exclude": ["combi_pilote", "chaussons"],
+        "journee.bag.0.item": "combi_pilote", "journee.bag.0.reason": "hors_poussette",
+        "journee.notes": ["practical.stroller_muff"]
+      }
+    },
+    {
+      "id": "porte-bebe-chanceliere-ignoree",
+      "description": "Chancelière notée, sortie en porte-bébé : elle ne sert que dans la poussette",
+      "input": { "profile": { "transport": "porte_bebe", "inventory": { "chanceliere": ["unique"] } } },
+      "expect": { "transport": "porte_bebe", "journee.morning.exclude": ["chanceliere"] }
+    },
+    {
+      "id": "chanceliere-apres-2-ans",
+      "description": "Enfant de 2 ans et demi avec une chancelière notée : plus de chancelière, la tenue des enfants",
+      "input": { "profile": { "birth": "2024-03-15", "inventory": { "chanceliere": ["unique"] } } },
+      "expect": { "transport": "poussette", "journee.morning.exclude": ["chanceliere"] }
+    },
+    {
       "id": "achats-rien-a-prevoir",
       "description": "Garde-robe complète : aucune suggestion",
       "input": {

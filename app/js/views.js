@@ -1,5 +1,5 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { addDays, ageMonths, homeStatus, hourFr, journeeRange, needMet, ownedCount, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
+import { addDays, ageMonths, baseTransport, homeStatus, hourFr, journeeRange, needMet, ownedCount, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
 import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.16.0';
+export const VERSION = '0.16.1';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -297,7 +297,7 @@ function outfitCard(state, ctx) {
   return `<section class="card" aria-labelledby="t-dehors">
     <div class="card-head">
       <h2 class="card-title" id="t-dehors">${icon('sun', { size: 18 })}Dehors</h2>
-      ${modePick(state, ctx.result.transport, state.profile.birth)}
+      ${modePick(state, baseTransport(ctx.result.transport, state.bundle.rules), state.profile.birth)}
     </div>
     ${bandTitle(state, outfit)}
     ${dressList(state, outfit)}
@@ -434,7 +434,7 @@ function outsideCard(state, ctx) {
   return `<section class="card day" aria-labelledby="t-dehors">
     <div class="card-head">
       <h2 class="card-title main" id="t-dehors">${icon('sun', { size: 20 })}Dehors</h2>
-      ${modePick(state, ctx.result.transport, state.profile.birth)}
+      ${modePick(state, baseTransport(ctx.result.transport, state.bundle.rules), state.profile.birth)}
     </div>
     <p class="card-sub">${!over ? 'Sa tenue complète pour sortir' : less.length ? 'Pour sortir, à changer' : 'Par-dessus, pour sortir'}</p>
     ${whenRow(state, ctx.result)}
@@ -710,7 +710,7 @@ function prevoirContent(state, ctx) {
     const label = `${name(x.category)}${x.size === 'unique' ? '' : `, ${x.size_label}`}`;
     return `<article class="buy">
       <div class="buy-head"><h3>${drawingsOn(state) ? `<span class="buy-ico">${drawingSvg(CATEGORY_DRAWINGS[x.category], { size: 26 })}</span>` : ''}${esc(name(x.category))}</h3>${x.size === 'unique' ? '' : `<span class="tag blue">${esc(x.size_label)}</span>`}</div>
-      ${many ? `<p class="buy-count"><strong>Il en manque ${x.quantity - x.owned}</strong><span class="hint"> · conseillé : ${x.quantity}</span></p>` : ''}
+      ${many ? `<p class="buy-count"><strong>Il en manque ${x.quantity - x.owned}</strong><span class="hint nowrap"> · conseillé : ${x.quantity}</span></p>` : ''}
       <div class="buy-meta"><span class="tag${when.urgent ? ' amber' : ''}">${esc(when.text)}</span><span class="buy-why">${esc(capitalize(why))}</span></div>
       ${official ? `<p class="source">${esc(render(M, official, 'short'))} · ${sourceLinks(state, M.messages[official].sources ?? [])}</p>` : ''}
       <div class="buy-actions">
@@ -738,7 +738,7 @@ function prevoirContent(state, ctx) {
         <span>${esc(sz.code === 'unique' ? 'Vous en avez' : sz.label)}${sz === now || sz.code === 'unique' ? '' : ' <span class="tag">bientôt</span>'}</span>
         ${counter(`${name(cat.id)}${sz.code === 'unique' ? '' : `, ${sz.label}`}`, cat.id, sz.code, ownedCount(inv, cat.id, sz.code))}
       </div>`).join('');
-    return `<div class="cat"><p class="cat-name">${esc(name(cat.id))}<span class="hint"> · conseillé : ${quantityFor(cat, state.profile, R)}</span></p>${rows}</div>`;
+    return `<div class="cat"><p class="cat-name"><span>${esc(name(cat.id))}</span><span class="cat-qty">conseillé : ${quantityFor(cat, state.profile, R)}</span></p>${rows}</div>`;
   };
   // Gigoteuses : par taille, une ligne par TOG utile aux saisons des semaines qui viennent (ou déjà notée), avec les
   // saisons où il sert ; deux conseillées par saison.
@@ -761,7 +761,7 @@ function prevoirContent(state, ctx) {
           ${counter(`Gigoteuse ${tog} TOG, ${sz.label}`, P.sleepbags.inventory, `${sz.code}|${tog}`, sleepbagCount(inv, sz.code, [tog], R))}
         </div>`).join('')}`;
     }).join('');
-    return `<div class="cat"><p class="cat-name">Gigoteuses<span class="hint"> · conseillé : 2 par saison</span></p>${rows}</div>`;
+    return `<div class="cat"><p class="cat-name"><span>Gigoteuses</span><span class="cat-qty">2 par saison</span></p>${rows}</div>`;
   };
   const group = (title, list, first = '') => (list.length || first ? `<p class="cat-group">${title}</p>${first}${list.map(catBlock).join('')}` : '');
   const cats = group('Tous les jours', P.categories.filter((c) => c.suggest_once_noted && fits(c)))

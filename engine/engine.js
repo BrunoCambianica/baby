@@ -142,10 +142,17 @@ function planOuting(input, R, age) {
 }
 
 // Mode de sortie retenu : un mode réservé aux plus grands (à pied) redevient la poussette avant l'âge prévu.
+// En poussette, avec une chancelière notée dans la garde-robe (ou signalée par la configuration d'un widget,
+// stroller_muff) : la chancelière remplace la combinaison, avant 2 ans (outfit.transport.poussette_chanceliere).
 export function transportFor(profile, age, R) {
   const t = R.outfit.transport[profile.transport];
-  return t && !(t.min_age_m && age < t.min_age_m) ? profile.transport : 'poussette';
+  const mode = t && !(t.min_age_m && age < t.min_age_m) && !t.base ? profile.transport : 'poussette';
+  const muff = R.outfit.transport.poussette_chanceliere;
+  const hasMuff = profile.stroller_muff ?? (profile.inventory?.chanceliere ?? []).length > 0;
+  return mode === 'poussette' && muff && hasMuff && !(muff.max_age_m && age >= muff.max_age_m) ? 'poussette_chanceliere' : mode;
 }
+// Le mode choisi par le parent, sans ses variantes (« poussette » pour la poussette avec chancelière).
+export const baseTransport = (mode, R) => R.outfit.transport[mode]?.base ?? mode;
 
 // Tenues propres à un âge (à partir de 2 ans : haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison).
 const ageVariant = (R, age) => (R.outfit.age_variants ?? []).filter((v) => age >= v.from_months).at(-1) ?? null;
@@ -394,7 +401,7 @@ function planJournee(input, R, age, plan) {
   if (later[0]) bag.push(later[0]);
   if (J.carry_dessus_for.includes(mode)) {
     const plain = bandItems(clamp(b0 - t.band_shift, 0, bands.length - 1), 'poussette', variant, R).find((i) => slotOf(J, i) === 'dessus');
-    if (plain && !start.has(plain)) bag.push({ item: plain, reason: mode === 'voiture' ? 'voiture' : 'pause' });
+    if (plain && !start.has(plain)) bag.push({ item: plain, reason: t.carry_reason ?? (mode === 'voiture' ? 'voiture' : 'pause') });
   }
   const rainy = hours.find((sl) => sl.precip_prob >= J.bag.rain_prob_at_least);
   if (rainy) bag.push({ item: t.rain_gear, reason: 'pluie', time: fmtMin(rainy.start) });
@@ -564,7 +571,7 @@ function planPurchases(input, R) {
       if (found.has(cat.id)) continue;
       if (cat.min_age_m && ageWeek < cat.min_age_m) continue;
       if (cat.max_age_m && ageWeek >= cat.max_age_m) continue;
-      if (!needMet(cat.need_if, week, band, transportFor(profile, ageWeek, R))) continue;
+      if (!needMet(cat.need_if, week, band, baseTransport(transportFor(profile, ageWeek, R), R))) continue;
       const system = P.size_systems[cat.size_system];
       // Les vêtements de tous les jours ne sont proposés qu'une fois notés dans la garde-robe : sans rien noté, on ne
       // sait pas ce qu'il a déjà.

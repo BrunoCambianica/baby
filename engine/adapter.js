@@ -247,7 +247,8 @@ export function profileToConfig(profile) {
 }
 
 // Configuration v2 : commune et horaires communs, un enfant par entrée de k (identifiant, prénom, naissance, mode, tendance,
-// et s'il y a lieu s, style de la journée, et g, tenues de nuit choisies par tranche) et m, date du dernier changement :
+// et s'il y a lieu s, style de la journée, g, tenues de nuit choisies par tranche, et cm, une chancelière dans sa
+// garde-robe, que les widgets n'ont pas) et m, date du dernier changement :
 // la plus récente l'emporte entre l'app et les widgets.
 export function householdToConfig(household) {
   return {
@@ -265,6 +266,7 @@ export function householdToConfig(household) {
       id: c.id, p: c.name ?? '', b: c.birth, t: c.transport, o: c.outfit_offset ?? 0,
       ...(c.day_style ? { s: c.day_style } : {}),
       ...(Object.keys(c.night_options ?? {}).length ? { g: c.night_options } : {}),
+      ...((c.inventory?.chanceliere ?? []).length ? { cm: 1 } : {}),
     })),
     m: household.updated ?? 0,
   };
@@ -277,6 +279,7 @@ export function configChildren(cfg) {
     id: String(c.id ?? ''), name: String(c.p ?? ''), birth: c.b, transport: c.t ?? 'poussette', outfit_offset: c.o ?? 0,
     day_style: typeof c.s === 'string' ? c.s : null,
     night_options: c.g && typeof c.g === 'object' && !Array.isArray(c.g) ? { ...c.g } : {},
+    stroller_muff: c.cm === 1,
   }));
 }
 
@@ -311,6 +314,7 @@ export function configToProfile(cfg, ref = '') {
     outfit_offset: child.outfit_offset,
     day_style: child.day_style,
     night_options: child.night_options,
+    stroller_muff: child.stroller_muff,
     outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
     room_temp_c: null,
     day_room_temp_c: null,

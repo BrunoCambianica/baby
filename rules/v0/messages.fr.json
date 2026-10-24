@@ -287,6 +287,11 @@
       "text": "À pied, il se réchauffe en marchant : une couche de moins qu'en poussette, à remettre s'il s'arrête ou remonte dans la poussette.",
       "short": "À pied : une couche de moins"
     },
+    "practical.stroller_muff": {
+      "kind": "pratique",
+      "text": "Avec la chancelière de votre garde-robe : dans la poussette, elle remplace la combinaison, pieds dedans. La combinaison va dans le sac, pour quand il en sort.",
+      "short": "Chancelière à la place de la combinaison"
+    },
     "practical.carrier.no_footed": {
       "kind": "pratique",
       "text": "Pas de pyjama à pieds en porte-bébé : il tire sur les pieds quand les jambes sont repliées.",
