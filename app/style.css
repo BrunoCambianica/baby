@@ -199,18 +199,17 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tip { display: flex; gap: 10px; align-items: flex-start; font-size: 0.92rem; color: var(--ink-2); background: var(--fill); border-radius: 14px; padding: 10px 12px; }
 .tip .ico { color: var(--blue); margin-top: 1px; }
 
-/* Tenue en dessins : une tuile par vêtement, accessoires en gris */
+/* Tenue en dessins : une tuile par vêtement, toutes de la même couleur ; seuls le sac (ambre) et ce qu'on enlève
+   (estompé, « − ») se distinguent, et « + » marque ce qu'on ajoute, toujours dit en toutes lettres à côté. */
 .drawing { display: block; flex: none; }
 .dress { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 6px; }
 .dress li { display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center; }
 .dress-ico { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: var(--blue-soft); color: var(--blue); flex: none; }
-.dress .extra .dress-ico { background: var(--fill); color: var(--ink-2); }
 .dress-name { font-size: 0.76rem; font-weight: 600; line-height: 1.25; color: var(--ink-2); overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
 .dress-hint { font-size: 0.7rem; color: var(--ink-3); margin-top: -4px; }
 .band { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .band strong { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
 .band span { font-size: 0.88rem; color: var(--ink-3); }
-.dress-ico.night { background: var(--violet-soft); color: var(--violet); }
 /* Tenues au choix : une liste déroulante */
 .alts { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
 .alts-title { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); }

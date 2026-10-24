@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.16.1';
+export const VERSION = '0.16.2';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -273,7 +273,7 @@ function dressList(state, outfit) {
   const layered = outfit.items.filter((i) => labels.item_layers[i] !== 'accessoire');
   const extras = outfit.items.filter((i) => labels.item_layers[i] === 'accessoire');
   if (drawingsOn(state)) {
-    return `<ul class="dress">${[...layered, ...extras].map((item) => `<li${labels.item_layers[item] === 'accessoire' ? ' class="extra"' : ''}>
+    return `<ul class="dress">${[...layered, ...extras].map((item) => `<li>
         <span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span><span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span>
         ${labels.item_hints?.[item] ? `<span class="dress-hint">${esc(labels.item_hints[item])}</span>` : ''}</li>`).join('')}</ul>`;
   }
@@ -414,7 +414,7 @@ function outsideCard(state, ctx) {
   const text = !drawingsOn(state);
   const changes = j.changes.map((ch, k) => (text
     ? `<p class="change${dim(k + 1)}"><strong>Vers ${hourFr(ch.time)}</strong>${mark(k + 1)} : ${[ch.remove.length ? `enlever ${esc(ch.remove.map((i) => labels.items[i]).join(', '))}` : '', ch.add.length ? `mettre ${esc(ch.add.map((i) => labels.items[i]).join(', '))}` : ''].filter(Boolean).join(' ; ')}</p>`
-    : `<div class="change${dim(k + 1)}"><p class="change-time">Vers ${hourFr(ch.time)}${mark(k + 1)}</p>
+    : `<div class="change${dim(k + 1)}"><p class="change-time">Vers ${hourFr(ch.time)}${mark(k + 1)}<span class="hint">${[ch.remove.length ? '− à enlever' : '', ch.add.length ? '+ à mettre' : ''].filter(Boolean).join(' · ')}</span></p>
         <ul class="dress small">${ch.remove.map((i) => changeItem(state, i, '−')).join('')}${ch.add.map((i) => changeItem(state, i, '+')).join('')}</ul></div>`)).join('');
   const rainHot = j.bag.some((b) => b.reason === 'pluie' && b.item === 'habillage_pluie'
     && (j.hours.find((h) => h.time === b.time)?.feels_c ?? 0) >= state.bundle.rules.outfit.overlays.rain_cover_warm_feels_c_at_least);
@@ -436,7 +436,7 @@ function outsideCard(state, ctx) {
       <h2 class="card-title main" id="t-dehors">${icon('sun', { size: 20 })}Dehors</h2>
       ${modePick(state, baseTransport(ctx.result.transport, state.bundle.rules), state.profile.birth)}
     </div>
-    <p class="card-sub">${!over ? 'Sa tenue complète pour sortir' : less.length ? 'Pour sortir, à changer' : 'Par-dessus, pour sortir'}</p>
+    <p class="card-sub">${!over ? 'Sa tenue complète pour sortir' : less.length ? 'Pour sortir : − à enlever, + à ajouter' : 'On ajoute par-dessus pour sortir (+)'}</p>
     ${whenRow(state, ctx.result)}
     <div class="day-step${now && passed > 0 ? ' past' : ''}">
       <p class="change-time">${ctx.tomorrow ? 'Demain matin' : 'Le matin'}, dès ${hourFr(j.from)}${mark(0)}</p>
@@ -532,7 +532,7 @@ function tonightCard(state, ctx) {
   const labels = state.bundle.messages.labels;
   const wear = drawingsOn(state)
     ? `<ul class="dress small">${n.wear.map((item) => `<li><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 28 })}</span><span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}
-        <li><span class="dress-ico night">${drawingSvg('gigoteuse', { size: 28 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
+        <li><span class="dress-ico">${drawingSvg('gigoteuse', { size: 28 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
     : `<p>${esc(capitalize(n.wear.map((i) => labels.items_short[i]).join(' + ')))}, gigoteuse ≈ ${esc(n.tog)} TOG.</p>`;
   return `<section class="card">
       <div class="card-head"><h2 class="card-title">${icon('moon', { size: 18 })}Ce soir</h2>
@@ -639,7 +639,7 @@ function nightWearCard(state, n) {
   const wear = drawingsOn(state)
     ? `<ul class="dress">${n.wear.map((item) => `<li><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span>
         <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}
-        <li><span class="dress-ico night">${drawingSvg('gigoteuse', { size: 34 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
+        <li><span class="dress-ico">${drawingSvg('gigoteuse', { size: 34 })}</span><span class="dress-name">Gigoteuse ${esc(n.tog)} TOG</span></li></ul>`
     : `<p>Sous la gigoteuse : ${esc(n.wear.map((item) => labels.items[item]).join(' et '))}.</p>`;
   // Autres tenues publiées par les fabricants pour cette température, selon la gigoteuse qu'on a : plus légère, une couche
   // de plus dessous ; plus chaude, une de moins (contrôlé par lint). Le choix est gardé pour cette tranche seulement.

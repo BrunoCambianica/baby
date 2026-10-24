@@ -409,7 +409,7 @@ await test('Journée : tenue du matin, changements, sac, geste de la nuque', asy
   // Dedans, la tenue de la journée ; dehors, ce qu'on ajoute par-dessus, sans répéter le body ni le pantalon.
   const inside = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
   assert(inside.join() === 'Body ML,Haut ML,Pantalon,Chaussettes', `dedans : ${inside.join()}`);
-  assert((await page.textContent('.day .card-sub')) === 'Par-dessus, pour sortir', await page.textContent('.day .card-sub'));
+  assert((await page.textContent('.day .card-sub')) === 'On ajoute par-dessus pour sortir (+)', await page.textContent('.day .card-sub'));
   const added = await page.locator('.day-step .dress-name').allTextContents();
   assert(added.length && !added.some((t) => /Body|Pantalon/.test(t)) && await page.locator('.day-step .plus').count() === added.length, `dehors : ${added.join()}`);
   // Les deux tenues tiennent sur le premier écran, au-dessus de la barre d'onglets.
@@ -604,7 +604,7 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   assert(names.join() === 'Body ML,Pyjama', `avec pyjama : ${names.join()}`);
   assert((await stored(page)).children[0].day_style === 'pyjama', 'avec pyjama non enregistré');
   // Avec pyjama dedans, dehors aussi : la carte Dehors ajoute seulement par-dessus.
-  assert((await page.textContent('.day .card-sub')) === 'Par-dessus, pour sortir', await page.textContent('.day .card-sub'));
+  assert((await page.textContent('.day .card-sub')) === 'On ajoute par-dessus pour sortir (+)', await page.textContent('.day .card-sub'));
   await page.selectOption('select[data-action="day-style"]', 'sans_pyjama');
   const morning = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name, .day-step .dress-name').allTextContents();
   assert(!morning.some((t) => /Pyjama/.test(t)) && morning.some((t) => /Pantalon/.test(t)), `journée : ${morning.join(', ')}`);
