@@ -684,6 +684,12 @@
       "expect": { "transport": "porte_bebe", "journee.morning.exclude": ["chanceliere"] }
     },
     {
+      "id": "froid-moufles-chanceliere",
+      "description": "7 °C ressentis en poussette, chancelière notée : bonnet et moufles (les mains restent dehors), la chancelière pour les pieds",
+      "input": { "profile": { "inventory": { "chanceliere": ["unique"] } }, "forecast": { "hourly": { "base": { "feels_c": 7 } } } },
+      "expect": { "outfit.band": "froid", "journee.morning.include": ["bonnet", "moufles", "chanceliere"], "journee.morning.exclude": ["chaussons"] }
+    },
+    {
       "id": "chanceliere-apres-2-ans",
       "description": "Enfant de 2 ans et demi avec une chancelière notée : plus de chancelière, la tenue des enfants",
       "input": { "profile": { "birth": "2024-03-15", "inventory": { "chanceliere": ["unique"] } } },
@@ -739,11 +745,11 @@
     },
     {
       "id": "enfant-3-ans-froid",
-      "description": "Enfant de 2 ans et demi à 5 °C : haut et pantalon, manteau chaud, ni body ni pyjama ni chancelière",
+      "description": "Enfant de 2 ans et demi à 5 °C : haut et pantalon, manteau chaud, bonnet et moufles, ni body ni pyjama ni chancelière",
       "input": { "profile": { "birth": "2024-03-15" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
       "expect": {
         "outfit.band": "froid",
-        "outfit.items": ["haut_ml", "pantalon_chaud", "pull", "manteau_chaud", "bonnet", "chaussettes_chaudes"]
+        "outfit.items": ["haut_ml", "pantalon_chaud", "pull", "manteau_chaud", "bonnet", "moufles", "chaussettes_chaudes"]
       }
     },
     {
@@ -850,13 +856,13 @@
     },
     {
       "id": "journee-se-rechauffe",
-      "description": "5 °C le matin, 15 °C à partir de midi : habillé une fois, la combinaison et le pull partent vers 12 h, un gilet dans le sac",
+      "description": "5 °C le matin, 15 °C à partir de midi : habillé une fois (moufles comprises), la combinaison et le pull partent vers 12 h, un gilet dans le sac",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "07:00-12:00": { "feels_c": 5 } } } } },
       "expect": {
         "journee.band": "froid",
         "journee.base_band": "frais",
-        "journee.morning": ["body_ml", "haut_ml", "pantalon", "chaussettes", "pull", "combi_pilote", "bonnet", "chaussons"],
-        "journee.changes": [{ "time": "12:00", "remove": ["combi_pilote", "bonnet", "chaussons", "pull"], "add": ["gilet"] }],
+        "journee.morning": ["body_ml", "haut_ml", "pantalon", "chaussettes", "pull", "combi_pilote", "bonnet", "moufles", "chaussons"],
+        "journee.changes": [{ "time": "12:00", "remove": ["combi_pilote", "moufles", "bonnet", "chaussons", "pull"], "add": ["gilet"] }],
         "journee.bag.*.item": ["gilet"],
         "widget.lines.0": "Ce matin 5° → 15°",
         "widget.lines.2": "12 h : − combi pilote… + gilet · sac : gilet"
@@ -876,12 +882,12 @@
     },
     {
       "id": "journee-se-refroidit",
-      "description": "15 °C jusqu'à 15 h, puis 5 °C : on remet combinaison, bonnet et chaussons, tous dans le sac",
+      "description": "15 °C jusqu'à 15 h, puis 5 °C : on remet combinaison, bonnet, moufles et chaussons, tous dans le sac",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "15:00-22:00": { "feels_c": 5 } } } } },
       "expect": {
         "journee.morning": ["body_ml", "haut_ml", "pantalon", "chaussettes", "gilet"],
-        "journee.changes": [{ "time": "15:00", "remove": [], "add": ["combi_pilote", "bonnet", "chaussons"] }],
-        "journee.bag.*.item": ["combi_pilote", "bonnet", "chaussons"]
+        "journee.changes": [{ "time": "15:00", "remove": [], "add": ["combi_pilote", "bonnet", "moufles", "chaussons"] }],
+        "journee.bag.*.item": ["combi_pilote", "bonnet", "moufles", "chaussons"]
       }
     },
     {
@@ -899,11 +905,11 @@
     },
     {
       "id": "journee-depart-froid",
-      "description": "2 °C au départ, 8 °C ensuite : bien couvert au départ, moufles et chancelière enlevées vers 11 h",
+      "description": "2 °C au départ, 8 °C ensuite : bien couvert au départ, la chancelière enlevée vers 11 h, les moufles restent (froid)",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 8 }, "overrides": { "07:00-11:00": { "feels_c": 2 } } } } },
       "expect": {
         "journee.band": "tres_froid",
-        "journee.changes": [{ "time": "11:00", "remove": ["moufles", "chanceliere"], "add": [] }]
+        "journee.changes": [{ "time": "11:00", "remove": ["chanceliere"], "add": [] }]
       }
     },
     {
@@ -1012,22 +1018,22 @@
     },
     {
       "id": "journee-sac-trois-objets",
-      "description": "Refroidissement et pluie : trois objets au plus, la pluie avant les chaussons, qui ne sont pas remis",
+      "description": "Refroidissement et pluie : trois objets au plus, sans compter bonnet, moufles et chaussons (dans une poche) : la pluie a sa place et tout est remis",
       "input": {
         "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "15:00-22:00": { "feels_c": 5, "precip_prob": 60, "precip_mm": 0.6 } } } }
       },
       "expect": {
-        "journee.bag.*.item": ["combi_pilote", "habillage_pluie", "bonnet"],
-        "journee.changes.0.add": ["combi_pilote", "bonnet"]
+        "journee.bag.*.item": ["combi_pilote", "habillage_pluie", "bonnet", "moufles", "chaussons"],
+        "journee.changes.0.add": ["combi_pilote", "bonnet", "moufles", "chaussons"]
       }
     },
     {
       "id": "journee-enfant-garde-son-pantalon",
-      "description": "Enfant de 2 ans et demi, 5 °C puis 15 °C : le pantalon chaud du matin reste, le manteau part",
+      "description": "Enfant de 2 ans et demi, 5 °C puis 15 °C : le pantalon chaud du matin reste, le manteau, le bonnet et les moufles partent",
       "input": { "profile": { "birth": "2024-03-15" }, "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "07:00-12:00": { "feels_c": 5 } } } } },
       "expect": {
-        "journee.morning": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes", "pull", "manteau_chaud", "bonnet"],
-        "journee.changes.0.remove.include": ["manteau_chaud", "bonnet"]
+        "journee.morning": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes", "pull", "manteau_chaud", "bonnet", "moufles"],
+        "journee.changes.0.remove.include": ["manteau_chaud", "bonnet", "moufles"]
       }
     },
     {

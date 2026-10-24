@@ -69,7 +69,7 @@
       { "id": "doux", "min_feels_c": 18, "items": ["body_mc", "pyjama_leger", "gilet_fin"] },
       { "id": "frais", "min_feels_c": 14, "items": ["body_ml", "pyjama", "gilet"] },
       { "id": "froid_modere", "min_feels_c": 9, "items": ["body_ml", "pyjama", "gilet_chaud", "combi_legere", "bonnet_fin"] },
-      { "id": "froid", "min_feels_c": 3, "items": ["body_ml", "pyjama_chaud", "pull", "combi_pilote", "bonnet", "chaussons"] },
+      { "id": "froid", "min_feels_c": 3, "items": ["body_ml", "pyjama_chaud", "pull", "combi_pilote", "bonnet", "moufles", "chaussons"] },
       { "id": "tres_froid", "min_feels_c": null, "items": ["body_ml", "pyjama_chaud", "pull", "combi_pilote_doublee", "bonnet", "moufles", "chaussons", "chanceliere"] }
     ],
     "transport": {
@@ -135,7 +135,7 @@
           "doux": ["tshirt", "pantalon_leger", "gilet_fin"],
           "frais": ["haut_ml", "pantalon", "gilet"],
           "froid_modere": ["haut_ml", "pantalon", "gilet_chaud", "veste", "bonnet_fin"],
-          "froid": ["haut_ml", "pantalon_chaud", "pull", "manteau_chaud", "bonnet", "chaussettes_chaudes"],
+          "froid": ["haut_ml", "pantalon_chaud", "pull", "manteau_chaud", "bonnet", "moufles", "chaussettes_chaudes"],
           "tres_froid": ["haut_ml", "pantalon_chaud", "pull", "combi_ski", "bonnet", "moufles", "chaussettes_chaudes"]
         }
       }
@@ -237,6 +237,7 @@
     "carry_dessus_for": ["a_pied", "voiture", "poussette_chanceliere"],
     "bag": {
       "max_items": 3,
+      "pocket_slots": ["tete", "mains", "pieds"],
       "rain_prob_at_least": 50,
       "sun_feels_c_at_least": 22
     },

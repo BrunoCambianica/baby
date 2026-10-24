@@ -428,7 +428,10 @@ function planJournee(input, R, age, plan) {
         bag.push({ item: target.get(sl), reason: 'si_frais', time: fmtMin(hours[k].start) });
       }
     });
-    return bag.filter((x, i) => bag.findIndex((y) => y.item === x.item) === i).slice(0, J.bag.max_items);
+    // Bonnet, moufles et chaussons tiennent dans une poche : ils ne comptent pas dans les objets du sac.
+    const pocket = (x) => J.bag.pocket_slots.includes(slotOf(J, x.item));
+    const unique = bag.filter((x, i) => bag.findIndex((y) => y.item === x.item) === i);
+    return unique.filter((x) => pocket(x) || unique.filter((y) => !pocket(y)).indexOf(x) < J.bag.max_items);
   };
   const packed = pack(input.now ? toMin(input.now) : 0);
 
