@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.16.2';
+export const VERSION = '0.16.3';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -421,7 +421,7 @@ function outsideCard(state, ctx) {
   const bag = j.bag.length
     ? `<div class="bag"><p class="bag-title">${icon('bag', { size: 18 })}Dans le sac</p><ul class="bag-list">${j.bag.map((b) => `<li>
         ${text ? '' : `<span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[b.item], { size: 26 })}</span>`}
-        <span><strong>${esc(capitalize(labels.items_short[b.item] ?? b.item))}</strong>${bagReason([b.item, b.reason, b.time]) ? `<span class="hint"> · ${esc(bagReason([b.item, b.reason, b.time]))}</span>` : ''}</span></li>`).join('')}</ul>
+        <span><strong>${esc(capitalize(labels.items_short[b.item] ?? b.item))}</strong>${bagReason([b.item, b.reason, b.time], now) ? `<span class="hint"> · ${esc(bagReason([b.item, b.reason, b.time], now))}</span>` : ''}</span></li>`).join('')}</ul>
         ${rainHot ? `<p class="hint">${esc(render(M, 'practical.rain.cover_warm', 'text'))}</p>` : ''}</div>`
     : '';
   const tips = j.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', ctx.result.params))}</span></li>`).join('');
@@ -442,7 +442,7 @@ function outsideCard(state, ctx) {
       <p class="change-time">${ctx.tomorrow ? 'Demain matin' : 'Le matin'}, dès ${hourFr(j.from)}${mark(0)}</p>
       ${morning}
     </div>
-    ${changes ? `<div class="changes">${changes}</div>` : `<p class="hint">Pas de changement à prévoir de ${hourFr(j.from)} à ${hourFr(j.to)}.</p>`}
+    ${changes ? `<div class="changes">${changes}</div>` : `<p class="hint">Pas de changement à prévoir ${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}.</p>`}
     ${bag}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
     <button class="btn soft" data-action="share-fiche">${icon('share', { size: 18 })}Envoyer la fiche du jour</button>

@@ -3,7 +3,7 @@
 // Les données voyagent dans le lien, après le # : elles ne passent par aucun serveur.
 // Servi à l'app (création, image) et à la page fiche/ (lecture).
 import { DRAWING_STROKE, DRAWINGS, ITEM_DRAWINGS } from '../../engine/drawings.js';
-import { hourFr, render } from '../../engine/engine.js';
+import { hourFr, render, toMin } from '../../engine/engine.js';
 
 const PREFIX = 'F1.';
 const toBase64Url = (text, toBase64) => toBase64(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -47,13 +47,14 @@ const short = (M, items) => items.map((i) => M.labels.items_short[i] ?? i).join(
 const long = (M, items) => items.map((i) => M.labels.items[i] ?? i).join(', ');
 const range = (f) => (Math.abs(f[1] - f[0]) >= 2 ? `${f[0]}° → ${f[1]}°` : `${f[0]}°`);
 
-// Pourquoi un objet est dans le sac, en quelques mots.
-export function bagReason([, reason, time]) {
-  const at = time ? hourFr(time) : '';
+// Pourquoi un objet est dans le sac, en quelques mots. Avec `now`, l'heure déjà commencée devient « dès maintenant ».
+export function bagReason([, reason, time], now = null) {
+  const current = Boolean(time && now && toMin(time) <= toMin(now));
+  const at = time && !current ? hourFr(time) : '';
   return {
     plus_tard: at && `pour ${at}`,
-    pluie: at ? `pluie vers ${at}` : 'pluie',
-    soleil: at ? `soleil vers ${at}` : 'soleil',
+    pluie: current ? 'pluie dès maintenant' : at ? `pluie vers ${at}` : 'pluie',
+    soleil: current ? 'soleil dès maintenant' : at ? `soleil vers ${at}` : 'soleil',
     pause: "s'il s'arrête",
     hors_poussette: "s'il sort de la poussette",
     voiture: 'en sortant de la voiture',

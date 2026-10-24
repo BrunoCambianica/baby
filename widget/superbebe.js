@@ -1,8 +1,8 @@
-// Superbébé 0.16.2, widget iPhone pour Scriptable.
+// Superbébé 0.16.3, widget iPhone pour Scriptable.
 
 // Fichier généré par tools/build-widget.js à partir de engine/ et widget/main.scriptable.js : ne pas modifier à la main.
 
-const SB_VERSION = "0.16.2";
+const SB_VERSION = "0.16.3";
 
 // Le chargeur fournit l'adresse réelle du site ; sinon, adresse par défaut (champ homepage de package.json).
 
@@ -708,40 +708,48 @@ function planJournee(input, R, age, plan) {
   // Le sac, trois objets au plus : la couche à remettre plus tard (la plus chaude d'abord) ; à pied ou en voiture,
   // la couche qu'il porterait en poussette ; la protection contre la pluie ; un chapeau au soleil ;
   // puis les autres couches à remettre, et celles qui manqueraient aux heures plus fraîches.
+  // Le sac ne parle que de ce qui vient, à partir de `from` (l'heure qu'il est) : à 11 h, ni la pluie de 9 h ni la
+  // couche remise à 10 h ; la pluie ou le soleil de l'heure en cours comptent encore.
   const slots = Object.keys(J.slots);
   const start = new Set(morning);
-  const later = changes.flatMap((ch) => ch.add.map((item) => ({ item, reason: 'plus_tard', time: ch.time })))
-    .filter((x) => !start.has(x.item))
-    .sort((x, y) => slots.indexOf(slotOf(J, x.item)) - slots.indexOf(slotOf(J, y.item)));
-  const bag = [];
-  if (later[0]) bag.push(later[0]);
-  if (J.carry_dessus_for.includes(mode)) {
-    const plain = bandItems(clamp(b0 - t.band_shift, 0, bands.length - 1), 'poussette', variant, R).find((i) => slotOf(J, i) === 'dessus');
-    if (plain && !start.has(plain)) bag.push({ item: plain, reason: t.carry_reason ?? (mode === 'voiture' ? 'voiture' : 'pause') });
-  }
-  const rainy = hours.find((sl) => sl.precip_prob >= J.bag.rain_prob_at_least);
-  if (rainy) bag.push({ item: t.rain_gear, reason: 'pluie', time: fmtMin(rainy.start) });
-  const sunny = hours.findIndex((sl, k) => sl.uv >= R.relay_triggers.uv_at_least && sl.feels_c >= J.bag.sun_feels_c_at_least
-    && ![...wornAt(k).values()].some(sun));
-  if (sunny >= 0) bag.push({ item: 'chapeau', reason: 'soleil', time: fmtMin(hours[sunny].start) });
-  bag.push(...later.slice(1));
-  // Ce qui manquerait à une heure plus fraîche que prévu : le bonnet, les moufles ou les chaussons que la tranche
-  // demande, et une couche du dessus si la chaleur manque au-delà de la tolérance ; sauf ce qui a été enlevé plus tôt.
-  needs.forEach((need, k) => {
-    const now = wornAt(k);
-    const target = layers(need);
-    const handy = (sl) => changes.some((ch) => ch.from <= k && ch.remove.some((r) => slotOf(J, r) === sl));
-    const missing = (sl) => target.has(sl) && !now.has(sl) && !sun(target.get(sl)) && !handy(sl);
-    const short = warmthOf([...base, ...now.values()]) < warmthOf(bandItems(need, mode, variant, R, style)) - J.warmth_under_tolerance;
-    const torso = short ? J.add_order.find((sl) => !J.extremities.includes(sl) && missing(sl)) : null;
-    for (const sl of [torso, ...J.extremities.filter(missing)].filter(Boolean)) {
-      bag.push({ item: target.get(sl), reason: 'si_frais', time: fmtMin(hours[k].start) });
+  const pack = (from) => {
+    const ahead = (k) => hours[k].end > from;
+    const later = changes.filter((ch) => toMin(ch.time) > from)
+      .flatMap((ch) => ch.add.map((item) => ({ item, reason: 'plus_tard', time: ch.time })))
+      .filter((x) => !start.has(x.item))
+      .sort((x, y) => slots.indexOf(slotOf(J, x.item)) - slots.indexOf(slotOf(J, y.item)));
+    const bag = [];
+    if (later[0]) bag.push(later[0]);
+    if (J.carry_dessus_for.includes(mode)) {
+      const plain = bandItems(clamp(b0 - t.band_shift, 0, bands.length - 1), 'poussette', variant, R).find((i) => slotOf(J, i) === 'dessus');
+      if (plain && !start.has(plain)) bag.push({ item: plain, reason: t.carry_reason ?? (mode === 'voiture' ? 'voiture' : 'pause') });
     }
-  });
-  const packed = bag.filter((x, i) => bag.findIndex((y) => y.item === x.item) === i).slice(0, J.bag.max_items);
+    const rainy = hours.find((sl, k) => ahead(k) && sl.precip_prob >= J.bag.rain_prob_at_least);
+    if (rainy) bag.push({ item: t.rain_gear, reason: 'pluie', time: fmtMin(rainy.start) });
+    const sunny = hours.findIndex((sl, k) => ahead(k) && sl.uv >= R.relay_triggers.uv_at_least && sl.feels_c >= J.bag.sun_feels_c_at_least
+      && ![...wornAt(k).values()].some(sun));
+    if (sunny >= 0) bag.push({ item: 'chapeau', reason: 'soleil', time: fmtMin(hours[sunny].start) });
+    bag.push(...later.slice(1));
+    // Ce qui manquerait à une heure plus fraîche que prévu : le bonnet, les moufles ou les chaussons que la tranche
+    // demande, et une couche du dessus si la chaleur manque au-delà de la tolérance ; sauf ce qui a été enlevé plus tôt.
+    needs.forEach((need, k) => {
+      if (!ahead(k)) return;
+      const now = wornAt(k);
+      const target = layers(need);
+      const handy = (sl) => changes.some((ch) => ch.from <= k && ch.remove.some((r) => slotOf(J, r) === sl));
+      const missing = (sl) => target.has(sl) && !now.has(sl) && !sun(target.get(sl)) && !handy(sl);
+      const short = warmthOf([...base, ...now.values()]) < warmthOf(bandItems(need, mode, variant, R, style)) - J.warmth_under_tolerance;
+      const torso = short ? J.add_order.find((sl) => !J.extremities.includes(sl) && missing(sl)) : null;
+      for (const sl of [torso, ...J.extremities.filter(missing)].filter(Boolean)) {
+        bag.push({ item: target.get(sl), reason: 'si_frais', time: fmtMin(hours[k].start) });
+      }
+    });
+    return bag.filter((x, i) => bag.findIndex((y) => y.item === x.item) === i).slice(0, J.bag.max_items);
+  };
+  const packed = pack(input.now ? toMin(input.now) : 0);
 
-  // On ne remet que ce qu'on a sous la main : porté le matin, ou dans le sac.
-  const handy = new Set([...morning, ...packed.map((x) => x.item)]);
+  // On ne remet que ce qu'on a sous la main : porté le matin, ou dans le sac de la journée (même si l'heure est passée).
+  const handy = new Set([...morning, ...pack(0).map((x) => x.item)]);
   const kept = changes
     .map((ch) => ({ ...ch, add: ch.add.filter((item) => handy.has(item)) }))
     .filter((ch) => ch.remove.length || ch.add.length);

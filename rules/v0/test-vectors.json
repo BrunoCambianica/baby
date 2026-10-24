@@ -929,6 +929,24 @@
       "expect": { "journee.bag": [{ "item": "habillage_pluie", "reason": "pluie", "time": "14:00" }] }
     },
     {
+      "id": "journee-pluie-passee",
+      "description": "À 11 h, la pluie de 9 h est passée et rien n'est annoncé ensuite : plus d'habillage pluie dans le sac",
+      "input": { "now": "11:00", "forecast": { "hourly": { "overrides": { "09:00": { "precip_prob": 70, "precip_mm": 0.3 } } } } },
+      "expect": { "journee.bag": [] }
+    },
+    {
+      "id": "journee-pluie-suivante",
+      "description": "À 11 h, après la pluie de 9 h : le sac annonce la prochaine, à 14 h",
+      "input": { "now": "11:00", "forecast": { "hourly": { "overrides": { "09:00": { "precip_prob": 70, "precip_mm": 0.3 }, "14:00-16:00": { "precip_prob": 70, "precip_mm": 0.3 } } } } },
+      "expect": { "journee.bag": [{ "item": "habillage_pluie", "reason": "pluie", "time": "14:00" }] }
+    },
+    {
+      "id": "journee-pluie-heure-en-cours",
+      "description": "À 11 h 40, la pluie de l'heure en cours compte encore",
+      "input": { "now": "11:40", "forecast": { "hourly": { "overrides": { "11:00": { "precip_prob": 70, "precip_mm": 0.3 } } } } },
+      "expect": { "journee.bag": [{ "item": "habillage_pluie", "reason": "pluie", "time": "11:00" }] }
+    },
+    {
       "id": "journee-chapeau-sans-changement",
       "description": "Journée douce, une heure à 23 °C au soleil : pas de changement, un chapeau dans le sac",
       "input": {
@@ -984,11 +1002,13 @@
     },
     {
       "id": "journee-widget-apres-midi",
-      "description": "À 14 h, après le changement de midi : la tenue du moment, plus de changement à venir, le sac",
+      "description": "À 14 h, après le changement de midi : la tenue du moment avec le gilet mis à midi, plus de changement à venir, le sac vide",
       "input": { "now": "14:00", "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "07:00-12:00": { "feels_c": 5 } } } } },
       "expect": {
         "widget.lines.0": "Cet après-midi 15°",
-        "widget.lines.2": "Sac : gilet",
+        "widget.lines.1": "Body ML · haut ML · pantalon · chaussettes · gilet",
+        "journee.bag": [],
+        "journee.changes.0.add": ["gilet"],
         "widget.check": "Touchez sa nuque, pas ses mains"
       }
     },
