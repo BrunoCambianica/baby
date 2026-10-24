@@ -133,10 +133,46 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   gap: 14px;
 }
 .content.no-tabbar { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px); }
-.card { background: var(--card); border-radius: 24px; padding: 18px; box-shadow: var(--shadow); display: grid; gap: 14px; min-width: 0; }
+.card { background: var(--card); border-radius: 24px; padding: 18px; box-shadow: var(--shadow); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .card-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 650; color: var(--ink-2); }
 .card-title .ico { color: var(--ink-3); }
+/* Dedans et Dehors : les deux titres de la journée, lisibles d'un coup d'œil, avec ce qu'ils couvrent dessous */
+.card-title.main { font-family: var(--display); font-size: 1.3rem; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+.card-title.main .ico { color: var(--blue); }
+.card-title.main, .card-head:has(.main) { min-height: 38px; }
+.card-sub { font-size: 0.9rem; color: var(--ink-3); margin-top: -12px; }
+/* Mode de sortie : une pastille qui ouvre la liste */
+.pick { position: relative; display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 38px; padding: 0 12px; border-radius: 999px; background: var(--fill); color: var(--ink); font-weight: 600; font-size: 0.9rem; }
+.pick .ico { color: var(--ink-2); }
+.pick::after { content: ""; width: 7px; height: 7px; margin: -4px 2px 0 2px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); }
+.pick select { appearance: none; -webkit-appearance: none; background: none; min-height: 0; padding: 0; border-radius: 0; font-weight: 600; font-size: 0.9rem; width: auto; color: inherit; cursor: pointer; }
+/* Température de la pièce, dans la carte Dedans */
+.room { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.room-text { min-width: 0; flex: 1; }
+.room-label { font-size: 0.92rem; font-weight: 600; color: var(--ink-2); }
+.room-step { display: flex; align-items: center; gap: 6px; flex: none; }
+.step-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--fill); color: var(--ink); }
+.room-value { min-width: 3.2em; text-align: center; font-family: var(--display); font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.room-value.pending { color: var(--ink-3); }
+.btn.small.tint { justify-self: start; }
+/* Réglages dépliés sous la tenue du dedans */
+.more-body { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 14px; }
+.more-body .room { border-top: 0; padding-top: 0; }
+.pick[aria-expanded="true"] { background: var(--blue-soft); color: var(--blue); }
+.pick[aria-expanded="true"] .ico { color: var(--blue); }
+.pick[aria-expanded="true"]::after { transform: rotate(225deg); margin-top: 4px; border-color: var(--blue); }
+/* Quand sortir, en tête de la carte Dehors */
+.when { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.when-ico { color: var(--ink-3); margin-right: 2px; }
+.when .tag { justify-self: start; white-space: normal; }
+.slots { display: contents; }
+.slots li { display: inline-flex; align-items: baseline; gap: 4px; padding: 5px 10px; border-radius: 999px; background: var(--fill); font-variant-numeric: tabular-nums; }
+.slots li.best { background: var(--blue-soft); color: var(--blue); }
+.slots .w-flag { color: inherit; font-size: 0.64rem; }
+.slots .w-time { font-size: 0.9rem; }
+.slots .w-feels { font-size: 0.82rem; color: var(--ink-3); opacity: 1; }
+.slots li.best .w-feels { color: inherit; opacity: 0.8; }
 .icon-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--fill); color: var(--ink-2); }
 .hint { color: var(--ink-3); font-size: 0.88rem; }
 .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--fill); color: var(--ink-2); white-space: nowrap; }

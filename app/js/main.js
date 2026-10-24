@@ -69,8 +69,6 @@ const state = {
   today: parisNow().date,
   tab: 'sortir',
   day: 'aujourdhui',
-  // Onglet Maison : « jour » ou « nuit » choisi à la main ; sinon selon l'heure (voir homeView).
-  maison: null,
   draft: null,
   results: [],
   open: new Set(),
@@ -133,11 +131,12 @@ const freshRoom = (profile, kind = 'nuit') => {
   const reading = kind === 'jour' ? profile.room_day : profile.room;
   return reading && Date.now() - reading.at < ROOM_TTL_MS ? reading.value : null;
 };
-const homeView = () => state.maison ?? homeMoment(parisNow().time);
+// Le widget Maison ouvre la pièce du moment : le jour, la carte « Dedans » de l'onglet Journée ; le soir, l'onglet Nuit.
+const homeTab = () => (homeMoment(parisNow().time) === 'nuit' ? 'nuit' : 'sortir');
 const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
   .format(new Date(ms)).replace(':', ' h ');
 
-// Les onglets Maison et Prévoir parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Sorties.
+// Les onglets Nuit et Achats parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Journée.
 function compute(day) {
   if (!state.forecast || !state.bundle) return null;
   const now = parisNow();
@@ -201,7 +200,7 @@ let lastKey = '';
 function paint() {
   const view = currentView();
   if (['onboarding', 'reglages', 'enfant'].includes(view) && !state.draft) state.draft = newDraft(view);
-  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.tab === 'nuit' ? homeView() : ''}|${state.draft?.step ?? ''}`;
+  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.draft?.step ?? ''}`;
   app.classList.toggle('anim', key !== lastKey);
   lastKey = key;
   let html;
@@ -250,8 +249,7 @@ function setThemeColor(view) {
   if (view === 'onboarding') color = SKY.clair;
   if (view === 'app') {
     const ctx = state.tab === 'sortir' ? compute(state.day) : null;
-    const house = homeView() === 'jour' ? SKY.maison : SKY.nuit;
-    color = state.tab === 'nuit' ? house : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
+    color = state.tab === 'nuit' ? SKY.nuit : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
   }
   meta.setAttribute('content', color);
   // Barres du système de l'app Android : ciel en haut, couleur de la barre d'onglets en bas.
@@ -504,7 +502,8 @@ function takeImport() {
   const wanted = params.get('enfant');
   const match = location.hash.match(/^#(import|partage)=(SB1\.[\w-]+)/);
   if (params.get('onglet') === 'maison') {
-    state.tab = 'nuit';
+    state.tab = homeTab();
+    state.day = 'aujourdhui';
     params.delete('onglet');
     history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`);
   }
@@ -689,12 +688,12 @@ const actions = {
     paint();
     window.scrollTo(0, 0);
   },
-  // Onglet Maison, jour ou nuit (aussi depuis « Ce soir » dans l'onglet Sorties).
-  maison(el) {
-    state.maison = el.dataset.value;
-    state.tab = 'nuit';
+  // Réglages repliés sous une tenue (la pièce de la carte « Dedans ») : ouverts ou fermés, gardés le temps de la session.
+  fold(el) {
+    const name = el.dataset.value;
+    if (state.open.has(name)) state.open.delete(name);
+    else state.open.add(name);
     paint();
-    window.scrollTo(0, 0);
   },
   day(el) {
     state.day = el.dataset.value;
@@ -718,13 +717,13 @@ const actions = {
     if (sheet?.child !== 'nouveau') updateChild({ outfit_offset: Number(el.dataset.value) }, sheet?.child);
     paint();
   },
-  // Avec ou sans pyjama la journée (dehors comme à la maison), depuis l'onglet Maison ou la fiche de l'enfant.
+  // Avec ou sans pyjama la journée (dedans comme dehors), depuis la carte « Dedans » ou la fiche de l'enfant.
   'day-style'(el) {
     const sheet = currentView() === 'enfant' ? state.draft : null;
     const value = el.dataset.value || null;
     if (sheet) sheet.dayStyle = value;
     if (sheet?.child !== 'nouveau') updateChild({ day_style: value }, sheet?.child);
-    if (!sheet) toast(value === 'pyjama' ? 'Avec pyjama la journée.' : 'Sans pyjama la journée, dehors comme à la maison.');
+    if (!sheet) toast(value === 'pyjama' ? 'Avec pyjama la journée.' : 'Sans pyjama la journée, dedans comme dehors.');
     paint();
   },
   // Tenue de nuit choisie pour une tranche de température ; « principal » revient à la tenue habituelle.
@@ -1277,7 +1276,7 @@ setInterval(() => {
   if (currentView() === 'app' && document.visibilityState === 'visible') paint();
 }, 5 * 60 * 1000);
 
-// Widget Android touché alors que l'app est déjà ouverte : elle passe à son enfant (et à l'onglet Maison pour le widget Maison).
+// Widget Android touché alors que l'app est déjà ouverte : elle passe à son enfant (et à la pièce du moment pour le widget Maison).
 window.sbChoisirEnfant = (id) => {
   if (!state.household?.children.some((c) => c.id === id)) return;
   showChild(id);
@@ -1285,8 +1284,8 @@ window.sbChoisirEnfant = (id) => {
 };
 window.sbOnglet = (tab) => {
   if (tab !== 'maison') return;
-  state.tab = 'nuit';
-  state.maison = null;
+  state.tab = homeTab();
+  state.day = 'aujourdhui';
   if (route()) location.hash = '';
   paint();
 };

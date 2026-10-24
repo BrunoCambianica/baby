@@ -152,7 +152,6 @@ await test('Reprise du profil 0.5 : il devient le premier enfant, garde-robe, ch
   const hidden = await page.evaluate(() => JSON.parse(localStorage.getItem('sb.masques')));
   assert(hidden[0] === `${c.id}|chanceliere:unique`, JSON.stringify(hidden));
   await page.click('.tabbar [data-value="nuit"]');
-  await page.click('[data-action="maison"][data-value="nuit"]');
   assert((await page.textContent('.hero-big')).includes('20,5'), 'relevé de la chambre perdu');
 });
 
@@ -173,20 +172,19 @@ await test('Deuxième enfant : fiche, pastilles, tenue et mode propres à chacun
   const chips = await page.locator('.kids button').allTextContents();
   assert(chips.join() === 'Léo,Zoé', chips.join());
   assert((await page.getAttribute('.kids button:nth-child(2)', 'aria-selected')) === 'true', 'le nouvel enfant doit être affiché');
-  assert((await page.getAttribute('.modes [data-value="a_pied"]', 'aria-checked')) === 'true', 'mode à pied non retenu');
+  assert((await page.inputValue('select[data-action="transport"]')) === 'a_pied', 'mode à pied non retenu');
   const zoeItems = await page.locator('.dress-name').allTextContents();
   assert(!zoeItems.some((t) => /Body|Pyjama|Chancelière/.test(t)), `tenue de Zoé : ${zoeItems.join(', ')}`);
   const bag = await page.textContent('.bag');
   assert(bag.includes('Imperméable') && !bag.includes('abillage'), `pluie à pied : ${bag}`);
   await shot(page, 'l1-zoe');
   await page.click('.kids >> text=Léo');
-  assert(!(await page.isVisible('.modes [data-value="a_pied"]')), 'à pied proposé pour Léo');
+  assert((await page.locator('select[data-action="transport"] option[value="a_pied"]').count()) === 0, 'à pied proposé pour Léo');
   const leoItems = await page.locator('.dress-name').allTextContents();
   assert(leoItems.some((t) => /Body/.test(t)), `tenue de Léo : ${leoItems.join(', ')}`);
   await shot(page, 'l1-leo');
   // Chambre de chacun.
   await page.click('.tabbar [data-value="nuit"]');
-  await page.click('[data-action="maison"][data-value="nuit"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   await page.click('.kids >> text=Zoé');
   assert(await page.isVisible("text=C'est la température de sa chambre"), 'relevé de Léo appliqué à Zoé');
@@ -276,12 +274,12 @@ await test('Widget iPhone : l\'app s\'ouvre sur l\'enfant du widget ; une config
   assert(h.children.length === 2 && h.children[0].transport === 'poussette', 'configuration plus ancienne appliquée');
   // Les changements partent vers le widget : configuration v2 et relevés par enfant.
   await page.click('.tabbar [data-value="nuit"]');
-  await page.click('[data-action="maison"][data-value="nuit"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   const src = await page.getAttribute('#sb-sync', 'data-sync');
   assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+&rappel=0$/.test(src), src);
-  // Le relevé du jour (widget Maison) part aussi.
-  await page.click('[data-action="maison"][data-value="jour"]');
+  // Le relevé du jour (carte Dedans, widget Maison) part aussi.
+  await page.click('.tabbar [data-value="sortir"]');
+  await page.click('[data-action="fold"][data-value="dedans"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   const both = await page.getAttribute('#sb-sync', 'data-sync');
   assert(/&rooms=zoe222:19\.5@\d+&dayrooms=zoe222:21\.5@\d+&rappel=0$/.test(both), both);
@@ -315,7 +313,7 @@ await test('App Android : configuration v2 pour la 0.6, v1 de l\'enfant affiché
 });
 
 await test('App Android 0.13 : widget Maison proposé, relevés notés sur le widget repris par l\'app, relevés du jour transmis', async (use) => {
-  // Le widget Maison a noté 23 °C dans la chambre de Léo à 7 h ; l'app ouverte depuis ce widget (onglet Maison) le reprend.
+  // Le widget Maison a noté 23 °C dans la chambre de Léo à 7 h ; l'app ouverte le soir depuis ce widget (onglet Nuit) le reprend.
   const noted = Date.parse('2026-10-21T07:00:00+02:00');
   const bridge = `window.calls = []; window.SuperbebeAndroid = {
     sync: (c, r) => window.calls.push(['sync', r]), syncReadings: (json) => window.calls.push(['readings', json]), colors() {}, widgets: () => 1,
@@ -328,18 +326,22 @@ await test('App Android 0.13 : widget Maison proposé, relevés notés sur le wi
   assert((await page.textContent('.hero-big')).startsWith('23,0') && await page.isVisible('text=Un peu chaud pour dormir : au-dessus de 20 °C'), await page.textContent('.hero'));
   assert(!page.url().includes('onglet='), page.url());
   assert((await stored(page)).children[0].room.value === 23, 'relevé du widget non gardé');
-  // Un relevé du jour noté dans l'app part vers les widgets.
-  await page.click('[data-action="maison"][data-value="jour"]');
-  await page.click('[aria-label="Monter d\'un demi-degré"]');
-  const calls = await page.evaluate(() => window.calls);
-  const last = JSON.parse(calls.filter(([k]) => k === 'readings').at(-1)[1]);
-  assert(last.jour.leo111.value === 21.5 && last.nuit.leo111.value === 23, JSON.stringify(last));
-  // Sans widget Maison posé, l'onglet Maison propose de le poser directement.
+  // Sans widget Maison posé, l'onglet Nuit propose de le poser directement.
   await page.click('.promo >> text=Ajouter');
   assert((await page.evaluate(() => window.calls)).some(([k, id]) => k === 'maison' && id === 'leo111'), 'widget Maison non demandé depuis l\'onglet');
   await page.goto(`${APP}#reglages`);
   await page.click('text=Le widget Maison de Zoé');
   assert((await page.evaluate(() => window.calls)).some(([k, id]) => k === 'maison' && id === 'zoe222'), 'widget Maison non demandé');
+  await page.context().close();
+  // Le jour, le widget Maison touché ouvre la carte Dedans : un relevé de la pièce noté dans l'app part vers les
+  // widgets, avec celui de la chambre.
+  const day = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `${bridge} if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
+  await day.goto(`${APP}?enfant=leo111&onglet=maison`);
+  await day.click('[data-action="fold"][data-value="dedans"]');
+  await day.click('[aria-label="Monter d\'un demi-degré"]');
+  const calls = await day.evaluate(() => window.calls);
+  const last = JSON.parse(calls.filter(([k]) => k === 'readings').at(-1)[1]);
+  assert(last.jour.leo111.value === 21.5 && last.nuit.leo111.value === 23, JSON.stringify(last));
 });
 
 await test('App Android ancienne (0.8) : pas de widget Maison, la mise à jour est proposée dans les réglages', async (use) => {
@@ -354,7 +356,7 @@ await test('App Android ancienne (0.8) : pas de widget Maison, la mise à jour e
   assert((await link.textContent()).includes(`0.8.0 → ${latest.versionName}`), await link.textContent());
   assert(await page.isVisible('text=App Android installée') && await page.isVisible('a.row >> text=Mettre à jour l\'app Android'), 'version installée ou mise à jour absentes');
   assert(!(await page.isVisible('text=Le widget Maison')), 'widget Maison proposé à une app qui ne l\'a pas');
-  // L'onglet Maison le dit aussi, avec la version installée et le lien de mise à jour.
+  // L'onglet Nuit le dit aussi, avec la version installée et le lien de mise à jour.
   await page.goto(APP);
   await page.click('.tabbar [data-value="nuit"]');
   await page.waitForSelector('.promo >> text=Le widget Maison');
@@ -397,7 +399,21 @@ await test('Journée : tenue du matin, changements, sac, geste de la nuque', asy
   assert((await page.textContent('.bag')).includes('Gilet'), await page.textContent('.bag'));
   assert(await page.isVisible('text=Touchez sa nuque, pas ses mains'), 'geste de la nuque absent');
   assert(!(await page.isVisible('text=Touchez une heure')), 'ancienne invite « touchez une heure »');
+  // Dedans, la tenue de la journée ; dehors, ce qu'on ajoute par-dessus, sans répéter le body ni le pantalon.
+  const inside = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
+  assert(inside.join() === 'Body ML,Pantalon,Chaussettes', `dedans : ${inside.join()}`);
+  assert((await page.textContent('.day .card-sub')) === 'Par-dessus, pour sortir', await page.textContent('.day .card-sub'));
+  const added = await page.locator('.day-step .dress-name').allTextContents();
+  assert(added.length && !added.some((t) => /Body|Pantalon/.test(t)) && await page.locator('.day-step .plus').count() === added.length, `dehors : ${added.join()}`);
+  // Les deux tenues tiennent sur le premier écran, au-dessus de la barre d'onglets.
+  const tabbar = (await page.locator('.tabbar').boundingBox()).y;
+  assert((await page.locator('.day-step .dress-ico').first().boundingBox()).y + 58 <= tabbar, 'tenue de dehors sous la barre d\'onglets');
   await shot(page, 'l2-journee-matin');
+  // Heure par heure : les heures défilent dans la carte, la page ne s'élargit pas.
+  await page.click('summary:has-text("Heure par heure")');
+  const width = await page.evaluate(() => [document.scrollingElement.scrollWidth, document.scrollingElement.clientWidth]);
+  const hours = await page.evaluate(() => { const h = document.querySelector('.hours'); return [h.scrollWidth, h.clientWidth]; });
+  assert(width[0] === width[1] && hours[0] > hours[1], `page ${width.join(' / ')}, heures ${hours.join(' / ')}`);
 });
 
 await test('Journée à 14 h : l\'étape en cours est marquée, les précédentes estompées', async (use) => {
@@ -406,7 +422,7 @@ await test('Journée à 14 h : l\'étape en cours est marquée, les précédente
   await page.waitForSelector('.day');
   assert((await page.locator('.change').first().textContent()).includes('maintenant'), 'étape de 11 h non marquée');
   assert(await page.locator('.day-step.past').count() === 1, 'matin non estompé');
-  assert((await page.textContent('.hero-label')).includes('Cet après-midi'), await page.textContent('.hero-label'));
+  assert((await page.textContent('.hero-label')).includes('Dehors cet après-midi'), await page.textContent('.hero-label'));
   await shot(page, 'l2-journee-14h');
 });
 
@@ -464,13 +480,13 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
   assert((await page.textContent('.hero .tonight')).includes('Pas de sortie conseillée ce soir'), 'ce soir non dit');
   assert((await page.textContent('.hero-label')).includes('Demain'), await page.textContent('.hero-label'));
   // Demain : jusqu'à trois créneaux, dans l'ordre de la journée, un seul marqué idéal.
-  const windows = await page.locator('.hero .windows .w-time').allTextContents();
+  const windows = await page.locator('.day .slots .w-time').allTextContents();
   const starts = windows.map((t) => parseInt(t, 10));
   assert(windows.length >= 1 && windows.length <= 3 && starts.every((h, k) => k === 0 || h > starts[k - 1]), windows.join(' | '));
-  assert((await page.locator('.hero .windows li.best').count()) === 1, 'créneau idéal non marqué');
+  assert((await page.locator('.day .slots li.best').count()) === 1, 'créneau idéal non marqué');
   assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '5°→19°', await page.textContent('.hero-big'));
   assert(!(await page.isVisible('.days')), 'choix du jour affiché le soir');
-  assert((await page.textContent('#t-jour')).includes('À préparer pour demain'), await page.textContent('#t-jour'));
+  assert((await page.textContent('.hero-label')).includes('à préparer ce soir') && await page.isVisible('#t-dedans') && await page.isVisible('#t-dehors'), await page.textContent('.hero-label'));
   assert((await page.textContent('.day .change-time')).startsWith('Demain matin'), await page.textContent('.day .change-time'));
   assert(await page.isVisible('text=Ce soir') && await page.isVisible('text=Gigoteuse 2 TOG'), 'carte de la nuit absente');
   assert((await page.getAttribute('[data-value="sortir"]', 'aria-selected')) === 'true', 'l\'app doit rester sur Sorties');
@@ -511,39 +527,50 @@ await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app An
   assert((await iphone.getAttribute('#sb-sync', 'data-sync')).endsWith('&rappel=0'), 'rappel non coupé');
 });
 
-await test('Maison : le jour et la nuit, chacun avec son relevé ; la nuit par défaut le soir', async (use) => {
+await test('Dedans et Nuit : chacun avec son relevé ; le widget Maison ouvre la pièce du moment', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await page.goto(APP);
-  assert((await page.textContent('.tabbar')).includes('Sorties') && (await page.textContent('.tabbar')).includes('Maison'), 'onglets Sorties et Maison absents');
-  await page.click('.tabbar [data-value="nuit"]');
-  await page.waitForSelector('text=Pour la journée');
-  assert((await page.getAttribute('[data-action="maison"][data-value="jour"]', 'aria-selected')) === 'true', 'le jour doit être choisi à 10 h');
-  assert((await page.textContent('.hero-big')).startsWith('21,0'), await page.textContent('.hero-big'));
+  assert((await page.textContent('.tabbar')).replace(/[\s\d]+/g, '') === 'JournéeNuitAchats', await page.textContent('.tabbar'));
+  // Le jour : la carte Dedans, pour une pièce à 20-22 °C tant que rien n'est noté ; la pastille déplie le relevé.
+  assert((await page.textContent('[data-action="fold"][data-value="dedans"]')).includes('20-22 °C'), 'pièce du repère non dite');
+  await page.click('[data-action="fold"][data-value="dedans"]');
+  assert((await page.textContent('.room-value')).startsWith('21,0'), await page.textContent('.room-value'));
   await page.click("text=C'est la température chez vous");
-  let names = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  let names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
   assert(names.join() === 'Body ML,Pantalon,Chaussettes', names.join());
   assert(await page.isVisible('text=Habillez-le comme vous') && await page.isVisible('text=Santé Manitoba (Canada)'), 'repères absents');
   for (let k = 0; k < 14; k++) await page.click('[aria-label="Monter d\'un demi-degré"]');
-  names = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
   assert(names.join() === 'Body léger' && await page.isVisible('text=Protéger de la chaleur, hydrater régulièrement'), names.join());
-  await shot(page, 'l5-maison-jour');
+  assert((await page.textContent('[data-action="fold"][data-value="dedans"]')).includes('28,0 °C'), 'relevé absent de la pastille');
+  // Dehors, plus froid que la pièce : le dessous change aussi, la tenue complète.
+  assert((await page.textContent('.day .card-sub')) === 'Sa tenue complète pour sortir', await page.textContent('.day .card-sub'));
+  await shot(page, 'l5-dedans');
   // La nuit garde son propre relevé : rien de noté pour la chambre.
-  await page.click('[data-action="maison"][data-value="nuit"]');
+  await page.click('.tabbar [data-value="nuit"]');
   await page.waitForSelector('text=Pour la nuit');
   assert((await page.textContent('.hero-big')).startsWith('19,0') && await page.isVisible("text=C'est la température de sa chambre"), await page.textContent('.hero-big'));
-  assert(await page.isVisible('text=Gigoteuse 2 TOG') && !(await page.isVisible('text=Pour la journée')), 'tenue de nuit');
+  assert(await page.isVisible('text=Gigoteuse 2 TOG') && !(await page.isVisible('#t-dedans')), 'tenue de nuit');
   const h = await stored(page);
   assert(h.children[0].room_day?.value === 28 && !h.children[0].room, JSON.stringify(h.children[0]));
   await page.context().close();
   const evening = use(await phone({ at: '2026-10-21T20:30:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await evening.goto(APP);
-  // « Détails », dans la carte « Ce soir » de l'onglet Sorties, ouvre Maison côté nuit.
+  // « Détails », dans la carte « Ce soir » de l'onglet Journée, ouvre l'onglet Nuit.
   await evening.click('.card >> text=Détails');
   await evening.waitForSelector('text=Pour la nuit');
-  assert(!(await evening.isVisible('text=Pour la journée')) && (await evening.textContent('.hero-label')).includes('La nuit, dans sa chambre'), 'la nuit attendue le soir');
-  await shot(evening, 'l5-maison-soir');
-  await evening.click('[data-action="maison"][data-value="jour"]');
-  await evening.waitForSelector('text=Pour la journée');
+  assert((await evening.textContent('.hero-label')).includes('Cette nuit, dans sa chambre'), 'la nuit attendue');
+  await shot(evening, 'l5-nuit');
+  await evening.context().close();
+  // Le widget Maison touché : la carte Dedans le jour, l'onglet Nuit le soir.
+  const day = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await day.goto(`${APP}?onglet=maison`);
+  await day.waitForSelector('#t-dedans');
+  assert((await day.getAttribute('.tabbar [data-value="sortir"]', 'aria-selected')) === 'true', 'le jour, le widget Maison mène à Journée');
+  await day.context().close();
+  const night = use(await phone({ at: '2026-10-21T20:30:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await night.goto(`${APP}?onglet=maison`);
+  await night.waitForSelector('text=Pour la nuit');
 });
 
 await test('La commune en haut de l\'écran ouvre les réglages sur la commune', async (use) => {
@@ -559,26 +586,26 @@ await test('La commune en haut de l\'écran ouvre les réglages sur la commune',
 await test('Tenues au choix : sans pyjama par défaut la journée (maison et sorties), pyjama la nuit, listes déroulantes', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.goto(APP);
-  await page.click('.tabbar [data-value="nuit"]');
-  let names = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  await page.click('[data-action="fold"][data-value="dedans"]');
+  let names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
   assert(names.join() === 'Body ML,Pantalon,Chaussettes', `par défaut : ${names.join()}`);
   const day = await page.locator('select[data-action="day-style"] option').allTextContents();
   assert(day.join(' | ') === 'Avec pyjama : body ML, pyjama | Sans pyjama : body ML, pantalon, chaussettes (par défaut)', day.join(' | '));
   await shot(page, 'l6-maison-sans-pyjama');
   await page.selectOption('select[data-action="day-style"]', 'pyjama');
-  names = await page.locator('.card:first-of-type .dress-name').allTextContents();
+  names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
   assert(names.join() === 'Body ML,Pyjama', `avec pyjama : ${names.join()}`);
   assert((await stored(page)).children[0].day_style === 'pyjama', 'avec pyjama non enregistré');
+  // Avec pyjama dedans, dehors aussi : la carte Dehors ajoute seulement par-dessus.
+  assert((await page.textContent('.day .card-sub')) === 'Par-dessus, pour sortir', await page.textContent('.day .card-sub'));
   await page.selectOption('select[data-action="day-style"]', 'sans_pyjama');
-  await page.click('.tabbar [data-value="sortir"]');
-  const morning = await page.locator('.day-step .dress-name').allTextContents();
-  assert(!morning.some((t) => /Pyjama/.test(t)) && morning.some((t) => /Pantalon/.test(t)), `sorties : ${morning.join(', ')}`);
+  const morning = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name, .day-step .dress-name').allTextContents();
+  assert(!morning.some((t) => /Pyjama/.test(t)) && morning.some((t) => /Pantalon/.test(t)), `journée : ${morning.join(', ')}`);
   // Créneaux de sortie : jusqu'à trois, dans l'ordre de la journée, le meilleur marqué.
-  assert((await page.locator('.hero .windows li.best').count()) === 1, 'créneau idéal non marqué');
+  assert((await page.locator('.day .slots li.best').count()) === 1, 'créneau idéal non marqué');
   await shot(page, 'l6-creneaux');
   // La nuit : 19 °C par défaut (18-20 °C), pyjama sous une 2 TOG ; l'autre gigoteuse dans la liste.
   await page.click('.tabbar [data-value="nuit"]');
-  await page.click('[data-action="maison"][data-value="nuit"]');
   let tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
   assert(tiles.join() === 'Body ML,Pyjama,Gigoteuse 2 TOG', `nuit par défaut : ${tiles.join()}`);
   const night = await page.locator('select[data-action="night-option"] option').allTextContents();

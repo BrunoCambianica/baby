@@ -1,4 +1,4 @@
-# Tester Superbébé (version 0.13)
+# Tester Superbébé (version 0.15)
 
 Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir avec bébé, et le soir avant le coucher.
 
@@ -12,11 +12,14 @@ Au premier lancement, trois questions : votre commune, le mois de naissance de v
 **Plusieurs enfants ?** Réglages, **Ajouter un enfant**. Chacun a son mode de sortie, sa tendance, sa garde-robe et ses relevés de température ; des pastilles en haut de l'écran passent de l'un à l'autre. À partir de 2 ans, les tenues changent (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière) et les tailles passent en années.
 
 L'app a trois onglets :
-- **Sorties** : habillez-le une fois le matin. La tenue du matin en petits dessins (ou en texte : Réglages, Affichage, Tenues), puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus) et le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. La journée suit la plage horaire des réglages ; la sortie idéale est rappelée en haut. **Envoyer la fiche du jour** partage une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse) ;
-- **Maison** : **Jour** ou **Nuit**, chacun avec sa température (boutons − et +). Le jour, la pièce où il vit et la tenue pour rester à la maison ; la nuit, sa chambre, quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir. De 6 h à 18 h l'onglet s'ouvre sur le jour, ensuite sur la nuit. **Tenues au choix** : le jour, « sans pyjama » (pantalon et chaussettes à la place, dehors aussi) ; la nuit, selon la gigoteuse que vous avez, une autre tenue publiée par un fabricant, gardée pour cette température : une gigoteuse plus légère va toujours avec une couche de plus dessous (à 19 °C : 2 TOG avec body ML et pyjama plutôt que 2,5 TOG avec body ML), une plus chaude avec une de moins ;
-- **Prévoir** : ce qu'il faudra bientôt (taille suivante, saison qui change).
+- **Journée** : le guide des tenues du jour, en deux cartes, dans l'ordre où on l'habille.
+  - **Dedans** : sa tenue de la journée, à la maison comme à la crèche. Elle vaut pour une pièce à 20-22 °C tant que rien n'est noté ; la pastille de température, à côté du titre, déplie le relevé de la pièce où il vit (boutons − et +), le choix « avec ou sans pyjama » (sans pyjama par défaut : pantalon et chaussettes à la place) et les repères officiels.
+  - **Dehors** : ce qu'on met **par-dessus** pour sortir (« + gilet chaud, + combi légère, + bonnet fin »), ou ce qu'on change (« − gilet fin, + gilet chaud ») ; si le dessous change aussi, la tenue complète. La pastille du mode de sortie (poussette, porte-bébé, voiture, à pied) est à côté du titre, les meilleurs moments pour sortir juste dessous (« idéal 10–11 h »). Puis au plus deux changements dans la journée (« vers 12 h : − combinaison, + gilet »), ce qui va dans le sac (trois objets au plus), et **Envoyer la fiche du jour** : une image et un lien pour la nounou, la crèche ou les grands-parents (prénom seulement, ni nom de famille ni adresse).
+  - Sous les deux cartes, le geste pour vérifier qu'il n'a pas trop chaud : touchez sa nuque, pas ses mains. En haut, le temps qu'il fera dehors ; la journée suit la plage horaire des réglages. La tenue s'affiche en petits dessins (ou en texte : Réglages, Affichage, Tenues).
+- **Nuit** : sa chambre, avec sa température (boutons − et +), quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir. **Tenues au choix** : selon la gigoteuse que vous avez, une autre tenue publiée par un fabricant, gardée pour cette température : une gigoteuse plus légère va toujours avec une couche de plus dessous (à 19 °C : 2 TOG avec body ML et pyjama plutôt que 2,5 TOG avec body ML), une plus chaude avec une de moins ;
+- **Achats** : ce qu'il faudra bientôt (taille suivante, saison qui change).
 
-**La veille au soir**, après la dernière sortie possible de la journée, l'onglet Sorties et le widget montrent la tenue et le sac de demain, « à préparer ce soir », à côté de la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).
+**La veille au soir**, après la dernière sortie possible de la journée, l'onglet Journée et le widget montrent les tenues et le sac de demain, « à préparer ce soir », puis la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).
 
 ## 2. Ajouter le widget sur iPhone (5 minutes)
 
@@ -33,7 +36,7 @@ Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chamb
 
 **Un widget par enfant** : posez un deuxième widget Scriptable, puis appui long dessus, **Modifier le widget**, et dans **Parameter**, écrivez le prénom de l'enfant (ou son numéro : 1, 2…). Sans rien dans Parameter, le widget montre le premier enfant.
 
-**Widget Maison** : un autre widget Scriptable, avec **maison** dans Parameter (ou « Léo maison »). Le jour, la température chez vous et la tenue pour rester à la maison ; le soir, sa chambre, la gigoteuse et la tenue dessous. Sur iPhone, un widget ne peut pas avoir de boutons : le toucher ouvre l'onglet Maison, où − et + notent la température.
+**Widget Maison** : un autre widget Scriptable, avec **maison** dans Parameter (ou « Léo maison »). Le jour, la température chez vous et la tenue pour rester à la maison ; le soir, sa chambre, la gigoteuse et la tenue dessous. Sur iPhone, un widget ne peut pas avoir de boutons : le toucher ouvre l'app sur la pièce du moment (le jour, la carte Dedans ; le soir, l'onglet Nuit), où − et + notent la température.
 
 ## 2 bis. Installer l'app et le widget sur Android (3 minutes)
 
@@ -55,8 +58,8 @@ Réglages, **Envoyer les profils** : un lien part par la messagerie de votre cho
 ## 3. Ce qu'on vous demande
 
 - Regardez l'app ou le widget avant de sortir, et le soir avant le coucher.
-- Le soir, notez la température de sa chambre (onglet Maison, Nuit) ; en journée, celle de la pièce où il vit si vous restez à la maison (Maison, Jour). Les deux relevés sont distincts : celui du salon ne sert jamais pour la nuit.
-- Dans l'onglet Prévoir, indiquez ce que vous avez déjà dans « Ma garde-robe ».
+- Le soir, notez la température de sa chambre (onglet Nuit) ; en journée, celle de la pièce où il vit (onglet Journée, pastille de température de la carte Dedans). Les deux relevés sont distincts : celui du salon ne sert jamais pour la nuit.
+- Dans l'onglet Achats, indiquez ce que vous avez déjà dans « Ma garde-robe ».
 - Si bébé a souvent trop chaud ou trop froid avec les tenues proposées, réglez « Tendance de bébé » dans les Réglages.
 - À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à cinq questions :
   1. Si l'app disparaissait demain, ce serait : très embêtant, un peu embêtant, ou pas grave ?

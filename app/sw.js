@@ -2,7 +2,7 @@
 // Changer VERSION à chaque mise en ligne pour que les téléphones récupèrent la nouvelle version.
 // sw-moteur.js (généré par tools/build-widget.js) : le moteur et les règles, pour calculer le rappel sans l'app.
 importScripts('sw-moteur.js');
-const VERSION = '0.14.2';
+const VERSION = '0.15.0';
 const CACHE = `superbebe-${VERSION}`;
 const ASSETS = [
   './',
