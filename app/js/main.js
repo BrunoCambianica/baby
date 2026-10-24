@@ -1089,21 +1089,30 @@ const actions = {
       paint();
     });
   },
+  // L'app elle-même (le site) et, dans l'app Android, l'APK (l'app installée et ses widgets) : vérifiés ensemble.
+  // Un APK plus récent : la ligne « Mettre à jour l'app Android » apparaît, qui le télécharge.
   async 'check-update'() {
     if (state.updateReady) {
       location.reload();
       return;
     }
     const registration = await navigator.serviceWorker?.getRegistration();
-    if (!registration) {
-      // Ouverte depuis le widget iPhone, l'app est rechargée du site à chaque fois.
-      toast(host ? `Vous avez la dernière version (${V.VERSION}).` : 'Mise à jour automatique indisponible ici.');
+    await Promise.all([registration?.update().catch(() => {}), loadApkLatest()]);
+    if (V.apkUpdate(state)) {
+      paint();
+      toast(`L'app Android ${state.apkLatest.versionName} est prête : touchez « Mettre à jour l'app Android ».`);
       return;
     }
-    await registration.update().catch(() => {});
+    // Ouverte depuis le widget iPhone, l'app est rechargée du site à chaque fois.
+    if (!registration && !host) {
+      toast('Mise à jour automatique indisponible ici.');
+      return;
+    }
+    const versions = `app ${V.VERSION}${state.androidVersion ? `, app Android ${state.androidVersion}` : ''}`;
     setTimeout(() => {
-      if (!state.updateReady) toast(`Vous avez la dernière version (${V.VERSION}).`);
-    }, 1500);
+      if (!state.updateReady) toast(`Vous avez la dernière version (${versions}).`);
+      if (currentView() === 'reglages') paint();
+    }, registration ? 1500 : 0);
   },
   async 'copy-report'() {
     if (await copy(reportText())) toast('Retours copiés : collez-les dans la conversation du test.');
@@ -1292,8 +1301,8 @@ window.sbOnglet = (tab) => {
 
 // App Android : la dernière version publiée de l'APK, pour proposer la mise à jour dans les réglages.
 function loadApkLatest() {
-  if (host !== 'android') return;
-  fetch(new URL(`../dist/android-version.json?t=${Date.now()}`, location.href), { cache: 'no-store' })
+  if (host !== 'android') return Promise.resolve();
+  return fetch(new URL(`../dist/android-version.json?t=${Date.now()}`, location.href), { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))
     .then((latest) => {
       if (!latest?.versionName) return;

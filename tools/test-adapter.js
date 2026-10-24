@@ -108,11 +108,11 @@ test('Widget le soir : la tenue et le sac de demain, à préparer, et la nuit ; 
   assert(evening.lines[2] === 'Sac : gilet · nuit 19° : body ML + pyjama + 2 TOG', evening.lines[2]);
   const rainy = widgetView({ forecast, profile, date: '2026-10-24', time: '20:30', lat: 45.758 }, bundle);
   assert(rainy.lines[0] === 'Demain 8° → 14° · pluie vers 8 h' && rainy.lines[2].startsWith('Sac : habillage pluie'), JSON.stringify(rainy.lines));
-  assert(evening.reminder.startsWith('Body ML, pantalon, chaussettes, pull, combi pilote') && evening.reminder.endsWith('nuit 19° : body ML + pyjama + 2 TOG'), evening.reminder);
+  assert(evening.reminder.startsWith('Body ML, haut ML, pantalon, chaussettes, pull, combi pilote') && evening.reminder.endsWith('nuit 19° : body ML + pyjama + 2 TOG'), evening.reminder);
   const morning = widgetView({ forecast, profile, date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle);
   assert(morning.moment === 'jour' && morning.tomorrow === null && morning.reminder === null && morning.lines[0] === 'Ce matin 5° → 19°', JSON.stringify(morning.lines));
   const early = widgetView({ forecast, profile, date: '2026-10-27', time: '16:00', lat: 45.758 }, bundle, { reminder: true });
-  assert(early.moment === 'jour' && early.reminder?.startsWith('Body MC, pantalon léger') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
+  assert(early.moment === 'jour' && early.reminder?.startsWith('Body MC, t-shirt, pantalon léger') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
 });
 
 test('Configuration du widget : aller-retour avec accents', () => {

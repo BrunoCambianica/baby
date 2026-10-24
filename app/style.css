@@ -396,6 +396,7 @@ p.check { display: block; }
 .group-body > .row:first-child, .group-body > :first-child .row { border-top: 0; }
 .row.column { flex-direction: column; align-items: stretch; }
 .row .value { color: var(--ink-3); }
+.row .value.nowrap { white-space: nowrap; flex: none; }
 .row .ico.chev { color: var(--ink-3); }
 .row.danger { color: #e5484d; justify-content: center; font-weight: 600; }
 .group-note { font-size: 0.84rem; color: var(--ink-3); padding: 0 6px; }

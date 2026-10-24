@@ -150,8 +150,9 @@ export function transportFor(profile, age, R) {
 // Tenues propres à un âge (à partir de 2 ans : haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison).
 const ageVariant = (R, age) => (R.outfit.age_variants ?? []).filter((v) => age >= v.from_months).at(-1) ?? null;
 
-// Style de la journée choisi pour l'enfant (« sans pyjama » : pantalon et chaussettes à la place, dehors comme
-// à la maison). Jamais plus chaud que la tenue d'origine (contrôlé par lint) ; la nuit n'est pas concernée.
+// Style de la journée choisi pour l'enfant (« sans pyjama » : l'équivalent du pyjama en vêtements de jour, un haut,
+// un pantalon et des chaussettes, dehors comme à la maison). Il couvre autant que le pyjama (contrôlé par lint) ;
+// la nuit n'est pas concernée.
 // Sans choix fait, le style par défaut des règles (« sans pyjama ») ; « pyjama » garde la tenue d'origine.
 const dayStyleId = (R, profile) => profile.day_style ?? R.outfit.default_day_style ?? null;
 const dayStyle = (R, profile) => R.outfit.day_styles?.[dayStyleId(R, profile)] ?? null;
@@ -906,15 +907,24 @@ export function lint(bundle) {
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);
     if (!DRAWINGS[ITEM_DRAWINGS[item]]) errors.push(`dessin manquant : ${item}`);
   }
-  // Tenues au choix. Le jour : jamais plus chaudes que la tenue d'origine (chaleur de journee.warmth). La nuit, ce qu'on
+  // Tenues au choix. Le jour, l'équivalent du pyjama remplacé, pas une couche de moins : un haut (journee.slots.peau),
+  // un bas (corps), et des chaussettes si le pyjama remplacé couvre les pieds ; le porte-bébé de même. La nuit, ce qu'on
   // met dessous s'additionne au TOG : une gigoteuse plus légère va avec des vêtements plus chauds, une plus chaude avec
   // des vêtements plus légers, et à gigoteuse égale, une couche fine d'écart au plus ; chaque tenue cite son fabricant.
   const heat = (list) => list.reduce((sum, item) => sum + (R.journee.warmth[item] ?? Number.NaN), 0);
   const togOf = (tog) => Number(String(tog).replace(',', '.'));
-  for (const [id, style] of Object.entries(R.outfit.day_styles ?? {})) {
-    for (const [item, replacement] of Object.entries(style.replace_items)) {
-      if (!(heat(replacement) <= heat([item]))) errors.push(`style ${id} : ${replacement.join(' + ')} plus chaud que ${item}`);
-      for (const r of replacement) if (!M.labels.items_short[r] || !DRAWINGS[ITEM_DRAWINGS[r]]) errors.push(`style ${id} : ${r} sans libellé ou dessin`);
+  const footed = ['pyjama', 'pyjama_chaud'];
+  const swaps = [...Object.entries(R.outfit.day_styles ?? {}).map(([id, style]) => [`style ${id}`, style.replace_items]),
+    ['porte-bébé', R.outfit.transport.porte_bebe?.replace_items ?? {}]];
+  for (const [who, replace] of swaps) {
+    for (const [item, replacement] of Object.entries(replace)) {
+      if (!item.startsWith('pyjama')) continue;
+      const has = (slot) => replacement.some((r) => R.journee.slots[slot].includes(r));
+      const socks = replacement.some((r) => r.startsWith('chaussettes'));
+      if (!has('peau') || !replacement.some((r) => r.startsWith('pantalon')) || (footed.includes(item) && !socks)) {
+        errors.push(`${who} : ${replacement.join(' + ')} n'équivaut pas à ${item} (un haut, un pantalon${footed.includes(item) ? ' et des chaussettes' : ''})`);
+      }
+      for (const r of replacement) if (!M.labels.items_short[r] || !DRAWINGS[ITEM_DRAWINGS[r]]) errors.push(`${who} : ${r} sans libellé ou dessin`);
     }
   }
   const binIds = new Set();

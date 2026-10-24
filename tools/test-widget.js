@@ -495,7 +495,8 @@ await test('Widget Maison (iPhone) : « maison » dans Parameter, le jour la pi�
   assert(open.view?.url === `${APP}?hote=scriptable&enfant=leo1&onglet=maison#import=${FAMILLE}`, String(open.view?.url));
   const day = await run({ files, param: 'Léo maison', loaderConfig: FAMILLE, at: '2026-10-21T10:00:00+02:00' });
   assert(day.texts[0] === 'LÉO · CHEZ VOUS' && day.texts[1] === 'Chez vous 17°' && day.widget.url.endsWith('&enfant=leo1&onglet=maison'), `${day.texts.join(' | ')} ${day.widget.url}`);
-  assert(day.widget.rows[0].images.length === 4 && day.texts.includes('Sous 20 °C : une couche de plus'), JSON.stringify([day.texts, day.widget.rows[0].images.length]));
+  // À 17 °C : body ML, haut ML, pantalon, chaussettes (l'équivalent du pyjama) et gilet fin.
+  assert(day.widget.rows[0].images.length === 5 && day.texts.includes('Sous 20 °C : une couche de plus'), JSON.stringify([day.texts, day.widget.rows[0].images.length]));
   const night = await run({ files, param: 'maison', loaderConfig: FAMILLE, at: '2026-10-21T20:30:00+02:00' });
   assert(night.texts[0] === 'LÉO · SA CHAMBRE' && night.texts[1] === 'Chambre 23°', night.texts.join(' | '));
   assert(night.widget.rows[0].texts[0].text.includes('1 TOG') && night.texts.includes('Un peu chaud pour dormir : au-dessus de 20 °C'), JSON.stringify(night.texts));

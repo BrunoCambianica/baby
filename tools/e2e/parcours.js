@@ -354,7 +354,14 @@ await test('App Android ancienne (0.8) : pas de widget Maison, la mise à jour e
   const link = page.locator('a.row', { hasText: 'Widget Maison' });
   assert((await link.getAttribute('href')).endsWith(`dist/superbebe-android.apk?v=${latest.versionCode}`), await link.getAttribute('href'));
   assert((await link.textContent()).includes(`0.8.0 → ${latest.versionName}`), await link.textContent());
-  assert(await page.isVisible('text=App Android installée') && await page.isVisible('a.row >> text=Mettre à jour l\'app Android'), 'version installée ou mise à jour absentes');
+  // Deux versions, deux noms : celle de l'app, et l'app Android à mettre à jour, de la version installée à la publiée.
+  assert(await page.isVisible('text=Version de l\'app'), 'version de l\'app absente');
+  const update = await page.textContent('a.row:has-text("Mettre à jour l\'app Android") .value');
+  assert(update === `0.8.0 → ${latest.versionName}`, update);
+  // « Rechercher une mise à jour » vérifie aussi l'APK et le dit.
+  await page.click('[data-action="check-update"]');
+  await page.waitForSelector('.toast');
+  assert((await page.textContent('.toast')).includes(`L'app Android ${latest.versionName} est prête`), await page.textContent('.toast'));
   assert(!(await page.isVisible('text=Le widget Maison')), 'widget Maison proposé à une app qui ne l\'a pas');
   // L'onglet Nuit le dit aussi, avec la version installée et le lien de mise à jour.
   await page.goto(APP);
@@ -401,7 +408,7 @@ await test('Journée : tenue du matin, changements, sac, geste de la nuque', asy
   assert(!(await page.isVisible('text=Touchez une heure')), 'ancienne invite « touchez une heure »');
   // Dedans, la tenue de la journée ; dehors, ce qu'on ajoute par-dessus, sans répéter le body ni le pantalon.
   const inside = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
-  assert(inside.join() === 'Body ML,Pantalon,Chaussettes', `dedans : ${inside.join()}`);
+  assert(inside.join() === 'Body ML,Haut ML,Pantalon,Chaussettes', `dedans : ${inside.join()}`);
   assert((await page.textContent('.day .card-sub')) === 'Par-dessus, pour sortir', await page.textContent('.day .card-sub'));
   const added = await page.locator('.day-step .dress-name').allTextContents();
   assert(added.length && !added.some((t) => /Body|Pantalon/.test(t)) && await page.locator('.day-step .plus').count() === added.length, `dehors : ${added.join()}`);
@@ -537,7 +544,7 @@ await test('Dedans et Nuit : chacun avec son relevé ; le widget Maison ouvre la
   assert((await page.textContent('.room-value')).startsWith('21,0'), await page.textContent('.room-value'));
   await page.click("text=C'est la température chez vous");
   let names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
-  assert(names.join() === 'Body ML,Pantalon,Chaussettes', names.join());
+  assert(names.join() === 'Body ML,Haut ML,Pantalon,Chaussettes', names.join());
   assert(await page.isVisible('text=Habillez-le comme vous') && await page.isVisible('text=Santé Manitoba (Canada)'), 'repères absents');
   for (let k = 0; k < 14; k++) await page.click('[aria-label="Monter d\'un demi-degré"]');
   names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
@@ -588,9 +595,9 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   await page.goto(APP);
   await page.click('[data-action="fold"][data-value="dedans"]');
   let names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
-  assert(names.join() === 'Body ML,Pantalon,Chaussettes', `par défaut : ${names.join()}`);
+  assert(names.join() === 'Body ML,Haut ML,Pantalon,Chaussettes', `par défaut : ${names.join()}`);
   const day = await page.locator('select[data-action="day-style"] option').allTextContents();
-  assert(day.join(' | ') === 'Avec pyjama : body ML, pyjama | Sans pyjama : body ML, pantalon, chaussettes (par défaut)', day.join(' | '));
+  assert(day.join(' | ') === 'Avec pyjama : body ML, pyjama | Sans pyjama : body ML, haut ML, pantalon, chaussettes (par défaut)', day.join(' | '));
   await shot(page, 'l6-maison-sans-pyjama');
   await page.selectOption('select[data-action="day-style"]', 'pyjama');
   names = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();

@@ -686,7 +686,7 @@
       "expect": {
         "journee.band": "froid",
         "journee.base_band": "frais",
-        "journee.morning": ["body_ml", "pantalon", "chaussettes", "pull", "combi_pilote", "bonnet", "chaussons"],
+        "journee.morning": ["body_ml", "haut_ml", "pantalon", "chaussettes", "pull", "combi_pilote", "bonnet", "chaussons"],
         "journee.changes": [{ "time": "12:00", "remove": ["combi_pilote", "bonnet", "chaussons", "pull"], "add": ["gilet"] }],
         "journee.bag.*.item": ["gilet"],
         "widget.lines.0": "Ce matin 5° → 15°",
@@ -710,7 +710,7 @@
       "description": "15 °C jusqu'à 15 h, puis 5 °C : on remet combinaison, bonnet et chaussons, tous dans le sac",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "15:00-22:00": { "feels_c": 5 } } } } },
       "expect": {
-        "journee.morning": ["body_ml", "pantalon", "chaussettes", "gilet"],
+        "journee.morning": ["body_ml", "haut_ml", "pantalon", "chaussettes", "gilet"],
         "journee.changes": [{ "time": "15:00", "remove": [], "add": ["combi_pilote", "bonnet", "chaussons"] }],
         "journee.bag.*.item": ["combi_pilote", "bonnet", "chaussons"]
       }
@@ -831,10 +831,10 @@
     },
     {
       "id": "maison-21",
-      "description": "À la maison à 21 °C : par défaut sans pyjama : body manches longues, pantalon et chaussettes, comme un adulte en pantalon et haut léger",
+      "description": "À la maison à 21 °C : par défaut sans pyjama, son équivalent : body manches longues, haut ML, pantalon et chaussettes",
       "input": { "profile": { "day_room_temp_c": 21 } },
       "expect": {
-        "indoor.wear": ["body_ml", "pantalon", "chaussettes"],
+        "indoor.wear": ["body_ml", "haut_ml", "pantalon", "chaussettes"],
         "indoor.room_status": "in_range",
         "indoor.relays.include": ["relay.indoor.dress_like_you", "relay.indoor.no_overwrap", "relay.check_neck"],
         "indoor.relays.exclude": ["relay.heat.protect"]
@@ -844,7 +844,7 @@
       "id": "maison-fraiche",
       "description": "Maison à 17 °C : un gilet fin en plus, et la pièce est sous 20 °C",
       "input": { "profile": { "day_room_temp_c": 17 } },
-      "expect": { "indoor.wear": ["body_ml", "pantalon", "chaussettes", "gilet_fin"], "indoor.room_status": "below" }
+      "expect": { "indoor.wear": ["body_ml", "haut_ml", "pantalon", "chaussettes", "gilet_fin"], "indoor.room_status": "below" }
     },
     {
       "id": "maison-chaleur",
@@ -856,7 +856,7 @@
       "id": "maison-sans-releve",
       "description": "Sans relevé : la tenue pour 21 °C, milieu du repère de 20 à 22 °C, en le disant",
       "input": {},
-      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pantalon", "chaussettes"] }
+      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "haut_ml", "pantalon", "chaussettes"] }
     },
     {
       "id": "maison-enfant",
@@ -869,7 +869,7 @@
       "description": "Salon à 18 °C le jour, chambre à 23 °C la nuit : chaque tenue suit son relevé, jamais celui de l'autre pièce",
       "input": { "now": "20:30", "profile": { "day_room_temp_c": 18, "room_temp_c": 23 } },
       "expect": {
-        "indoor.wear": ["body_ml", "pantalon", "chaussettes", "gilet_fin"],
+        "indoor.wear": ["body_ml", "haut_ml", "pantalon", "chaussettes", "gilet_fin"],
         "indoor.room_temp_c": 18,
         "night.room_temp_c": 23,
         "night.tog": "1",
@@ -880,7 +880,7 @@
       "id": "maison-releve-chambre-seul",
       "description": "Seule la chambre est relevée : la tenue de jour reste celle du repère de 20 à 22 °C",
       "input": { "profile": { "room_temp_c": 16 } },
-      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "pantalon", "chaussettes"], "night.tog": "2,5" }
+      "expect": { "indoor.room_assumed": true, "indoor.wear": ["body_ml", "haut_ml", "pantalon", "chaussettes"], "night.tog": "2,5" }
     },
     {
       "id": "nuit-tenues-au-choix",
@@ -933,10 +933,10 @@
     },
     {
       "id": "maison-sans-pyjama",
-      "description": "Style « sans pyjama » à 21 °C : body ML, pantalon et chaussettes ; l'autre tenue reste proposée",
+      "description": "Style « sans pyjama » à 21 °C : body ML, haut ML, pantalon et chaussettes ; l'autre tenue reste proposée",
       "input": { "profile": { "day_room_temp_c": 21, "day_style": "sans_pyjama" } },
       "expect": {
-        "indoor.wear": ["body_ml", "pantalon", "chaussettes"], "indoor.day_style": "sans_pyjama",
+        "indoor.wear": ["body_ml", "haut_ml", "pantalon", "chaussettes"], "indoor.day_style": "sans_pyjama",
         "indoor.styles.*.id": ["pyjama", "sans_pyjama"]
       }
     },
@@ -948,15 +948,15 @@
     },
     {
       "id": "maison-sans-pyjama-froid",
-      "description": "Sans pyjama à 15 °C : pantalon et chaussettes chauds à la place du pyjama chaud, le gilet reste",
+      "description": "Sans pyjama à 15 °C : haut ML, pantalon et chaussettes chauds à la place du pyjama épais, le gilet reste",
       "input": { "profile": { "day_room_temp_c": 15, "day_style": "sans_pyjama" } },
-      "expect": { "indoor.wear": ["body_ml", "pantalon_chaud", "chaussettes_chaudes", "gilet"] }
+      "expect": { "indoor.wear": ["body_ml", "haut_ml", "pantalon_chaud", "chaussettes_chaudes", "gilet"] }
     },
     {
       "id": "maison-sans-pyjama-leger",
-      "description": "Sans pyjama à 24 °C : un pantalon léger, sans chaussettes",
+      "description": "Sans pyjama à 24 °C : un t-shirt et un pantalon léger, sans chaussettes",
       "input": { "profile": { "day_room_temp_c": 24, "day_style": "sans_pyjama" } },
-      "expect": { "indoor.wear": ["body_mc", "pantalon_leger"] }
+      "expect": { "indoor.wear": ["body_mc", "tshirt", "pantalon_leger"] }
     },
     {
       "id": "maison-chaleur-sans-choix",
@@ -966,11 +966,11 @@
     },
     {
       "id": "sortie-sans-pyjama",
-      "description": "6 °C en poussette, style « sans pyjama » : pantalon et chaussettes chauds sous la combinaison, toute la journée",
+      "description": "6 °C en poussette, style « sans pyjama » : haut ML, pantalon et chaussettes chauds sous la combinaison, toute la journée",
       "input": { "profile": { "day_style": "sans_pyjama" } },
       "expect": {
-        "outfit.items.include": ["pantalon_chaud", "chaussettes_chaudes", "combi_pilote"], "outfit.items.exclude": ["pyjama", "pyjama_chaud"],
-        "journee.morning.include": ["pantalon_chaud", "chaussettes_chaudes"], "journee.morning.exclude": ["pyjama", "pyjama_chaud"]
+        "outfit.items.include": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes", "combi_pilote"], "outfit.items.exclude": ["pyjama", "pyjama_chaud"],
+        "journee.morning.include": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes"], "journee.morning.exclude": ["pyjama", "pyjama_chaud"]
       }
     },
     {

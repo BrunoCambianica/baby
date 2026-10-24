@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.15.0';
+export const VERSION = '0.15.1';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -609,7 +609,7 @@ function homeWidgetPromo(state) {
 
 // Où l'app est ouverte : utile pour savoir d'où viennent les widgets (seule l'app Android en pose sur Android).
 function openedIn(state) {
-  if (state.host === 'android') return `app Android ${state.androidVersion || ''}`.trim();
+  if (state.host === 'android') return 'app Android';
   if (state.host === 'scriptable') return 'widget iPhone (Scriptable)';
   return state.standalone ? 'icône installée depuis le navigateur' : 'navigateur';
 }
@@ -796,10 +796,12 @@ export function viewSettings(state) {
     ${reminderGroup(state)}
     <section class="group"><h2 class="group-title">Application</h2>
       <div class="group-body">
-        <button class="row" data-action="check-update"><span>${state.updateReady ? 'Installer la mise à jour' : 'Rechercher une mise à jour'}</span><span class="value">v${VERSION}</span></button>
+        <button class="row" data-action="check-update"><span>${state.updateReady ? 'Installer la mise à jour' : 'Rechercher une mise à jour'}</span>${icon('refresh', { size: 20 })}</button>
+        <div class="row"><span>Version de l'app</span><span class="value">${VERSION}</span></div>
+        ${apkUpdate(state)
+    ? `<a class="row" href="${esc(state.apkLatest.url)}"><span>Mettre à jour l'app Android</span><span class="value nowrap">${esc(state.androidVersion)} → ${esc(state.apkLatest.versionName)}</span></a>`
+    : state.androidVersion ? `<div class="row"><span>App Android et widgets</span><span class="value">${esc(state.androidVersion)}${state.apkLatest ? ' · à jour' : ''}</span></div>` : ''}
         <div class="row"><span>Ouvert dans</span><span class="value">${esc(openedIn(state))}</span></div>
-        ${state.androidVersion ? `<div class="row"><span>App Android installée</span><span class="value">${esc(state.androidVersion)}</span></div>` : ''}
-        ${apkUpdate(state) ? `<a class="row" href="${esc(state.apkLatest.url)}"><span>Mettre à jour l'app Android</span><span class="value">${esc(state.apkLatest.versionName)}</span></a>` : ''}
         <button class="row" data-action="copy-report"><span>Copier mes retours de test</span>${icon('share', { size: 20 })}</button>
         <a class="row" href="#apropos"><span>Charte, sources et confidentialité</span>${chev()}</a>
       </div>
@@ -869,7 +871,7 @@ export function viewChild(state) {
             `<button role="radio" aria-checked="${(d.dayStyle ?? state.bundle.rules.outfit.default_day_style) === v}" data-action="day-style" data-value="${v}">${l}</button>`).join('')}</div>
         </div>` : ''}
       </div>
-      <p class="group-note">« A chaud » allège toutes ses tenues d'un cran, « A froid » les réchauffe d'un cran. « À pied » apparaît à partir de 2 ans.${pyjamas ? ' « Sans pyjama » : pantalon et chaussettes à la place, dehors comme à la maison ; la nuit ne change pas.' : ''}</p>
+      <p class="group-note">« A chaud » allège toutes ses tenues d'un cran, « A froid » les réchauffe d'un cran. « À pied » apparaît à partir de 2 ans.${pyjamas ? ' « Sans pyjama » : son équivalent en vêtements de jour (un haut, un pantalon et des chaussettes), dedans comme dehors ; la nuit ne change pas.' : ''}</p>
     </section>
     ${fresh ? '<button class="btn" data-action="child-add">Ajouter</button>' : remove}
   </div>`;
@@ -934,7 +936,7 @@ export function viewReceive(state) {
 }
 
 // L'app Android installée est plus ancienne que la dernière publiée (comparaison des numéros 0.13.1…).
-function apkUpdate(state) {
+export function apkUpdate(state) {
   const parse = (v) => String(v ?? '').split('.').map((n) => Number.parseInt(n, 10) || 0);
   if (!state.androidVersion || !state.apkLatest?.versionName) return false;
   const [a, b] = [parse(state.androidVersion), parse(state.apkLatest.versionName)];

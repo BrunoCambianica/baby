@@ -2,7 +2,7 @@
   "id": "baby-rules",
   "version": "0.1.0",
   "status": "brouillon, à relire avant toute diffusion",
-  "updated": "2026-10-22",
+  "updated": "2026-10-24",
   "locale": "fr-FR",
   "policy": {
     "medical_advice": false,
@@ -78,9 +78,9 @@
         "band_shift": -1,
         "remove_items": ["chanceliere"],
         "replace_items": {
-          "pyjama_leger": ["pantalon_leger", "chaussettes"],
-          "pyjama": ["pantalon", "chaussettes"],
-          "pyjama_chaud": ["pantalon_chaud", "chaussettes_chaudes"],
+          "pyjama_leger": ["tshirt", "pantalon_leger", "chaussettes"],
+          "pyjama": ["haut_ml", "pantalon", "chaussettes"],
+          "pyjama_chaud": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes"],
           "combi_legere": ["couverture_portage"],
           "combi_pilote": ["manteau_portage"],
           "combi_pilote_doublee": ["manteau_portage"]
@@ -130,9 +130,9 @@
     "day_styles": {
       "sans_pyjama": {
         "replace_items": {
-          "pyjama_leger": ["pantalon_leger"],
-          "pyjama": ["pantalon", "chaussettes"],
-          "pyjama_chaud": ["pantalon_chaud", "chaussettes_chaudes"]
+          "pyjama_leger": ["tshirt", "pantalon_leger"],
+          "pyjama": ["haut_ml", "pantalon", "chaussettes"],
+          "pyjama_chaud": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes"]
         }
       }
     },
