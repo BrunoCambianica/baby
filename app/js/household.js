@@ -13,10 +13,14 @@ export function newId() {
 }
 
 // `day_style` : style de la journée (null : avec pyjama ; « sans_pyjama ») ; `night_options` : tenue de nuit choisie
-// par tranche de température ({ n20: 'tog-1' }), sinon la tenue principale.
+// par tranche de température ({ n20: 'tog-1' }), sinon la tenue principale ; `swaps` : pièces au choix
+// ({ pull: { to: 'gilet_chaud' } } toujours, avec `day` pour ce jour-là seulement).
 export const newChild = ({ name = '', birth, transport = 'poussette', outfit_offset = 0 }) => ({
-  id: newId(), name, birth, transport, outfit_offset, day_style: null, night_options: {}, inventory: {}, room: null, room_day: null,
+  id: newId(), name, birth, transport, outfit_offset, day_style: null, night_options: {}, swaps: {}, inventory: {}, room: null, room_day: null,
 });
+
+// Pièces au choix encore utiles : celles de toujours, et celles d'aujourd'hui ou d'un jour à venir.
+export const liveSwaps = (swaps, today) => Object.fromEntries(Object.entries(swaps ?? {}).filter(([, s]) => s?.to && (!s.day || s.day >= today)));
 
 // Profil des versions à un seul enfant (jusqu'à 0.5) : il devient le premier enfant du foyer.
 export function migrate(raw) {
@@ -79,7 +83,7 @@ export function fromConfig(cfg, local, { keepView = false } = {}) {
     const before = known.get(id);
     return {
       id, name: c.name, birth: c.birth, transport: c.transport, outfit_offset: c.outfit_offset,
-      day_style: c.day_style, night_options: c.night_options,
+      day_style: c.day_style, night_options: c.night_options, swaps: c.swaps,
       inventory: before?.inventory ?? {}, room: before?.room ?? null, room_day: before?.room_day ?? null,
     };
   });

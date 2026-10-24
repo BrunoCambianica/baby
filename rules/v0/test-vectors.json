@@ -947,6 +947,42 @@
       "expect": { "journee.bag": [{ "item": "habillage_pluie", "reason": "pluie", "time": "11:00" }] }
     },
     {
+      "id": "pieces-gilet-chaud-toujours",
+      "description": "Pièces au choix : un gilet chaud toujours à la place du pull (même rôle, 0,5 de moins), le plan de la journée reste le même",
+      "input": { "profile": { "swaps": { "pull": { "to": "gilet_chaud" } } } },
+      "expect": {
+        "journee.morning.include": ["gilet_chaud", "combi_pilote", "bonnet"],
+        "journee.morning.exclude": ["pull"],
+        "journee.swapped": { "gilet_chaud": "pull" },
+        "outfit.items.include": ["gilet_chaud"],
+        "outfit.items.exclude": ["pull"]
+      }
+    },
+    {
+      "id": "pieces-un-jour-seulement",
+      "description": "Pièces au choix : un remplacement pour un autre jour ne compte pas aujourd'hui",
+      "input": { "profile": { "swaps": { "pull": { "to": "gilet_chaud", "day": "2026-11-04" } } } },
+      "expect": { "journee.morning.include": ["pull"], "journee.morning.exclude": ["gilet_chaud"], "journee.swapped": {} }
+    },
+    {
+      "id": "pieces-equivalent-refuse",
+      "description": "Pièces au choix : un manteau à la place de la combinaison est refusé (il ne couvre pas les jambes), même enregistré",
+      "input": { "profile": { "swaps": { "combi_pilote": { "to": "manteau_chaud" } } } },
+      "expect": { "journee.morning.include": ["combi_pilote"], "journee.morning.exclude": ["manteau_chaud"] }
+    },
+    {
+      "id": "pieces-voiture",
+      "description": "Pièces au choix : en voiture, la couverture par-dessus le harnais reste, la combinaison de ski choisie ne s'applique pas",
+      "input": { "profile": { "transport": "voiture", "swaps": { "combi_pilote_doublee": { "to": "combi_ski" } } }, "forecast": { "hourly": { "base": { "feels_c": 0 } } } },
+      "expect": { "journee.morning.include": ["couverture_harnais"], "journee.morning.exclude": ["combi_ski", "combi_pilote_doublee"] }
+    },
+    {
+      "id": "pieces-maison",
+      "description": "Pièces au choix : à la maison à 15 °C, le gilet chaud choisi à la place du gilet",
+      "input": { "profile": { "day_room_temp_c": 15, "swaps": { "gilet": { "to": "gilet_chaud" } } } },
+      "expect": { "indoor.wear.include": ["gilet_chaud"], "indoor.wear.exclude": ["gilet"], "indoor.swapped": { "gilet_chaud": "gilet" } }
+    },
+    {
       "id": "journee-chapeau-sans-changement",
       "description": "Journée douce, une heure à 23 °C au soleil : pas de changement, un chapeau dans le sac",
       "input": {

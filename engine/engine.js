@@ -837,6 +837,67 @@ export function skyTheme(result, moment) {
   return 'clair';
 }
 
+// ——— Pièces au choix ———
+// En touchant une pièce de la tenue, un équivalent à sa place (outfit.alternatives) : même rôle (journee.slots), même
+// couverture, aussi chaud à max_warmth_gap près. Le choix vaut pour un jour ou toujours (profile.swaps) et se revérifie
+// chaque jour ; les plans gardent leur calcul, seules les pièces changent de nom.
+
+// Ce qui peut remplacer une pièce dans un mode de sortie (null : à la maison) : `options` ({ item, gap }), sauf ce que
+// le mode retire ou remplace ; sinon `reason`, le message qui dit pourquoi. `near` : presque équivalentes (même chaleur,
+// pas la même couverture), pour l'expliquer ; `slot` : son rôle.
+export function pieceChoices(item, R, mode = null) {
+  const A = R.outfit.alternatives;
+  const J = R.journee;
+  const slot = slotOf(J, item);
+  const locked = A.locked_items[item] ?? A.locked_slots[slot];
+  if (locked) return { slot, options: [], near: [], reason: locked };
+  const t = mode ? R.outfit.transport[mode] : null;
+  const allowed = (x) => !t || (!t.remove_items.includes(x) && !(x in (t.replace_items ?? {})));
+  const gap = (x) => round1(J.warmth[x] - J.warmth[item]);
+  const options = A.pairs.filter((p) => p.includes(item)).map((p) => p.find((x) => x !== item)).filter(allowed)
+    .map((x) => ({ item: x, gap: gap(x) }));
+  const near = (J.slots[slot] ?? [])
+    .filter((x) => x !== item && A.coverage[x] && A.coverage[item] && A.coverage[x] !== A.coverage[item]
+      && Math.abs(gap(x)) <= A.max_warmth_gap && allowed(x) && !A.locked_items[x])
+    .map((x) => ({ item: x, coverage: A.coverage[x] }));
+  return { slot, options, near, reason: options.length ? null : 'swap.none' };
+}
+
+// Pièces remplacées ce jour-là ({ pièce: équivalent }) : profile.swaps ({ pièce: { to, day } }, sans day : toujours),
+// tant que l'équivalent vaut encore dans ce mode de sortie.
+function activeSwaps(input, R, mode) {
+  const out = {};
+  for (const [from, s] of Object.entries(input.profile.swaps ?? {})) {
+    if (!s?.to || (s.day && s.day !== input.date)) continue;
+    if (pieceChoices(from, R, mode).options.some((o) => o.item === s.to)) out[from] = s.to;
+  }
+  return out;
+}
+
+// Une liste de pièces, l'équivalent à la place ; `swapped` retient la pièce conseillée de chaque pièce remplacée.
+function swapItems(items, swaps, swapped) {
+  return [...new Set(items.map((item) => {
+    const to = swaps[item];
+    if (!to) return item;
+    swapped[to] = item;
+    return to;
+  }))];
+}
+
+// Le plan de la journée avec les pièces remplacées : un changement qui enlèverait et remettrait la même pièce disparaît.
+function swapJournee(j, swaps) {
+  const swapped = {};
+  j.morning = swapItems(j.morning, swaps, swapped);
+  j.changes = j.changes.map((ch) => {
+    const remove = swapItems(ch.remove, swaps, swapped);
+    const add = swapItems(ch.add, swaps, swapped);
+    return { ...ch, remove: remove.filter((i) => !add.includes(i)), add: add.filter((i) => !remove.includes(i)) };
+  }).filter((ch) => ch.remove.length || ch.add.length);
+  const bag = j.bag.map((b) => ({ ...b, item: swapItems([b.item], swaps, swapped)[0] }));
+  j.bag = bag.filter((b, i) => bag.findIndex((x) => x.item === b.item) === i);
+  j.swapped = swapped;
+}
+
 export function evaluate(input, bundle) {
   const R = bundle.rules;
   const age = ageMonths(input.profile.birth, input.date);
@@ -875,6 +936,15 @@ export function evaluate(input, bundle) {
     night: planNight(input, R, plan.heat, age),
     purchases: planPurchases(input, R),
   };
+  // Pièces au choix : dehors selon le mode de sortie, à la maison sans.
+  const outdoor = activeSwaps(input, R, result.transport);
+  if (outfit) {
+    outfit.swapped = {};
+    outfit.items = swapItems(outfit.items, outdoor, outfit.swapped);
+  }
+  if (result.journee) swapJournee(result.journee, outdoor);
+  result.indoor.swapped = {};
+  result.indoor.wear = swapItems(result.indoor.wear, activeSwaps(input, R, null), result.indoor.swapped);
   // Alerte officielle qui passe avant le plan de la journée dans le widget (vigilance, grand froid, chaleur…).
   if (result.journee) result.journee.alert = result.relays.find((id) => R.journee.widget_urgent_relays.includes(id)) ?? null;
   const moment = displayMoment(result, input.now);
@@ -898,6 +968,8 @@ export function outfitAt(input, bundle, hhmm) {
   const outfit = chooseOutfit(slot.feels_c, input.profile, R, age);
   const params = {};
   addOverlays(outfit, plan, [slot], R, params, bundle.messages.labels);
+  outfit.swapped = {};
+  outfit.items = swapItems(outfit.items, activeSwaps(input, R, outfit.transport), outfit.swapped);
   return { ...outfit, params, reasons: slot.reasons.filter((r) => r !== 'hors_plage') };
 }
 
@@ -975,6 +1047,21 @@ export function lint(bundle) {
       for (const r of replacement) if (!M.labels.items_short[r] || !DRAWINGS[ITEM_DRAWINGS[r]]) errors.push(`${who} : ${r} sans libellé ou dessin`);
     }
   }
+  // Pièces au choix : chaque paire du même rôle, de même couverture, aussi chaude à max_warmth_gap près, hors des
+  // emplacements et des pièces verrouillés ; chaque raison a son message, chaque rôle son libellé.
+  const A = R.outfit.alternatives;
+  for (const [a, b] of A.pairs) {
+    const where = `pièces au choix ${a} / ${b}`;
+    if (!items.has(a) || !items.has(b)) errors.push(`${where} : pièce inconnue`);
+    if (slotOf(R.journee, a) !== slotOf(R.journee, b)) errors.push(`${where} : pas le même rôle`);
+    if (!A.coverage[a] || A.coverage[a] !== A.coverage[b]) errors.push(`${where} : pas la même couverture`);
+    if (!(Math.abs(heat([b]) - heat([a])) <= A.max_warmth_gap)) errors.push(`${where} : écart de chaleur ${round1(heat([b]) - heat([a]))}`);
+    if ([a, b].some((x) => A.locked_items[x] || A.locked_slots[slotOf(R.journee, x)])) errors.push(`${where} : pièce verrouillée`);
+  }
+  for (const id of [...Object.values(A.locked_slots), ...Object.values(A.locked_items), 'swap.none']) {
+    if (!M.messages[id]) errors.push(`message manquant : ${id}`);
+  }
+  for (const slot of Object.keys(R.journee.slots)) if (!M.labels.slot_roles?.[slot]) errors.push(`rôle sans libellé : ${slot}`);
   const binIds = new Set();
   for (const bin of R.night.tog_hint.bins) {
     if (!bin.id || binIds.has(bin.id)) errors.push(`tranche de nuit sans identifiant unique : ${bin.max_c}`);

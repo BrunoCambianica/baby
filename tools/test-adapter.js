@@ -1,6 +1,6 @@
 // Tests de l'adaptateur Open-Meteo sur des réponses réelles enregistrées (Lyon, 21 octobre 2026).
 import { join } from 'node:path';
-import { evaluate, lint } from '../engine/engine.js';
+import { evaluate, lint, pieceChoices } from '../engine/engine.js';
 import {
   buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
   householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, weeklyOutlook, widgetView,
@@ -190,6 +190,24 @@ test('Tenues au choix : style de la journée et tenue de nuit passent par la con
   assert(!view.tomorrow.journee.morning.some((i) => i.startsWith('pyjama')), view.tomorrow.journee.morning.join());
 });
 
+test('Pièces au choix : elles passent par la configuration jusqu\'au widget', () => {
+  const household = {
+    commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 },
+    outing_window: { from: '09:00', to: '18:00' }, outing_duration_h: 1, outfit_view: 'dessins', updated: 5,
+    children: [{ id: 'leo', name: 'Léo', birth: '2026-05', transport: 'poussette', outfit_offset: 0 }],
+  };
+  const at = { forecast, date: '2026-10-21', time: '07:30', lat: 45.758 };
+  const before = widgetView({ ...at, profile: configToProfile(householdToConfig(household), 'leo') }, bundle).today.journee.morning;
+  const from = before.find((i) => pieceChoices(i, bundle.rules, 'poussette').options.length);
+  assert(from, `aucune pièce remplaçable : ${before.join()}`);
+  const to = pieceChoices(from, bundle.rules, 'poussette').options[0].item;
+  household.children[0].swaps = { [from]: { to } };
+  const cfg = decodeConfig(encodeConfig(householdToConfig(household), toB64), fromB64);
+  assert(cfg.k[0].w[from].to === to && configChildren(cfg)[0].swaps[from].to === to, JSON.stringify(cfg.k));
+  const after = widgetView({ ...at, profile: configToProfile(cfg, 'leo') }, bundle).today.journee;
+  assert(after.morning.includes(to) && !after.morning.includes(from) && after.swapped[to] === from, after.morning.join());
+});
+
 test('Charte : une tenue de nuit non compensée (gigoteuse plus légère sans couche en plus, ou l\'inverse) est refusée', () => {
   const bad = structuredClone(bundle);
   const n20 = bad.rules.night.tog_hint.bins.find((b) => b.id === 'n20').alternatives;
@@ -205,6 +223,28 @@ test('Charte : une tenue de nuit non compensée (gigoteuse plus légère sans co
   const unsourced = structuredClone(bundle);
   unsourced.rules.night.tog_hint.bins[0].alternatives[0].sources = ['carnet-1000-jours'];
   assert(lint(unsourced).errors.some((e) => e.includes('sans fabricant cité')), 'tenue de nuit sans fabricant acceptée');
+});
+
+test('Pièces au choix : la charte refuse un équivalent plus léger, qui couvre moins, ou une pièce verrouillée', () => {
+  const bad = structuredClone(bundle);
+  bad.rules.outfit.alternatives.pairs.push(['veste', 'manteau_chaud'], ['combi_pilote', 'manteau_chaud'], ['bonnet', 'bonnet_fin'], ['gilet', 'veste']);
+  const { errors } = lint(bad);
+  assert(errors.some((e) => e.includes('veste / manteau_chaud : écart de chaleur 1.5')), errors.join(' | '));
+  assert(errors.some((e) => e.includes('combi_pilote / manteau_chaud : pas la même couverture')), errors.join(' | '));
+  assert(errors.some((e) => e.includes('bonnet / bonnet_fin : pièce verrouillée')), errors.join(' | '));
+  assert(errors.some((e) => e.includes('gilet / veste : pas le même rôle')), errors.join(' | '));
+});
+
+test('Pièces au choix : équivalents, presque équivalents et raisons', () => {
+  const R = bundle.rules;
+  const pull = pieceChoices('pull', R, 'poussette');
+  assert(pull.options.length === 1 && pull.options[0].item === 'gilet_chaud' && pull.options[0].gap === -0.5 && !pull.reason, JSON.stringify(pull));
+  const combi = pieceChoices('combi_pilote', R, 'poussette');
+  assert(!combi.options.length && combi.reason === 'swap.none' && combi.near.some((n) => n.item === 'manteau_chaud' && n.coverage === 'haut_du_corps'), JSON.stringify(combi));
+  assert(pieceChoices('couverture_harnais', R, 'voiture').reason === 'relay.car.coat', 'couverture du harnais remplaçable');
+  assert(pieceChoices('bonnet', R, 'poussette').reason === 'swap.locked.extremity', 'bonnet remplaçable');
+  assert(!pieceChoices('combi_pilote_doublee', R, 'voiture').options.length, 'combinaison de ski proposée en voiture');
+  assert(pieceChoices('combi_pilote_doublee', R, 'poussette').options[0]?.item === 'combi_ski', 'combinaison de ski absente en poussette');
 });
 
 test('Configuration du widget : texte invalide refusé', () => {

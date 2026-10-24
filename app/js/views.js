@@ -1,5 +1,5 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { addDays, ageMonths, baseTransport, homeStatus, hourFr, journeeRange, needMet, ownedCount, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
+import { addDays, ageMonths, baseTransport, homeStatus, hourFr, journeeRange, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
 import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.16.4';
+export const VERSION = '0.17.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -268,21 +268,19 @@ function bandTitle(state, outfit) {
 }
 
 // La tenue : tuiles dessinées (de la peau vers le dessus, accessoires à la fin) ou liste écrite par couches.
-function dressList(state, outfit) {
+function dressList(state, outfit, piece = null) {
   const labels = state.bundle.messages.labels;
   const layered = outfit.items.filter((i) => labels.item_layers[i] !== 'accessoire');
   const extras = outfit.items.filter((i) => labels.item_layers[i] === 'accessoire');
   if (drawingsOn(state)) {
-    return `<ul class="dress">${[...layered, ...extras].map((item) => `<li>
-        <span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span><span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span>
-        ${labels.item_hints?.[item] ? `<span class="dress-hint">${esc(labels.item_hints[item])}</span>` : ''}</li>`).join('')}</ul>`;
+    return `<ul class="dress">${[...layered, ...extras].map((item) => pieceTile(state, item, { piece, hint: labels.item_hints?.[item] })).join('')}</ul>`;
   }
   let previous = null;
   const rows = layered.map((item) => {
     const layer = labels.item_layers[item];
     const name = layer !== previous ? `<p class="layer-name">${esc(labels.layers[layer])}</p>` : '';
     previous = layer;
-    return `<li class="layer"><span class="layer-dot"></span><div>${name}<p class="layer-items">${esc(capitalize(labels.items[item]))}</p></div></li>`;
+    return `<li class="layer"><span class="layer-dot"></span><div>${name}<p class="layer-items">${pieceText(state, item, piece, labels.items[item])}</p></div></li>`;
   }).join('');
   return `<ol class="layers">${rows}</ol>
     ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}`;
@@ -300,7 +298,8 @@ function outfitCard(state, ctx) {
       ${modePick(state, baseTransport(ctx.result.transport, state.bundle.rules), state.profile.birth)}
     </div>
     ${bandTitle(state, outfit)}
-    ${dressList(state, outfit)}
+    ${dressList(state, outfit, { where: 'dehors', date: ctx.date, swapped: outfit.swapped })}
+    ${swapNote(state, outfit.swapped)}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
   </section>`;
 }
@@ -316,11 +315,77 @@ function outfitChoice(label, action, choices, extra = '') {
         `<option value="${esc(c.value)}"${c.selected ? ' selected' : ''}${c.byDefault ? ` data-label="${esc(c.text)}" data-hint="par défaut"` : ''}>${esc(c.text)}${c.byDefault ? ' (par défaut)' : ''}</option>`).join('')}</select></span></label>`;
 }
 
-// Un vêtement du plan : dessin et nom, avec « − » (on l'enlève) ou « + » (on l'ajoute, ou on le remet).
-function changeItem(state, item, sign, size = 28) {
+// Une pièce de la tenue : dessin et nom, avec « − » (on l'enlève) ou « + » (on l'ajoute, ou on la remet) s'il y a lieu.
+// Avec `piece` ({ where : dedans ou dehors, date, swapped }), elle se touche : ce qui l'explique et ses équivalents
+// (pieceSheet) ; une pièce choisie à la place d'une autre porte une marque.
+function pieceTile(state, item, { piece = null, sign = '', size = 34, hint = '' } = {}) {
+  const name = capitalize(state.bundle.messages.labels.items_short[item] ?? item);
+  const swapped = piece?.swapped?.[item];
+  const cls = [sign === '−' ? 'minus' : sign === '+' ? 'plus' : '', swapped ? 'swapped' : ''].filter(Boolean).join(' ');
+  const inner = `<span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size })}${sign ? `<span class="sign" aria-hidden="true">${sign}</span>` : ''}${swapped ? `<span class="swap-mark" aria-hidden="true">${icon('refresh', { size: 12, stroke: 2.6 })}</span>` : ''}</span>
+    <span class="dress-name">${esc(name)}</span>${hint ? `<span class="dress-hint">${esc(hint)}</span>` : ''}`;
+  return `<li${cls ? ` class="${cls}"` : ''}>${piece ? `<button class="dress-btn" ${pieceData(item, piece)} aria-label="${esc(name)}${swapped ? ' (choisi)' : ''} : pourquoi, et par quoi la remplacer">${inner}</button>` : inner}</li>`;
+}
+const pieceData = (item, piece) => `data-action="piece" data-value="${esc(item)}" data-where="${piece.where}" data-date="${esc(piece.date)}"`;
+// En texte : le nom, touchable de même.
+const pieceText = (state, item, piece, text) => (piece
+  ? `<button class="piece-link" ${pieceData(item, piece)}>${esc(capitalize(text))}${piece.swapped?.[item] ? ` ${icon('refresh', { size: 14 })}` : ''}</button>`
+  : esc(capitalize(text)));
+const changeItem = (state, item, sign, size = 28, piece = null) => pieceTile(state, item, { piece, sign, size });
+
+// Les pièces choisies à la place des pièces conseillées, en clair sous la tenue, avec de quoi revenir.
+function swapNote(state, swapped) {
+  const entries = Object.entries(swapped ?? {});
+  if (!entries.length) return '';
   const labels = state.bundle.messages.labels;
-  return `<li class="${sign === '−' ? 'minus' : 'plus'}"><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size })}<span class="sign" aria-hidden="true">${sign}</span></span>
-    <span class="dress-name">${esc(capitalize(labels.items_short[item] ?? item))}</span></li>`;
+  const swaps = state.profile.swaps ?? {};
+  return `<ul class="swap-notes">${entries.map(([to, from]) => `<li>${icon('refresh', { size: 16 })}<span>${esc(capitalize(labels.items_short[to]))} plutôt que ${esc(labels.items_short[from])} · ${swaps[from]?.day ? (swaps[from].day === state.today ? "aujourd'hui" : 'demain') : 'toujours'}</span>
+      <button class="link" data-action="unswap" data-value="${esc(from)}">Revenir</button></li>`).join('')}</ul>`;
+}
+
+// Ce qu'ouvre une pièce touchée : son rôle et pour quoi elle est là, puis ses équivalents, pour ce jour-là ou toujours ;
+// sans équivalent, pourquoi (et les pièces presque équivalentes, avec ce qui les en écarte). Une pièce déjà choisie
+// propose de revenir à la pièce conseillée.
+export function pieceSheet(state, ctx, item, where) {
+  const M = state.bundle.messages;
+  const R = state.bundle.rules;
+  const labels = M.labels;
+  const name = (i) => capitalize(labels.items_short[i] ?? i);
+  const outdoor = where === 'dehors';
+  const r = ctx.result;
+  const plan = outdoor ? r.journee ?? r.outfit : r.indoor;
+  const from = plan?.swapped?.[item] ?? null;
+  const base = from ?? item;
+  const choices = pieceChoices(base, R, outdoor ? r.transport : null);
+  const swap = from ? state.profile.swaps?.[from] : null;
+  const today = ctx.date === state.today;
+  const dayLabel = today ? "Aujourd'hui" : 'Demain';
+  const always = state.profile.name ? `Toujours pour ${state.profile.name}` : 'Toujours';
+  const range = R.indoor.comfort_range_c;
+  const feels = r.journee
+    ? `${r.journee.feels.first}°${r.journee.feels.extreme !== r.journee.feels.first ? ` → ${r.journee.feels.extreme}°` : ''}`
+    : `${Math.round(r.outfit?.feels_c ?? 0)}°`;
+  const context = outdoor ? `Dehors, ${feels} ressentis` : `Dedans, pièce à ${r.indoor.room_temp_c !== null ? `${decimal(r.indoor.room_temp_c)} °C` : `${range.min}-${range.max} °C`}`;
+  const role = labels.slot_roles[choices.slot] ?? labels.layers[labels.item_layers[item]] ?? '';
+  const buttons = (to) => `<div class="piece-btns">
+      <button class="btn small tint" data-action="swap" data-from="${esc(base)}" data-to="${esc(to)}" data-scope="day" data-date="${esc(ctx.date)}">${dayLabel}</button>
+      <button class="btn small soft" data-action="swap" data-from="${esc(base)}" data-to="${esc(to)}" data-scope="always" data-date="${esc(ctx.date)}">${esc(always)}</button></div>`;
+  const options = choices.options.filter((o) => o.item !== item);
+  const gap = (g) => labels.swap_gaps[g < 0 ? 'lighter' : g > 0 ? 'warmer' : 'same'];
+  const reason = choices.reason && !from ? M.messages[choices.reason] : null;
+  const less = R.outfit.alternatives.coverage[base] === 'corps_entier';
+  const html = `<div class="piece-head"><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span>
+      <div><p class="piece-role">${esc(role)}</p><p class="hint">${esc(context)}</p></div></div>
+    ${from ? `<div class="piece-now"><p>${icon('refresh', { size: 18 })}<span>Plutôt que ${esc(labels.items_short[from])}, ${swap?.day ? (swap.day === state.today ? "aujourd'hui" : 'demain') : 'toujours'}</span></p>
+      <div class="piece-btns"><button class="btn small soft" data-action="unswap" data-value="${esc(from)}">Revenir : ${esc(name(from))}</button>
+      ${swap?.day ? `<button class="btn small tint" data-action="swap" data-from="${esc(from)}" data-to="${esc(item)}" data-scope="always" data-date="${esc(ctx.date)}">${esc(always)}</button>` : ''}</div></div>` : ''}
+    ${options.length ? `<p class="piece-sub">${from ? 'Ou à la place' : 'À la place'}</p>
+      <ul class="piece-opts">${options.map((o) => `<li><div class="piece-opt"><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[o.item], { size: 26 })}</span>
+        <span><strong>${esc(name(o.item))}</strong><span class="hint">${esc(gap(o.gap))}</span></span></div>${buttons(o.item)}</li>`).join('')}</ul>` : ''}
+    ${reason ? `<p class="tip">${icon('info', { size: 20 })}<span>${esc(render(M, choices.reason, 'text'))}</span></p>
+      ${reason.sources?.length ? `<p class="source">Source : ${sourceLinks(state, reason.sources)}</p>` : ''}` : ''}
+    ${choices.near.length && !from ? `<ul class="piece-near">${choices.near.map((n) => `<li><strong>${esc(name(n.item))}</strong> : ${esc(labels.swap_near[less && n.coverage !== 'corps_entier' ? 'less' : 'more'])}</li>`).join('')}</ul>` : ''}`;
+  return { title: name(item), html };
 }
 
 // La journée en deux cartes, dans l'ordre où on habille bébé : « Dedans », la tenue qu'il porte à la maison (ou à la
@@ -333,10 +398,10 @@ function insideCard(state, ctx, { today = true } = {}) {
   const labels = M.labels;
   const i = ctx.result.indoor;
   const range = R.indoor.comfort_range_c;
+  const piece = { where: 'dedans', date: ctx.date, swapped: i.swapped };
   const wear = drawingsOn(state)
-    ? `<ul class="dress">${i.wear.map((item) => `<li><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span>
-        <span class="dress-name">${esc(capitalize(labels.items_short[item]))}</span></li>`).join('')}</ul>`
-    : `<p class="layer-items">${esc(capitalize(i.wear.map((item) => labels.items[item]).join(', ')))}</p>`;
+    ? `<ul class="dress">${i.wear.map((item) => pieceTile(state, item, { piece })).join('')}</ul>`
+    : `<p class="layer-items">${i.wear.map((item) => pieceText(state, item, piece, labels.items[item])).join(', ')}</p>`;
   const known = i.room_temp_c !== null;
   const value = i.room_temp_c ?? state.profile.room_day?.value ?? 21;
   const step = (delta, label, ico) => `<button class="step-btn" data-action="room" data-kind="jour" data-value="${delta}" data-base="21" aria-label="${label}">${icon(ico, { size: 18 })}</button>`;
@@ -372,6 +437,7 @@ function insideCard(state, ctx, { today = true } = {}) {
       </div>
       <p class="card-sub">Sa tenue de la journée</p>
       ${wear}
+      ${swapNote(state, i.swapped)}
       ${hot.length ? `<ul class="tips">${hot.map((id) => `<li>${icon('sun', { size: 20 })}<span>${esc(render(M, id, 'short'))}</span></li>`).join('')}</ul>` : ''}
       ${open ? `<div class="more-body" id="dedans-reglages">
           ${room}
@@ -416,10 +482,11 @@ function outsideCard(state, ctx) {
   const mark = (k) => (k === passed && started ? ' <span class="tag blue">maintenant</span>' : '');
   const dim = (k) => (now && k < passed ? ' past' : '');
   const text = !drawingsOn(state);
+  const piece = { where: 'dehors', date: ctx.date, swapped: j.swapped };
   const changes = j.changes.map((ch, k) => (text
     ? `<p class="change${dim(k + 1)}"><strong>Vers ${hourFr(ch.time)}</strong>${mark(k + 1)} : ${[ch.remove.length ? `enlever ${esc(ch.remove.map((i) => labels.items[i]).join(', '))}` : '', ch.add.length ? `mettre ${esc(ch.add.map((i) => labels.items[i]).join(', '))}` : ''].filter(Boolean).join(' ; ')}</p>`
     : `<div class="change${dim(k + 1)}"><p class="change-time">Vers ${hourFr(ch.time)}${mark(k + 1)}<span class="hint">${[ch.remove.length ? '− à enlever' : '', ch.add.length ? '+ à mettre' : ''].filter(Boolean).join(' · ')}</span></p>
-        <ul class="dress small">${ch.remove.map((i) => changeItem(state, i, '−')).join('')}${ch.add.map((i) => changeItem(state, i, '+')).join('')}</ul></div>`)).join('');
+        <ul class="dress small">${ch.remove.map((i) => changeItem(state, i, '−', 28, piece)).join('')}${ch.add.map((i) => changeItem(state, i, '+', 28, piece)).join('')}</ul></div>`)).join('');
   const rainHot = j.bag.some((b) => b.reason === 'pluie' && b.item === 'habillage_pluie'
     && (j.hours.find((h) => h.time === b.time)?.feels_c ?? 0) >= state.bundle.rules.outfit.overlays.rain_cover_warm_feels_c_at_least);
   const bag = j.bag.length
@@ -431,10 +498,10 @@ function outsideCard(state, ctx) {
   const tips = j.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', ctx.result.params))}</span></li>`).join('');
   const names = (items) => esc(items.map((i) => labels.items[i]).join(', '));
   let morning;
-  if (!over) morning = dressList(state, { items: j.morning });
+  if (!over) morning = dressList(state, { items: j.morning }, piece);
   else if (!extra.length && !less.length) morning = '<p class="hint">Rien de plus : la même tenue que dedans.</p>';
   else if (text) morning = `<p class="layer-items">${[less.length ? `− ${names(less)}` : '', extra.length ? `+ ${names(extra)}` : ''].filter(Boolean).join(' ; ')}</p>`;
-  else morning = `<ul class="dress">${less.map((i) => changeItem(state, i, '−', 34)).join('')}${extra.map((i) => changeItem(state, i, '+', 34)).join('')}</ul>`;
+  else morning = `<ul class="dress">${less.map((i) => changeItem(state, i, '−', 34, piece)).join('')}${extra.map((i) => changeItem(state, i, '+', 34, piece)).join('')}</ul>`;
   return `<section class="card day" aria-labelledby="t-dehors">
     <div class="card-head">
       <h2 class="card-title main" id="t-dehors">${icon('sun', { size: 20 })}Dehors</h2>
@@ -447,6 +514,7 @@ function outsideCard(state, ctx) {
       ${morning}
     </div>
     ${changes ? `<div class="changes">${changes}</div>` : `<p class="hint">Pas de changement à prévoir ${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}.</p>`}
+    ${swapNote(state, j.swapped)}
     ${bag}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
     <button class="btn soft" data-action="share-fiche">${icon('share', { size: 18 })}Envoyer la fiche du jour</button>

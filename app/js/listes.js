@@ -1,7 +1,9 @@
-// Listes déroulantes : une feuille qui monte du bas de l'écran, aux couleurs de l'app, à la place de la liste du
-// système (sur Android, une fenêtre blanche qui coupe les libellés et ignore le thème). La <select> reste dans la page :
-// elle garde la valeur et ce que disent les lecteurs d'écran ; la feuille la règle et lui envoie « change », comme un
-// choix fait dans la liste. Les listes ne reçoivent plus le toucher (style.css) : on ouvre la feuille de celle touchée.
+// Feuille qui monte du bas de l'écran, aux couleurs de l'app : les listes déroulantes, et ce qu'on ouvre en touchant
+// une pièce de la tenue (openSheet).
+// Listes déroulantes : la feuille remplace la liste du système (sur Android, une fenêtre blanche qui coupe les libellés
+// et ignore le thème). La <select> reste dans la page : elle garde la valeur et ce que disent les lecteurs d'écran ;
+// la feuille la règle et lui envoie « change », comme un choix fait dans la liste. Les listes ne reçoivent plus le
+// toucher (style.css) : on ouvre la feuille de celle touchée.
 // Sur une <option> : data-label (le libellé sans la mention), data-hint (« par défaut », en pastille), data-icon.
 // Sur la <select> : data-title, le titre de la feuille quand aria-label est trop court.
 import { icon } from './icons.js';
@@ -29,8 +31,8 @@ function live(select) {
   return select.dataset.action ? document.querySelector(`select[data-action="${select.dataset.action}"]`) : null;
 }
 
-function build(select) {
-  const title = select.dataset.title ?? select.getAttribute('aria-label') ?? '';
+// Le cadre : voile, feuille, poignée et titre, puis le contenu.
+function frame(title) {
   const scrim = document.createElement('div');
   scrim.className = 'sheet-scrim';
   const sheet = document.createElement('div');
@@ -38,25 +40,10 @@ function build(select) {
   sheet.setAttribute('role', 'dialog');
   sheet.setAttribute('aria-modal', 'true');
   sheet.setAttribute('aria-label', title);
-  sheet.innerHTML = '<div class="sheet-head"><span class="sheet-grip" aria-hidden="true"></span><p class="sheet-title"></p></div><div class="sheet-list" role="radiogroup"></div>';
+  sheet.tabIndex = -1;
+  sheet.innerHTML = '<div class="sheet-head"><span class="sheet-grip" aria-hidden="true"></span><p class="sheet-title"></p></div>';
   sheet.querySelector('.sheet-title').textContent = title;
-  const list = sheet.querySelector('.sheet-list');
-  list.setAttribute('aria-label', title);
-  [...select.options].forEach((o, i) => {
-    const chosen = i === select.selectedIndex;
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'sheet-opt';
-    b.dataset.index = String(i);
-    b.setAttribute('role', 'radio');
-    b.setAttribute('aria-checked', String(chosen));
-    b.innerHTML = `${o.dataset.icon ? icon(o.dataset.icon, { size: 22 }) : ''}<span class="sheet-text"></span>${o.dataset.hint ? '<span class="tag"></span>' : ''}`
-      + `<span class="sheet-check">${chosen ? icon('check', { size: 20, stroke: 2.4 }) : ''}</span>`;
-    b.querySelector('.sheet-text').textContent = o.dataset.label ?? o.textContent;
-    if (o.dataset.hint) b.querySelector('.tag').textContent = o.dataset.hint;
-    list.append(b);
-  });
-  return { scrim, sheet, list };
+  return { scrim, sheet };
 }
 
 // Tirer la feuille vers le bas par son en-tête la ferme, comme sur le téléphone.
@@ -83,41 +70,79 @@ function draggable(o) {
   head.addEventListener('pointercancel', end);
 }
 
+// Clavier : Échap ferme ; flèches et Tab passent d'un bouton à l'autre sans sortir de la feuille.
 function onKey(event) {
   if (event.key === 'Escape') {
     event.preventDefault();
     close();
     return;
   }
-  const opts = [...open.list.children];
+  const opts = [...open.sheet.querySelectorAll('button:not([disabled]), a[href]')];
   const k = opts.indexOf(document.activeElement);
-  const to = { ArrowDown: k + 1, ArrowUp: k - 1, Home: 0, End: opts.length - 1, Tab: k }[event.key];
-  if (to === undefined) return;
+  const tab = event.shiftKey ? k - 1 : k + 1;
+  const to = { ArrowDown: k + 1, ArrowUp: k - 1, Home: 0, End: opts.length - 1, Tab: (tab + opts.length) % opts.length }[event.key];
+  if (to === undefined || !opts.length) return;
   event.preventDefault();
   opts[Math.max(0, Math.min(opts.length - 1, to))].focus();
 }
 
-export function openList(select, { keyboard = false } = {}) {
-  if (open || select.disabled || !select.options.length) return;
-  const o = { select, keyboard, ...build(select) };
+function show(o, focus) {
   open = o;
   document.body.append(o.scrim, o.sheet);
   document.documentElement.classList.add('sheet-lock');
   // Le bouton retour d'Android ferme la feuille au lieu de quitter l'écran.
   history.pushState({ sheet: true }, '');
-  const current = o.list.querySelector('[aria-checked="true"]') ?? o.list.firstElementChild;
-  o.list.scrollTop = current.offsetTop - (o.list.clientHeight - current.offsetHeight) / 2;
-  current.focus({ preventScroll: true });
+  // Sans bouton dans la feuille, elle prend le focus elle-même : Échap la ferme.
+  (focus ?? o.sheet).focus({ preventScroll: true });
   o.sheet.getBoundingClientRect();
   o.scrim.classList.add('open');
   o.sheet.classList.add('open');
   o.scrim.addEventListener('click', () => close());
-  o.list.addEventListener('click', (e) => {
+  o.sheet.addEventListener('keydown', onKey);
+  draggable(o);
+}
+
+export function openList(select, { keyboard = false } = {}) {
+  if (open || select.disabled || !select.options.length) return;
+  const o = { select, keyboard, ...frame(select.dataset.title ?? select.getAttribute('aria-label') ?? '') };
+  const list = document.createElement('div');
+  list.className = 'sheet-list';
+  list.setAttribute('role', 'radiogroup');
+  list.setAttribute('aria-label', o.sheet.getAttribute('aria-label'));
+  [...select.options].forEach((opt, i) => {
+    const chosen = i === select.selectedIndex;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sheet-opt';
+    b.dataset.index = String(i);
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(chosen));
+    b.innerHTML = `${opt.dataset.icon ? icon(opt.dataset.icon, { size: 22 }) : ''}<span class="sheet-text"></span>${opt.dataset.hint ? '<span class="tag"></span>' : ''}`
+      + `<span class="sheet-check">${chosen ? icon('check', { size: 20, stroke: 2.4 }) : ''}</span>`;
+    b.querySelector('.sheet-text').textContent = opt.dataset.label ?? opt.textContent;
+    if (opt.dataset.hint) b.querySelector('.tag').textContent = opt.dataset.hint;
+    list.append(b);
+  });
+  list.addEventListener('click', (e) => {
     const b = e.target.closest('.sheet-opt');
     if (b) choose(Number(b.dataset.index));
   });
-  o.sheet.addEventListener('keydown', onKey);
-  draggable(o);
+  o.sheet.append(list);
+  const current = list.querySelector('[aria-checked="true"]') ?? list.firstElementChild;
+  show(o, current);
+  list.scrollTop = current.offsetTop - (list.clientHeight - current.offsetHeight) / 2;
+}
+
+// Une feuille au contenu libre (HTML déjà échappé par les vues) ; ses boutons data-action passent par main.js,
+// qui la ferme avec closeSheet.
+export function openSheet(title, html, { keyboard = false } = {}) {
+  if (open) return;
+  const o = { keyboard, ...frame(title) };
+  const body = document.createElement('div');
+  body.className = 'sheet-content';
+  body.innerHTML = html;
+  o.sheet.append(body);
+  show(o, body.querySelector('button:not([disabled]), a[href]'));
 }
 
 function dismiss(o) {
@@ -129,10 +154,10 @@ function dismiss(o) {
     o.scrim.remove();
     o.sheet.remove();
   }, 300);
-  if (o.keyboard) live(o.select)?.focus({ preventScroll: true });
+  if (o.keyboard && o.select) live(o.select)?.focus({ preventScroll: true });
 }
 
-// Le choix passe à la liste une fois la page revenue où elle était (après le retour dans l'historique).
+// Ce qui suit la fermeture passe une fois la page revenue où elle était (après le retour dans l'historique).
 function flush() {
   const then = after;
   after = null;
@@ -150,6 +175,8 @@ function close(then = null) {
     setTimeout(flush, 400);
   } else flush();
 }
+
+export const closeSheet = close;
 
 function choose(index) {
   const { select } = open;

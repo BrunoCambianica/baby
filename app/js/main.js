@@ -7,8 +7,8 @@ import {
   api, apiBase, familyKeys, fromB64url, mergeHousehold, newSecret, seal, sharedPart, shortFicheLink, unseal,
 } from './famille.js';
 import { dayLong, dayShort } from './format.js';
-import { ageLabel, fromConfig, fromShared, isNewer, migrate, newChild, profileOf } from './household.js';
-import './listes.js';
+import { ageLabel, fromConfig, fromShared, isNewer, liveSwaps, migrate, newChild, profileOf } from './household.js';
+import { closeSheet, openSheet } from './listes.js';
 import { store } from './storage.js';
 import * as V from './views.js';
 
@@ -155,6 +155,7 @@ function compute(day) {
       outing_duration_h: p.outing_duration_h,
       outfit_offset: p.outfit_offset ?? 0,
       day_style: p.day_style ?? null,
+      swaps: p.swaps ?? {},
       night_options: p.night_options ?? {},
       room_temp_c: tomorrow ? null : freshRoom(p, 'nuit'),
       day_room_temp_c: tomorrow ? null : freshRoom(p, 'jour'),
@@ -577,6 +578,7 @@ const configText = () => encodeConfig(householdToConfig(state.household), (s) =>
 // Lien pour l'autre parent : les profils (prénoms compris) passent dans le message, jamais par un serveur.
 const profilesLink = () => `${new URL('./', location.href).href}#partage=${configText()}`;
 const childName = (c, i) => c.name || `Enfant ${i + 1}`;
+const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 
 // iPhone : lien qui renvoie les réglages au widget (script Scriptable nommé « Superbébé »).
 const scriptableLink = () => (state.profile ? `scriptable:///run/${encodeURIComponent('Superbébé')}?config=${configText()}` : '');
@@ -726,6 +728,35 @@ const actions = {
     if (sheet) sheet.dayStyle = value;
     if (sheet?.child !== 'nouveau') updateChild({ day_style: value }, sheet?.child);
     if (!sheet) toast(value === 'pyjama' ? 'Avec pyjama la journée.' : 'Sans pyjama la journée, dedans comme dehors.');
+    paint();
+  },
+  // Une pièce de la tenue touchée : pourquoi elle est là, et ses équivalents (pour ce jour-là, ou toujours).
+  piece(el) {
+    const { value, where, date } = el.dataset;
+    const ctx = compute(date === parisNow().date ? 'aujourdhui' : 'demain');
+    if (!ctx) return;
+    const { title, html } = V.pieceSheet(state, ctx, value, where);
+    openSheet(title, html);
+  },
+  // Un équivalent choisi : pour ce jour-là, ou toujours pour cet enfant. Le moteur le revérifie chaque jour.
+  swap(el) {
+    const { from, to, scope, date } = el.dataset;
+    const labels = state.bundle.messages.labels;
+    const swaps = liveSwaps(state.profile.swaps, parisNow().date);
+    // Pas d'aller-retour : choisir le gilet à la place du pull efface le pull à la place du gilet.
+    delete swaps[to];
+    swaps[from] = scope === 'always' ? { to } : { to, day: date };
+    closeSheet();
+    updateChild({ swaps });
+    toast(`${capitalize(labels.items_short[to])} plutôt que ${labels.items_short[from]}, ${scope === 'always' ? 'toujours' : date === parisNow().date ? "aujourd'hui" : 'demain'}.`);
+    paint();
+  },
+  unswap(el) {
+    const swaps = liveSwaps(state.profile.swaps, parisNow().date);
+    delete swaps[el.dataset.value];
+    closeSheet();
+    updateChild({ swaps });
+    toast(`Retour au conseil : ${state.bundle.messages.labels.items_short[el.dataset.value]}.`);
     paint();
   },
   // Tenue de nuit choisie pour une tranche de température ; « principal » revient à la tenue habituelle.

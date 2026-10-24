@@ -150,6 +150,41 @@
         }
       }
     },
+    "alternatives": {
+      "note": "Pièces au choix, en touchant une pièce de la tenue : à sa place, un équivalent du même rôle (journee.slots), qui couvre autant (coverage) et tient aussi chaud à max_warmth_gap près (journee.warmth), contrôlé par lint. Le choix vaut pour un jour ou toujours, et le moteur le revérifie chaque jour : il ne s'applique pas si le mode de sortie retire ou remplace l'équivalent. Le reste ne se remplace pas, avec sa raison (locked_slots, locked_items).",
+      "max_warmth_gap": 0.5,
+      "coverage": {
+        "gilet_fin": "haut_du_corps",
+        "gilet": "haut_du_corps",
+        "gilet_chaud": "haut_du_corps",
+        "pull": "haut_du_corps",
+        "combi_legere": "corps_entier",
+        "veste": "haut_du_corps",
+        "combi_pilote": "corps_entier",
+        "manteau_chaud": "haut_du_corps",
+        "combi_pilote_doublee": "corps_entier",
+        "combi_ski": "corps_entier"
+      },
+      "pairs": [
+        ["gilet_fin", "gilet"],
+        ["gilet", "gilet_chaud"],
+        ["gilet_chaud", "pull"],
+        ["combi_pilote_doublee", "combi_ski"]
+      ],
+      "locked_slots": {
+        "peau": "swap.locked.base",
+        "corps": "swap.locked.base",
+        "tete": "swap.locked.extremity",
+        "mains": "swap.locked.extremity",
+        "pieds": "swap.locked.extremity",
+        "poussette": "swap.locked.muff"
+      },
+      "locked_items": {
+        "couverture_harnais": "relay.car.coat",
+        "couverture_portage": "swap.locked.carrier",
+        "manteau_portage": "swap.locked.carrier"
+      }
+    },
     "overlays": {
       "rain_cover_prob_at_least": 30,
       "rain_cover_warm_feels_c_at_least": 22,

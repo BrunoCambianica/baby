@@ -554,6 +554,7 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
   transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .sheet.open { transform: none; }
+.sheet:focus-visible { outline: none; }
 .sheet.dragging { transition: none; }
 .sheet-head { flex: none; padding: 10px var(--gutter) 10px; touch-action: none; cursor: grab; }
 .sheet-grip { display: block; width: 38px; height: 5px; margin: 0 auto 12px; border-radius: 3px; background: var(--ink-3); opacity: 0.35; }
@@ -570,6 +571,61 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
 .sheet-check { flex: none; width: 20px; }
 @media (prefers-reduced-motion: reduce) {
   .sheet, .sheet-scrim { transition: none; }
+}
+.sheet-content { overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 14px; padding: 0 var(--gutter) 6px; }
+
+/* Pièces de la tenue : chacune se touche (son rôle, ses équivalents) ; celle choisie à la place d'une autre est marquée. */
+.dress-btn { display: grid; justify-items: center; align-content: start; gap: 6px; width: 100%; border-radius: 16px; }
+.swap-mark { position: absolute; left: -5px; top: -5px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--blue); }
+.piece-link { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; display: inline-flex; align-items: center; gap: 4px; }
+.swap-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.swap-notes li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--blue-soft); font-size: 0.88rem; }
+.swap-notes .ico { color: var(--blue); }
+.swap-notes span { flex: 1; min-width: 0; }
+.piece-head { display: flex; align-items: center; gap: 12px; }
+.piece-role { font-weight: 650; }
+.piece-now { display: grid; gap: 10px; padding: 12px; border-radius: 16px; background: var(--blue-soft); }
+.piece-now p { display: flex; align-items: center; gap: 8px; color: var(--blue); font-weight: 600; }
+.piece-sub { font-size: 0.8rem; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.piece-opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.piece-opts li { display: grid; gap: 10px; padding: 12px; border-radius: 16px; background: var(--fill); }
+.piece-opt { display: flex; align-items: center; gap: 12px; }
+.piece-opt .dress-ico { width: 44px; height: 44px; border-radius: 14px; }
+.piece-opt .hint { display: block; }
+.piece-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.piece-btns .btn { flex: 1 1 auto; }
+.piece-opts .btn.soft { background: var(--card); }
+.piece-near { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.9rem; color: var(--ink-2); }
+
+/* Paysage (téléphone couché, tablette, ordinateur) : le ciel en colonne à gauche, qui reste en place, les onglets
+   au pied de cette colonne, et les cartes à droite, qui défilent. Les pages (réglages…) gardent leur colonne. */
+@media (orientation: landscape) and (min-width: 640px) {
+  :root { --side: clamp(260px, 36vw, 360px); --tabbar-side: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  #app:has(> .tabbar) { max-width: 1040px; display: grid; grid-template-columns: var(--side) minmax(0, 1fr); column-gap: 20px; align-items: start; }
+  #app:has(> .tabbar) > .hero {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    border-radius: 0 28px 28px 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 18px calc(var(--tabbar-side) + 16px) max(18px, env(safe-area-inset-left, 0px));
+  }
+  #app:has(> .tabbar) .hero-label { margin-top: 14px; }
+  #app:has(> .tabbar) .days { margin-top: 10px; }
+  #app:has(> .tabbar) .hero-big { font-size: 3.2rem; }
+  #app:has(> .tabbar) > .content { margin-top: 0; padding: calc(env(safe-area-inset-top, 0px) + 16px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) 0; }
+  #app:has(> .tabbar) > .tabbar {
+    left: max(0px, calc((100vw - 1040px) / 2));
+    transform: none;
+    width: var(--side);
+    max-width: none;
+    padding: 4px 8px calc(env(safe-area-inset-bottom, 0px) + 4px) max(8px, env(safe-area-inset-left, 0px));
+    border-top: 0;
+    border-radius: 0 0 28px 0;
+  }
+  #app:has(> .tabbar) > .tabbar button { padding: 4px 0; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

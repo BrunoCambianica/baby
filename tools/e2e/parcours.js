@@ -598,6 +598,78 @@ await test('La commune en haut de l\'écran ouvre les réglages sur la commune',
   assert((await page.inputValue('#from')) === '10:00' && (await stored(page)).outing_window?.from === '10:00', 'plage horaire non retenue');
 });
 
+await test('Pièces au choix : une pièce touchée dit son rôle et propose ses équivalents, pour aujourd\'hui ou toujours', async (use) => {
+  const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  await page.goto(APP);
+  const tile = (item) => page.locator(`.day .dress-btn[data-value="${item}"]`).first();
+  // Le gilet chaud : deux équivalents, le gilet (un peu plus léger) et le pull (un peu plus chaud).
+  await tile('gilet_chaud').click();
+  await page.waitForSelector('.sheet.open');
+  await page.waitForTimeout(400);
+  assert((await page.textContent('.sheet-title')) === 'Gilet chaud', await page.textContent('.sheet-title'));
+  const opts = await page.locator('.piece-opts strong').allTextContents();
+  assert(opts.join() === 'Gilet,Pull', opts.join());
+  assert((await page.textContent('.piece-opts')).includes('un peu plus de chaleur'), await page.textContent('.piece-opts'));
+  await page.screenshot({ path: join(CAPTURES, 'pieces-gilet.png') });
+  await page.click('.piece-opts li:has-text("Pull") [data-scope="always"]');
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  assert((await stored(page)).children[0].swaps?.gilet_chaud?.to === 'pull', JSON.stringify((await stored(page)).children[0].swaps));
+  assert(await tile('pull').isVisible() && (await page.locator('.day .swapped .swap-mark').count()) >= 1, 'pull choisi non marqué');
+  assert((await page.textContent('.day .swap-notes')).includes('Pull plutôt que gilet chaud · toujours'), await page.textContent('.day .swap-notes'));
+  await shot(page, 'pieces-pull-choisi');
+  // Le pull choisi : revenir au gilet chaud conseillé.
+  await tile('pull').click();
+  await page.waitForSelector('.sheet.open');
+  assert((await page.textContent('.piece-now')).includes('Plutôt que gilet chaud, toujours'), await page.textContent('.piece-now'));
+  await page.click('.sheet [data-action="unswap"]');
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  assert(await tile('gilet_chaud').isVisible() && !Object.keys((await stored(page)).children[0].swaps ?? {}).length, 'retour au conseil non fait');
+  // Pour aujourd'hui seulement : retenu avec la date du jour.
+  await tile('gilet_chaud').click();
+  await page.waitForSelector('.sheet.open');
+  await page.click('.piece-opts li:has-text("Gilet") >> nth=0 >> [data-scope="day"]');
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  assert((await stored(page)).children[0].swaps?.gilet_chaud?.day === '2026-10-21', JSON.stringify((await stored(page)).children[0].swaps));
+  assert((await page.textContent('.day .swap-notes')).includes("aujourd'hui"), await page.textContent('.day .swap-notes'));
+  // La combi légère : pas d'équivalent, et pourquoi la veste n'en est pas un ; Échap ferme.
+  await tile('combi_legere').click();
+  await page.waitForSelector('.sheet.open');
+  assert((await page.textContent('.sheet-content .tip')).includes("Pas d'équivalent"), await page.textContent('.sheet-content'));
+  assert((await page.textContent('.piece-near')).includes('Veste : même chaleur, mais ne couvre pas les jambes'), await page.textContent('.piece-near'));
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(CAPTURES, 'pieces-combi.png') });
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  // Le bonnet : demandé par le ressenti, il ne se remplace pas.
+  await tile('bonnet_fin').click();
+  await page.waitForSelector('.sheet.open');
+  assert((await page.textContent('.sheet-content .tip')).includes('ce que le ressenti demande reste'), await page.textContent('.sheet-content'));
+});
+
+await test('Paysage : le ciel à gauche, les onglets à son pied, les cartes à droite, visibles sans défiler', async (use) => {
+  const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
+  await page.setViewportSize({ width: 915, height: 412 });
+  await page.goto(APP);
+  await page.waitForSelector('.content .card');
+  for (const tab of ['sortir', 'nuit', 'prevoir']) {
+    await page.click(`.tabbar [data-value="${tab}"]`);
+    await page.waitForTimeout(400);
+    const hero = await page.locator('.hero').boundingBox();
+    const card = await page.locator('.content > .card').first().boundingBox();
+    const bar = await page.locator('.tabbar').boundingBox();
+    assert(card.x >= hero.x + hero.width && card.y < 200, `${tab} : carte ${JSON.stringify(card)}, ciel ${JSON.stringify(hero)}`);
+    assert(bar.x + bar.width <= hero.x + hero.width + 1 && bar.y + bar.height <= 413, `${tab} : onglets ${JSON.stringify(bar)}`);
+    const big = await page.locator('.hero-big').boundingBox();
+    assert(big && big.y + big.height <= bar.y, `${tab} : réponse du ciel cachée par les onglets ${JSON.stringify(big)}`);
+    await page.screenshot({ path: join(CAPTURES, `paysage-${tab}.png`) });
+  }
+  // En faisant défiler les cartes, le ciel reste en place.
+  await page.click('.tabbar [data-value="sortir"]');
+  await page.mouse.wheel(0, 600);
+  await page.waitForTimeout(300);
+  assert((await page.locator('.hero').boundingBox()).y === 0, 'le ciel défile avec les cartes');
+});
+
 await test('Tenues au choix : sans pyjama par défaut la journée (maison et sorties), pyjama la nuit, listes déroulantes', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.goto(APP);

@@ -287,6 +287,31 @@
       "text": "À pied, il se réchauffe en marchant : une couche de moins qu'en poussette, à remettre s'il s'arrête ou remonte dans la poussette.",
       "short": "À pied : une couche de moins"
     },
+    "swap.locked.base": {
+      "kind": "pratique",
+      "text": "Le dessous (body, pyjama, ou haut, pantalon et chaussettes) suit le ressenti. Avant 2 ans, « Tenue de la journée », dans la carte Dedans, le choisit avec ou sans pyjama.",
+      "short": "Le dessous se choisit dans Dedans"
+    },
+    "swap.locked.extremity": {
+      "kind": "pratique",
+      "text": "Tête, mains et pieds : ce que le ressenti demande reste tant qu'il le demande, sans équivalent plus léger.",
+      "short": "Demandé par le ressenti"
+    },
+    "swap.locked.muff": {
+      "kind": "pratique",
+      "text": "La chancelière vient de votre garde-robe (onglet Achats) : notée, elle remplace la combinaison dans la poussette ; retirée, la combinaison revient.",
+      "short": "Se règle dans la garde-robe"
+    },
+    "swap.locked.carrier": {
+      "kind": "pratique",
+      "text": "En porte-bébé, la couverture ou le manteau de portage se met par-dessus vous deux : pas de combinaison, elle tire sur ses jambes repliées.",
+      "short": "Porte-bébé : par-dessus vous deux"
+    },
+    "swap.none": {
+      "kind": "pratique",
+      "text": "Pas d'équivalent aussi chaud, qui couvre autant, dans nos repères.",
+      "short": "Pas d'équivalent"
+    },
     "practical.stroller_muff": {
       "kind": "pratique",
       "text": "Avec la chancelière de votre garde-robe : dans la poussette, elle remplace la combinaison, pieds dedans. La combinaison va dans le sac, pour quand il en sort.",
@@ -651,6 +676,25 @@
       "froid_modere": "Plutôt froid",
       "froid": "Froid",
       "tres_froid": "Très froid"
+    },
+    "slot_roles": {
+      "peau": "La première couche, contre la peau",
+      "corps": "Bras, jambes et pieds, sous les couches chaudes",
+      "haut": "La couche chaude du haut, facile à enlever",
+      "dessus": "Par-dessus, contre le froid et le vent",
+      "tete": "Pour la tête",
+      "mains": "Pour les mains",
+      "pieds": "Pour les pieds",
+      "poussette": "Dans la poussette, jambes et pieds au chaud"
+    },
+    "swap_gaps": {
+      "lighter": "un peu moins de chaleur",
+      "same": "même chaleur",
+      "warmer": "un peu plus de chaleur"
+    },
+    "swap_near": {
+      "less": "même chaleur, mais ne couvre pas les jambes",
+      "more": "couvre aussi les jambes : plus de chaleur que conseillé"
     },
     "layers": {
       "peau": "Contre la peau",
