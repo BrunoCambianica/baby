@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.16.3';
+export const VERSION = '0.16.4';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -252,8 +252,8 @@ function modes(state, current, birth) {
 // Le mode de sortie en tête de la carte « Dehors » : une pastille qui s'ouvre en liste, pour que la tenue passe avant.
 function modePick(state, current, birth) {
   const ico = TRANSPORTS.find(([v]) => v === current)?.[2] ?? 'stroller';
-  return `<label class="pick">${icon(ico, { size: 18 })}<select data-action="transport" aria-label="Mode de sortie">${modesFor(state, birth).map(([v, l]) =>
-    `<option value="${v}"${current === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  return `<label class="pick">${icon(ico, { size: 18 })}<select data-action="transport" aria-label="Mode de sortie">${modesFor(state, birth).map(([v, l, i]) =>
+    `<option value="${v}" data-icon="${i}"${current === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>`;
 }
 
 // Tranche de ressenti en titre, comme sur les guides par température : « Frais · 14 à 18 °C ».
@@ -305,11 +305,15 @@ function outfitCard(state, ctx) {
   </section>`;
 }
 
-// Tenues au choix : une liste déroulante, la tenue affichée sélectionnée, celle par défaut signalée.
+// Tenues au choix : une liste déroulante, la tenue affichée sélectionnée, celle par défaut signalée (en pastille dans
+// la feuille qui s'ouvre, entre parenthèses pour les lecteurs d'écran). Fermée, la tenue choisie s'affiche en entier,
+// sur deux lignes s'il le faut : une liste coupe son texte ; elle reste dessous, invisible, pour le clavier.
 function outfitChoice(label, action, choices, extra = '') {
+  const shown = choices.find((c) => c.selected) ?? choices[0];
   return `<label class="alts"><span class="alts-title">${esc(label)}</span>
+      <span class="alts-box"><span class="alts-value" aria-hidden="true"><span>${esc(shown.text)}</span>${shown.byDefault ? '<span class="tag">par défaut</span>' : ''}</span>
       <select data-action="${action}"${extra} aria-label="${esc(label)}">${choices.map((c) =>
-        `<option value="${esc(c.value)}"${c.selected ? ' selected' : ''}>${esc(c.text)}</option>`).join('')}</select></label>`;
+        `<option value="${esc(c.value)}"${c.selected ? ' selected' : ''}${c.byDefault ? ` data-label="${esc(c.text)}" data-hint="par défaut"` : ''}>${esc(c.text)}${c.byDefault ? ' (par défaut)' : ''}</option>`).join('')}</select></span></label>`;
 }
 
 // Un vêtement du plan : dessin et nom, avec « − » (on l'enlève) ou « + » (on l'ajoute, ou on le remet).
@@ -348,8 +352,8 @@ function insideCard(state, ctx, { today = true } = {}) {
   const byDefault = R.outfit.default_day_style;
   const choice = i.styles?.length > 1
     ? outfitChoice('Tenue de la journée, dedans comme dehors', 'day-style', i.styles.map((st) => ({
-      value: st.id, selected: st.id === i.day_style,
-      text: `${st.id === 'pyjama' ? 'Avec pyjama' : 'Sans pyjama'} : ${st.wear.map((item) => labels.items_short[item]).join(', ')}${st.id === byDefault ? ' (par défaut)' : ''}`,
+      value: st.id, selected: st.id === i.day_style, byDefault: st.id === byDefault,
+      text: `${st.id === 'pyjama' ? 'Avec pyjama' : 'Sans pyjama'} : ${st.wear.map((item) => labels.items_short[item]).join(', ')}`,
     })))
     : '';
   // Les repères de la chaleur restent visibles ; les autres se déplient (la nuque a sa propre ligne, sous les cartes).
@@ -648,8 +652,8 @@ function nightWearCard(state, n) {
   const otherBag = options.some((o) => o.tog !== options[0].tog);
   const choices = options.length > 1
     ? `${outfitChoice('Selon votre gigoteuse', 'night-option', options.map((o) => ({
-      value: o.id, selected: o.id === n.option,
-      text: `${o.tog} TOG : ${o.wear.map((item) => labels.items_short[item]).join(' + ')}${o.id === 'principal' ? ' (par défaut)' : ''}`,
+      value: o.id, selected: o.id === n.option, byDefault: o.id === 'principal',
+      text: `${o.tog} TOG : ${o.wear.map((item) => labels.items_short[item]).join(' + ')}`,
     })), ` data-bin="${esc(n.bin ?? '')}"`)}
         ${otherBag ? `<p class="hint">${esc(render(state.bundle.messages, 'fabricant.night.compensation', 'short'))}.</p>` : ''}`
     : '';
@@ -768,7 +772,7 @@ function prevoirContent(state, ctx) {
     + group('Selon la saison', P.categories.filter((c) => !c.suggest_once_noted && !c.togs && fits(c)), sleepbagBlock());
   const wash = state.profile.wash_days ?? P.quantities.wash_days_default;
   const washPick = `<label class="wash"><span>Lessive tous les</span>
-      <select data-action="wash" aria-label="Lessive tous les combien de jours">${P.quantities.wash_days_choices.map((d) =>
+      <select data-action="wash" aria-label="Lessive tous les combien de jours" data-title="Une lessive tous les…">${P.quantities.wash_days_choices.map((d) =>
         `<option value="${d}"${d === wash ? ' selected' : ''}>${d} jours</option>`).join('')}</select></label>
     <p class="hint">${esc(render(M, 'purchase.quantity_rule', 'text'))}</p>`;
   return `${owned ? '' : `<section class="card"><p class="tip">${icon('hanger', { size: 20 })}<span>Indiquez d'abord ce que vous avez déjà dans « Ma garde-robe » : les suggestions seront plus justes.</span></p></section>`}
@@ -836,8 +840,8 @@ export function viewSettings(state) {
         <div class="row column" id="reglage-commune"><span>Commune</span>${communePicker(draft, results)}</div>
         <div class="row column"><span>Plage horaire</span>
           <div class="pair">
-            <select id="from" aria-label="Début">${hours(6, 20).map((h) => `<option value="${h}"${profile.outing_window.from === h ? ' selected' : ''}>de ${hourFr(h)}</option>`).join('')}</select>
-            <select id="to" aria-label="Fin">${hours(7, 22).map((h) => `<option value="${h}"${profile.outing_window.to === h ? ' selected' : ''}>à ${hourFr(h)}</option>`).join('')}</select>
+            <select id="from" aria-label="Début" data-title="Début de la plage horaire">${hours(6, 20).map((h) => `<option value="${h}"${profile.outing_window.from === h ? ' selected' : ''}>de ${hourFr(h)}</option>`).join('')}</select>
+            <select id="to" aria-label="Fin" data-title="Fin de la plage horaire">${hours(7, 22).map((h) => `<option value="${h}"${profile.outing_window.to === h ? ' selected' : ''}>à ${hourFr(h)}</option>`).join('')}</select>
           </div>
           ${draft.error ? `<p class="error">${esc(draft.error)}</p>` : ''}
         </div>

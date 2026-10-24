@@ -213,7 +213,11 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 /* Tenues au choix : une liste déroulante */
 .alts { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
 .alts-title { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); }
-.alts select { width: 100%; }
+.alts-box { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 11px 14px; border-radius: 12px; background: var(--fill); cursor: pointer; }
+.alts-box::after { content: ""; flex: none; width: 7px; height: 7px; margin: -4px 4px 0 auto; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); }
+.alts-value { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; line-height: 1.35; }
+.alts-box select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.alts-box:has(select:focus-visible) { outline: 3px solid var(--blue); outline-offset: 2px; }
 /* Créneaux de sortie : jusqu'à trois, dans l'ordre de la journée, le meilleur en clair */
 .windows { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin: 14px 0 0; padding: 0; position: relative; }
 .windows li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 14px; color: #fff; min-width: 0; }
@@ -520,6 +524,53 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
 /* Sans carte au-dessus, le pied de page ne doit pas remonter sur le ciel. */
 .content > .foot:first-child { padding-top: 46px; }
 .foot a { color: var(--ink-2); }
+
+/* Listes déroulantes (js/listes.js) : une feuille qui monte du bas de l'écran, à la place de la liste du système.
+   Les listes ne reçoivent plus le toucher : c'est leur libellé, ou la zone sous le doigt, qui ouvre la feuille. */
+.sheets select { pointer-events: none; }
+.sheets label:has(> select), .sheets .pair { cursor: pointer; }
+.pick select:focus-visible { outline: none; }
+.pick:has(select:focus-visible) { outline: 3px solid var(--blue); outline-offset: 2px; }
+.sheet-lock, .sheet-lock body { overflow: hidden; }
+.sheet-scrim { position: fixed; inset: 0; z-index: 50; background: rgba(8, 10, 14, 0.42); opacity: 0; transition: opacity 0.22s ease; }
+.sheet-scrim.open { opacity: 1; }
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 51;
+  max-width: 480px;
+  max-height: min(72vh, 560px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.2);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  transform: translateY(100%);
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sheet.open { transform: none; }
+.sheet.dragging { transition: none; }
+.sheet-head { flex: none; padding: 10px var(--gutter) 10px; touch-action: none; cursor: grab; }
+.sheet-grip { display: block; width: 38px; height: 5px; margin: 0 auto 12px; border-radius: 3px; background: var(--ink-3); opacity: 0.35; }
+.sheet-title { font-family: var(--display); font-size: 1.12rem; font-weight: 700; letter-spacing: -0.01em; }
+.sheet-list { position: relative; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 2px; padding: 0 10px 4px; }
+.sheet-opt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 12px 14px; border-radius: 16px; text-align: left; font-size: 1.02rem; line-height: 1.35; }
+.sheet-opt .ico { color: var(--ink-2); }
+.sheet-opt:hover { background: var(--fill); }
+.sheet-opt[aria-checked="true"] { background: var(--blue-soft); color: var(--blue); font-weight: 650; }
+.sheet-opt[aria-checked="true"] .ico { color: var(--blue); }
+.sheet-opt:focus-visible { outline-offset: -3px; border-radius: 16px; }
+.sheet-text { flex: 1; min-width: 0; }
+.sheet-opt .tag { flex: none; font-weight: 600; }
+.sheet-check { flex: none; width: 20px; }
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheet-scrim { transition: none; }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .anim .content > *, .anim .page > * { animation: rise 0.35s ease-out both; }

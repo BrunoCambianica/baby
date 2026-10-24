@@ -588,6 +588,14 @@ await test('La commune en haut de l\'écran ouvre les réglages sur la commune',
   const box = await page.locator('#reglage-commune').boundingBox();
   const height = page.viewportSize().height;
   assert(box && box.y >= 0 && box.y + box.height <= height, `commune hors de l'écran : ${JSON.stringify(box)} / ${height}`);
+  // Une liste sans libellé (plage horaire) : le toucher à sa place ouvre sa feuille, le choix y est retenu.
+  const from = await page.locator('#from').boundingBox();
+  await page.mouse.click(from.x + from.width / 2, from.y + from.height / 2);
+  await page.waitForSelector('.sheet.open');
+  assert((await page.textContent('.sheet-title')) === 'Début de la plage horaire', await page.textContent('.sheet-title'));
+  await page.click('.sheet-opt:has-text("de 10 h")');
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  assert((await page.inputValue('#from')) === '10:00' && (await stored(page)).outing_window?.from === '10:00', 'plage horaire non retenue');
 });
 
 await test('Tenues au choix : sans pyjama par défaut la journée (maison et sorties), pyjama la nuit, listes déroulantes', async (use) => {
@@ -611,16 +619,36 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   // Créneaux de sortie : jusqu'à trois, dans l'ordre de la journée, le meilleur marqué.
   assert((await page.locator('.day .slots li.best').count()) === 1, 'créneau idéal non marqué');
   await shot(page, 'l6-creneaux');
+  // Le mode de sortie : la pastille ouvre la feuille des choix (icônes, choix en cours coché) ; le retour la ferme sans rien changer.
+  const mode = await page.inputValue('select[data-action="transport"]');
+  await page.click('.day .pick');
+  await page.waitForSelector('.sheet.open');
+  assert((await page.textContent('.sheet-title')) === 'Mode de sortie', await page.textContent('.sheet-title'));
+  assert((await page.locator('.sheet-opt .ico').count()) >= 3, 'icônes des modes absentes');
+  assert((await page.getAttribute(`.sheet-opt[data-index="${await page.$eval('select[data-action="transport"]', (s) => s.selectedIndex)}"]`, 'aria-checked')) === 'true', 'mode en cours non coché');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(CAPTURES, 'l6-feuille-mode.png') });
+  await page.evaluate(() => history.back());
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  assert((await page.inputValue('select[data-action="transport"]')) === mode, 'mode changé par le retour');
   // La nuit : 19 °C par défaut (18-20 °C), pyjama sous une 2 TOG ; l'autre gigoteuse dans la liste.
   await page.click('.tabbar [data-value="nuit"]');
   let tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
   assert(tiles.join() === 'Body ML,Pyjama,Gigoteuse 2 TOG', `nuit par défaut : ${tiles.join()}`);
   const night = await page.locator('select[data-action="night-option"] option').allTextContents();
   assert(night.join(' | ') === '2 TOG : body ML + pyjama (par défaut) | 2,5 TOG : body ML | 2,5 TOG : pyjama | 3,5 TOG : pyjama léger' && await page.isVisible('text=Gigoteuse plus légère : une couche de plus dessous'), night.join(' | '));
-  // Toucher la liste l'ouvre seulement : rien ne change avant le choix.
-  await page.click('select[data-action="night-option"]');
+  // Toucher la liste ouvre la feuille des choix, sans rien changer ; « par défaut » y devient une pastille. Le choix s'y fait.
+  await page.click('.alts:has(select[data-action="night-option"])');
+  await page.waitForSelector('.sheet.open');
   assert(!(await stored(page)).children[0].night_options?.n20, 'tenue changée au simple toucher');
-  await page.selectOption('select[data-action="night-option"]', 'tog-2-5');
+  const sheet = await page.locator('.sheet-opt .sheet-text').allTextContents();
+  assert(sheet.join(' | ') === '2 TOG : body ML + pyjama | 2,5 TOG : body ML | 2,5 TOG : pyjama | 3,5 TOG : pyjama léger', sheet.join(' | '));
+  assert((await page.textContent('.sheet-opt[aria-checked="true"] .tag')) === 'par défaut', 'pastille « par défaut » absente');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(CAPTURES, 'l6-feuille-nuit.png') });
+  await page.click('.sheet-opt:has-text("2,5 TOG : body ML")');
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  assert((await page.inputValue('select[data-action="night-option"]')) === 'tog-2-5', 'choix de la feuille non retenu');
   tiles = await page.locator('.card:first-of-type .dress-name').allTextContents();
   assert(tiles.join() === 'Body ML,Gigoteuse 2,5 TOG', tiles.join());
   await shot(page, 'l6-nuit-choix');

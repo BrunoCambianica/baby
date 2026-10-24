@@ -8,6 +8,7 @@ import {
 } from './famille.js';
 import { dayLong, dayShort } from './format.js';
 import { ageLabel, fromConfig, fromShared, isNewer, migrate, newChild, profileOf } from './household.js';
+import './listes.js';
 import { store } from './storage.js';
 import * as V from './views.js';
 

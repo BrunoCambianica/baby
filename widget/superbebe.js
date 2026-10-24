@@ -1,8 +1,8 @@
-// Superbébé 0.16.3, widget iPhone pour Scriptable.
+// Superbébé 0.16.4, widget iPhone pour Scriptable.
 
 // Fichier généré par tools/build-widget.js à partir de engine/ et widget/main.scriptable.js : ne pas modifier à la main.
 
-const SB_VERSION = "0.16.3";
+const SB_VERSION = "0.16.4";
 
 // Le chargeur fournit l'adresse réelle du site ; sinon, adresse par défaut (champ homepage de package.json).
 
