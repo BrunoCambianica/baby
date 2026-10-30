@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.19.0';
+export const VERSION = '0.20.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -30,6 +30,9 @@ const NOTE_ICON = {
   'practical.carrier.body_heat': 'carrier',
   'practical.carrier.no_footed': 'carrier',
   'practical.walk.body_heat': 'walk',
+  'relay.carrier.cover_face': 'shield',
+  'relay.carrier.airway_heat': 'shield',
+  'relay.carrier.slippery': 'snow',
 };
 const SCRIPTABLE_URL = 'https://apps.apple.com/fr/app/scriptable/id1405459188';
 
@@ -288,12 +291,43 @@ function dressList(state, outfit, piece = null) {
     ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}`;
 }
 
+// Les conseils sous une tenue : un repère officiel (le portage) dit sa source, une suggestion pratique non.
+function noteList(state, notes, params) {
+  const M = state.bundle.messages;
+  return notes.map((n) => {
+    const msg = M.messages[n];
+    const official = msg?.kind === 'officiel';
+    const text = esc(typo(render(M, n, 'text', params)));
+    return official
+      ? `<li class="official-tip">${icon(NOTE_ICON[n] ?? 'shield', { size: 20 })}<span><strong>${esc(typo(render(M, n, 'short', params)))}.</strong> ${text}<span class="source">Source : ${sourceLinks(state, msg.sources ?? [])}</span></span></li>`
+      : `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${text}</span></li>`;
+  }).join('');
+}
+
+// Bien porter : les cinq principes de position de Santé Canada, en porte-bébé, dans une carte repliée, dépliée d'office
+// avant guide_open_under_months mois (tant que le parent ne l'a pas repliée).
+function carrierCard(state, ctx) {
+  const R = state.bundle.rules;
+  const mode = ctx.result.transport;
+  const S = R.outfit.transport[mode]?.safety;
+  if (!S) return '';
+  const M = state.bundle.messages;
+  const young = ctx.result.age_months < S.guide_open_under_months;
+  const open = state.open.has('portage') || (young && !state.closed?.has('portage'));
+  const sources = [...new Set(S.principles.flatMap((id) => M.messages[id].sources ?? []))];
+  return `<details class="card fold carrier-guide" data-details="portage"${open ? ' open' : ''}>
+    <summary>${icon('carrier', { size: 18 })}Bien porter : 5 repères${chev()}</summary>
+    <ol class="facts principles">${S.principles.map((id) => `<li>${icon('check', { size: 18 })}<span><strong>${esc(render(M, id, 'short'))}.</strong> ${esc(typo(render(M, id, 'text')))}</span></li>`).join('')}</ol>
+    <p class="source">Source : ${sourceLinks(state, sources)}</p>
+  </details>`;
+}
+
 // Tenue sans plan de la journée (prévisions qui ne couvrent pas la plage horaire) : celle du créneau conseillé.
 function outfitCard(state, ctx) {
   const M = state.bundle.messages;
   const outfit = ctx.result.outfit;
   if (!outfit) return '';
-  const tips = outfit.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', ctx.result.params))}</span></li>`).join('');
+  const tips = noteList(state, outfit.notes, ctx.result.params);
   return `<section class="card" aria-labelledby="t-dehors">
     <div class="card-head">
       <h2 class="card-title" id="t-dehors">${icon('sun', { size: 18 })}Dehors</h2>
@@ -470,6 +504,8 @@ const span = (w) => (w.start.endsWith(':00') && w.end.endsWith(':00')
   : `${hourFr(w.start)} – ${hourFr(w.end)}`);
 // « 14 h » ne se coupe pas en fin de ligne.
 const nbsp = (s) => s.replace(/(\d) h\b/g, '$1\u00a0h');
+// Guillemets et deux-points tenus à leurs mots, comme en typographie française.
+const typo = (s) => s.replace(/« /g, '«\u00a0').replace(/ ([»:;?!])/g, '\u00a0$1');
 
 // Sous les créneaux, ce qui fait le meilleur : « Pourquoi 10–11 h ? Au sec avant la pluie de 12 h · 9° ressentis ».
 function whenRow(state, result) {
@@ -548,7 +584,7 @@ function outsideCard(state, ctx) {
         <span><strong>${esc(capitalize(labels.items_short[b.item] ?? b.item))}</strong>${bagReason([b.item, b.reason, b.time], now) ? `<span class="hint"> · ${esc(bagReason([b.item, b.reason, b.time], now))}</span>` : ''}</span></li>`).join('')}</ul>
         ${rainHot ? `<p class="hint">${esc(render(M, 'practical.rain.cover_warm', 'text'))}</p>` : ''}</div>`
     : '';
-  const tips = j.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', ctx.result.params))}</span></li>`).join('');
+  const tips = noteList(state, j.notes, ctx.result.params);
   const names = (items) => esc(items.map((i) => labels.items[i]).join(', '));
   let first;
   if (!over) first = dressList(state, { items: wearing }, piece);
@@ -703,7 +739,7 @@ function sortirContent(state, ctx) {
   // La veille au soir : la journée de demain à préparer, dedans et dehors, puis la nuit qui vient.
   if (ctx.evening?.result.journee) {
     const next = ctx.evening;
-    return [insideCard(state, next, { today: false }), outsideCard(state, next), checkLine(state), feedbackCard(state, ctx), tonightCard(state, ctx),
+    return [insideCard(state, next, { today: false }), outsideCard(state, next), checkLine(state), carrierCard(state, next), feedbackCard(state, ctx), tonightCard(state, ctx),
       officialCard(state, next.result.relays, next.result.params), promoCard(state), foot()].join('');
   }
   if (!ctx.tomorrow && !ctx.result.outfit && !ctx.result.journee) return `${tonightCard(state, ctx)}${promoCard(state)}${foot()}`;
@@ -711,6 +747,7 @@ function sortirContent(state, ctx) {
     insideCard(state, ctx, { today: !ctx.tomorrow }),
     ctx.result.journee ? outsideCard(state, ctx) : outfitCard(state, ctx),
     checkLine(state),
+    carrierCard(state, ctx),
     feedbackCard(state, ctx),
     hoursCard(state, ctx),
     officialCard(state, ctx.result.relays, ctx.result.params),

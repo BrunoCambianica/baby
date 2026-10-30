@@ -473,6 +473,25 @@ await test('« C\'était juste ? » : une réponse par jour, la tendance propos�
   assert(/Tenues jugées : 2 réponse\(s\), 1 juste\(s\) \(50 %\)/.test(report) && !report.includes('Léo'), report);
 });
 
+await test('Portage sûr : couverture jamais sur le visage, cinq repères dépliés avant 4 mois, rien en poussette', async (use) => {
+  const young = { ...LEO, birth: '2026-08', transport: 'porte_bebe' };
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([young], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  const tip = (await page.textContent('.day .tips li.official-tip')).replace(/\u00a0/g, ' ');
+  assert(tip.startsWith('Couverture de portage : jamais sur son visage.') && tip.includes('Santé Canada') && tip.includes('INSPQ'), tip);
+  // Avant 4 mois, les cinq repères de Santé Canada sont dépliés ; repliés par le parent, ils le restent.
+  assert(await page.isVisible('.carrier-guide[open]') && (await page.locator('.carrier-guide .principles li').count()) === 5, 'repères non dépliés');
+  await page.click('.carrier-guide summary');
+  await page.click('[data-action="day"][data-value="demain"]');
+  await page.click('[data-action="day"][data-value="aujourdhui"]');
+  assert(!(await page.isVisible('.carrier-guide[open]')), 'repères dépliés à nouveau');
+  await shot(page, 'l2-portage-sur');
+  // En poussette : ni repère du portage, ni carte.
+  await page.selectOption('select[data-action="transport"]', 'poussette');
+  assert(!(await page.locator('.carrier-guide').count()) && !(await page.locator('.official-tip').count()), 'repères du portage en poussette');
+});
+
 await test('Garde-robe réelle : le gilet chaud qu\'il a plutôt que le pull qu\'il n\'a pas, et la pièce qui manque', async (use) => {
   const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([{ ...LEO, inventory: { gilets_chauds: ['6m'] } }], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);

@@ -101,7 +101,18 @@
           "combi_pilote_doublee": ["manteau_portage"]
         },
         "notes": ["practical.carrier.body_heat", "practical.carrier.no_footed"],
-        "rain_gear": "cape_pluie"
+        "rain_gear": "cape_pluie",
+        "safety": {
+          "note": "Repères de sécurité du portage, dans la carte Dehors : la couverture ou le manteau de portage jamais sur son visage (dès qu'il est dans la tenue) ; par forte chaleur avant heat_under_months mois, nez et bouche dégagés ; verglas ou neige annoncés dans la suite de la plage (codes météo WMO d'Open-Meteo : bruine ou pluie verglaçante, neige), pas de porte-bébé sur sol glissant. Puis les cinq principes de position (principles), dépliés d'office avant guide_open_under_months mois.",
+          "cover_items": ["couverture_portage", "manteau_portage"],
+          "cover_relay": "relay.carrier.cover_face",
+          "heat_under_months": 4,
+          "heat_relay": "relay.carrier.airway_heat",
+          "slippery_weather_codes": [56, 57, 66, 67, 71, 73, 75, 77, 85, 86],
+          "slippery_relay": "relay.carrier.slippery",
+          "principles": ["relay.carrier.chin", "relay.carrier.face", "relay.carrier.back", "relay.carrier.kiss", "relay.carrier.fit"],
+          "guide_open_under_months": 4
+        }
       },
       "a_pied": {
         "band_shift": -1,

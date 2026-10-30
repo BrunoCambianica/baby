@@ -522,6 +522,19 @@ function planJournee(input, R, age, plan) {
   };
 }
 
+// Repères de sécurité du portage (outfit.transport.<mode>.safety), placés en tête des conseils de la carte Dehors :
+// la couverture ou le manteau de portage jamais sur son visage, dès qu'il est dans la tenue ; par forte chaleur, avant
+// heat_under_months mois, nez et bouche dégagés ; verglas ou neige annoncés dans la suite de la plage, sol glissant.
+function carrierNotes(mode, items, age, plan, R) {
+  const S = R.outfit.transport[mode]?.safety;
+  if (!S) return [];
+  const notes = [];
+  if (items.some((item) => S.cover_items.includes(item))) notes.push(S.cover_relay);
+  if (plan.heat && age < S.heat_under_months) notes.push(S.heat_relay);
+  if (plan.inPlage.some((sl) => S.slippery_weather_codes.includes(sl.weather_code))) notes.push(S.slippery_relay);
+  return notes;
+}
+
 // Tenue portée à une heure donnée du plan de la journée : celle du matin, avec les changements déjà passés.
 export function journeeAt(journee, hhmm) {
   const items = [...journee.morning];
@@ -1069,6 +1082,12 @@ export function evaluate(input, bundle) {
   result.indoor.wear = swapItems(result.indoor.wear, indoor.swaps, result.indoor.swapped);
   result.indoor.wardrobe = fromWardrobe(result.indoor.swapped, indoor.wardrobe);
   result.indoor.missing = notOwned(result.indoor.wear, indoor.missing);
+  // Repères du portage, en tête des conseils (ils ne dépendent pas des pièces remplacées : celles du portage sont verrouillées).
+  if (outfit) outfit.notes.unshift(...carrierNotes(result.transport, outfit.items, age, plan, R));
+  if (result.journee) {
+    const j = result.journee;
+    j.notes.unshift(...carrierNotes(result.transport, [...j.morning, ...j.changes.flatMap((ch) => ch.add)], age, plan, R));
+  }
   // Alerte officielle qui passe avant le plan de la journée dans le widget (vigilance, grand froid, chaleur…).
   if (result.journee) result.journee.alert = result.relays.find((id) => R.journee.widget_urgent_relays.includes(id)) ?? null;
   const moment = displayMoment(result, input.now);
@@ -1122,6 +1141,7 @@ export function lint(bundle) {
     ...R.night.always,
     ...R.night.when_room_known,
     ...Object.values(R.outfit.transport).flatMap((t) => t.notes),
+    ...Object.values(R.outfit.transport).flatMap((t) => (t.safety ? [t.safety.cover_relay, t.safety.heat_relay, t.safety.slippery_relay, ...t.safety.principles] : [])),
     ...R.purchases.never_suggest.map((p) => p.relay),
     ...R.purchases.categories.flatMap((c) => [
       ...c.relays, ...(c.relays_under_12m ?? []), ...(c.relays_from_12m ?? []), ...(c.under_min_age_relay ? [c.under_min_age_relay] : []),

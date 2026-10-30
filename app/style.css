@@ -280,6 +280,12 @@ p.check { display: block; }
 .tips { list-style: none; display: grid; gap: 8px; margin: 0; background: var(--fill); border-radius: 14px; padding: 10px 12px; font-size: 0.92rem; color: var(--ink-2); }
 .tips li { display: flex; gap: 10px; align-items: flex-start; }
 .tips .ico { color: var(--blue); margin-top: 1px; flex: none; }
+/* Un repère officiel du portage parmi les conseils : en tête, en clair, avec sa source */
+.tips li.official-tip { color: var(--ink); }
+.tips li.official-tip .ico { color: var(--green); }
+.tips li.official-tip .source { display: block; margin-top: 2px; }
+.carrier-guide .principles strong { color: var(--ink); }
+.carrier-guide .principles { margin-bottom: 10px; }
 
 /* Heure par heure */
 .hours { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: 0 -8px; padding: 0 8px; }

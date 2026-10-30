@@ -1308,8 +1308,15 @@ document.addEventListener('click', (event) => {
 document.addEventListener('toggle', (event) => {
   const name = event.target.dataset?.details;
   if (!name) return;
-  if (event.target.open) state.open.add(name);
-  else state.open.delete(name);
+  // Une carte dépliée d'office (« Bien porter » avant 4 mois) reste repliée une fois que le parent l'a repliée.
+  state.closed ??= new Set();
+  if (event.target.open) {
+    state.open.add(name);
+    state.closed.delete(name);
+  } else {
+    state.open.delete(name);
+    state.closed.add(name);
+  }
 }, true);
 
 window.addEventListener('hashchange', () => {

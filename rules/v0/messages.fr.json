@@ -12,6 +12,62 @@
       "text": "Vigilance {color} ({phenomena}) : suivez les conseils de comportement des pouvoirs publics sur vigilance.meteofrance.fr.",
       "short": "Vigilance {color} : consignes officielles"
     },
+    "relay.carrier.cover_face": {
+      "kind": "officiel",
+      "verbatim": false,
+      "sources": ["santecanada-porte-bebes", "inspq-porte-bebes"],
+      "text": "La couverture ou le manteau de portage se met par-dessus vous deux, son visage toujours dégagé : selon Santé Canada, « même les extensions de manteaux ou les manteaux de portage sont dangereux lorsqu'ils recouvrent le bébé ».",
+      "short": "Couverture de portage : jamais sur son visage"
+    },
+    "relay.carrier.airway_heat": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": ["spf-fortes-chaleurs-bebes"],
+      "text": "« Pour les bébés en porte-bébés éviter l'enfouissement des voies aériennes supérieures (nourrissons de moins de 4 mois). »",
+      "short": "Chaleur : nez et bouche toujours dégagés"
+    },
+    "relay.carrier.slippery": {
+      "kind": "officiel",
+      "verbatim": false,
+      "sources": ["inspq-porte-bebes"],
+      "text": "Verglas ou neige annoncés : l'INSPQ conseille de « ne pas utiliser un porte-bébé dans des environnements où les risques de chutes sont élevés (ex. : un trottoir glacé) ».",
+      "short": "Verglas ou neige : pas de porte-bébé sur sol glissant"
+    },
+    "relay.carrier.chin": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": ["santecanada-porte-bebes"],
+      "text": "« Placez le bébé de façon à ce que son menton ne repose pas sur sa poitrine. »",
+      "short": "Menton relevé"
+    },
+    "relay.carrier.face": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": ["santecanada-porte-bebes"],
+      "text": "« Assurez-vous de pouvoir toujours voir le visage de votre bébé et vérifiez souvent sa respiration. »",
+      "short": "Visage visible en tout temps"
+    },
+    "relay.carrier.back": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": ["santecanada-porte-bebes"],
+      "text": "« Placez votre bébé de façon à ce que sa poitrine et son ventre soient contre vous. »",
+      "short": "Dos bien soutenu"
+    },
+    "relay.carrier.kiss": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": ["santecanada-porte-bebes"],
+      "text": "« Placez votre bébé suffisamment haut dans le porte-bébé pour que vous puissiez embrasser le sommet de sa tête. »",
+      "short": "Assez haut pour l'embrasser"
+    },
+    "relay.carrier.fit": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": ["santecanada-porte-bebes"],
+      "text": "« Placez votre bébé en position verticale dans le porte-bébé et serrez-le suffisamment pour soutenir son dos. »",
+      "short": "Bien ajusté"
+    },
     "relay.heat.outing_hours": {
       "kind": "officiel",
       "verbatim": true,

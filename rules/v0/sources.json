@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "consulted": "2026-10-21",
+  "consulted": "2026-10-30",
   "levels": {
     "A": "Autorité publique française (santé, solidarités, Santé publique France, HAS, ARS, Santé.fr, collectivité/PMI, Météo-France, service public)",
     "A-etranger": "Autorité publique étrangère ou internationale, utilisée seulement faute de source française, et nommée comme telle",
@@ -100,12 +100,35 @@
     {
       "id": "spf-fortes-chaleurs-bebes",
       "publisher": "Santé publique France",
-      "title": "Document de prévention fortes chaleurs (PDF, titre non confirmé)",
-      "url": "https://www.santepubliquefrance.fr/content/download/358276/3089502",
-      "published": null,
+      "short": "Santé publique France",
+      "title": "Prévenir les risques liés aux fortes chaleurs chez l'enfant : repères pour votre pratique (réf. W-3035-001-2106)",
+      "url": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/424019_spf00003179.pdf",
+      "published": "2021-06",
       "level": "A",
-      "verification": "a_verifier",
-      "notes": "Citations lues via moteur de recherche ; le lien redirige vers l'accueil du site. Retrouver le document, son titre et sa date."
+      "verification": "lu",
+      "notes": "Lu le 30/10/2026 (document destiné aux professionnels de santé, état des connaissances juin 2021), rubrique « En extérieur » : « Préférer les sorties le matin avant 11 heures ou le soir après 21 heures » ; « Protéger les bébés dans les poussettes ou les porte-bébés dorsaux des rayons directs du soleil. Pour les bébés en porte-bébés éviter l'enfouissement des voies aériennes supérieures (nourrissons de moins de 4 mois). » L'ancien lien (content/download/358276) redirigeait vers l'accueil du site."
+    },
+    {
+      "id": "santecanada-porte-bebes",
+      "publisher": "Santé Canada",
+      "short": "Santé Canada",
+      "title": "Sécurité des porte-bébés",
+      "url": "https://www.canada.ca/fr/sante-canada/services/soins-nourrissons/porte-bebes.html",
+      "published": "2025-11-03",
+      "level": "A-etranger",
+      "verification": "lu",
+      "notes": "Lu le 30/10/2026, utilisé faute de source française sur le portage. Cinq principes clés (menton relevé, visage visible en tout temps, soutien uniforme du dos, à portée des câlins, bon ajustement) ; « même les extensions de manteaux ou les manteaux de portage sont dangereux lorsqu'ils recouvrent le bébé »."
+    },
+    {
+      "id": "inspq-porte-bebes",
+      "publisher": "Institut national de santé publique du Québec",
+      "short": "INSPQ (Québec)",
+      "title": "Avis sur l'utilisation sécuritaire des porte-bébés souples et en bandoulière",
+      "url": "https://www.inspq.qc.ca/publications/952",
+      "published": "2009-07-20",
+      "level": "A-etranger",
+      "verification": "lu",
+      "notes": "PDF lu le 30/10/2026, p. 20, utilisé faute de source française sur le portage : « Protéger l'enfant du froid lors des déplacements extérieurs en hiver [...]. Ne pas bloquer sa respiration en le recouvrant du manteau du porteur. » ; « Ne pas utiliser un porte-bébé dans des environnements où les risques de chutes sont élevés (ex. : un trottoir glacé). »"
     },
     {
       "id": "meteofrance-vigilance",

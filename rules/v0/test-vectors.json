@@ -335,6 +335,48 @@
       "expect": { "purchases.*.category.exclude": ["gilets_chauds", "pulls", "gilets", "gilets_fins"] }
     },
     {
+      "id": "portage-couverture-visage",
+      "description": "Porte-bébé à 5 °C : couverture de portage dans la tenue, le repère du visage dégagé en tête des conseils",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
+      "expect": { "journee.morning.include": ["couverture_portage"], "journee.notes.0": "relay.carrier.cover_face" }
+    },
+    {
+      "id": "portage-sans-couverture",
+      "description": "Porte-bébé à 20 °C : pas de couverture, pas de repère sur la couverture",
+      "input": { "date": "2026-06-10", "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 20 } } } },
+      "expect": { "journee.notes.exclude": ["relay.carrier.cover_face", "relay.carrier.airway_heat", "relay.carrier.slippery"] }
+    },
+    {
+      "id": "portage-poussette-rien",
+      "description": "Poussette à 10 °C : aucun repère du portage",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 10 } } } },
+      "expect": { "journee.notes.exclude": ["relay.carrier.cover_face"] }
+    },
+    {
+      "id": "portage-chaleur-moins-de-4-mois",
+      "description": "33 °C, bébé de 2 mois en porte-bébé : nez et bouche dégagés (Santé publique France)",
+      "input": { "date": "2026-07-15", "profile": { "birth": "2026-05-10", "transport": "porte_bebe" }, "forecast": { "daylight": { "sunrise": "06:05", "sunset": "21:50" }, "hourly": { "from": "06:00", "to": "22:00", "base": { "feels_c": 31, "uv": 7 }, "overrides": { "06:00-11:00": { "feels_c": 22, "uv": 2 } } } } },
+      "expect": { "journee.notes.include": ["relay.carrier.airway_heat"] }
+    },
+    {
+      "id": "portage-chaleur-6-mois",
+      "description": "Même chaleur à 6 mois : pas de repère des moins de 4 mois",
+      "input": { "date": "2026-07-15", "profile": { "birth": "2026-01-10", "transport": "porte_bebe" }, "forecast": { "daylight": { "sunrise": "06:05", "sunset": "21:50" }, "hourly": { "from": "06:00", "to": "22:00", "base": { "feels_c": 31, "uv": 7 }, "overrides": { "06:00-11:00": { "feels_c": 22, "uv": 2 } } } } },
+      "expect": { "journee.notes.exclude": ["relay.carrier.airway_heat"] }
+    },
+    {
+      "id": "portage-verglas",
+      "description": "Pluie verglaçante annoncée à 14 h, en porte-bébé : pas de porte-bébé sur sol glissant (INSPQ)",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 1 }, "overrides": { "14:00": { "weather_code": 66 } } } } },
+      "expect": { "journee.notes.include": ["relay.carrier.slippery"] }
+    },
+    {
+      "id": "portage-verglas-passe",
+      "description": "À 15 h 20, la pluie verglaçante de 10 h est passée : plus de repère sur le sol glissant",
+      "input": { "now": "15:20", "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 1 }, "overrides": { "10:00": { "weather_code": 66 } } } } },
+      "expect": { "journee.notes.exclude": ["relay.carrier.slippery"] }
+    },
+    {
       "id": "pourquoi-plus-doux",
       "description": "Hiver sec : le créneau idéal est le plus doux, dit avec son ressenti",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 4 }, "overrides": { "12:00-15:00": { "feels_c": 7 }, "13:00": { "feels_c": 8 } } } } },
