@@ -281,6 +281,72 @@
       "expect": { "outing.window": null, "outing.reason": "journee_terminee" }
     },
     {
+      "id": "pourquoi-plus-doux",
+      "description": "Hiver sec : le créneau idéal est le plus doux, dit avec son ressenti",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 4 }, "overrides": { "12:00-15:00": { "feels_c": 7 }, "13:00": { "feels_c": 8 } } } } },
+      "expect": { "outing.window.why": [{ "id": "outing.why.froid.max" }], "outing.why": "Le plus doux · 8° ressentis" }
+    },
+    {
+      "id": "pourquoi-avant-la-pluie",
+      "description": "Pluie dès 13 h : le créneau de 11 h est au sec, avant la pluie",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 10 }, "overrides": { "11:00": { "feels_c": 12 }, "13:00-19:00": { "precip_prob": 80, "precip_mm": 1.2 } } } } },
+      "expect": { "outing.why": "Au sec avant la pluie de 13 h · 12° ressentis" }
+    },
+    {
+      "id": "pourquoi-avant-la-premiere-averse",
+      "description": "Averses à 10 h et à partir de 14 h : à 9 h, on sort avant la première",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 10 }, "overrides": { "10:00": { "precip_prob": 80, "precip_mm": 1 }, "14:00-19:00": { "precip_prob": 80, "precip_mm": 1 } } } } },
+      "expect": { "outing.window": { "start": "09:00" }, "outing.why": "Au sec avant la pluie de 10 h · 10° ressentis" }
+    },
+    {
+      "id": "pourquoi-entre-deux-averses",
+      "description": "À 10 h 30, averse à 11 h et pluie dès 14 h : midi est entre deux averses",
+      "input": { "now": "10:30", "forecast": { "hourly": { "base": { "feels_c": 10 }, "overrides": { "11:00": { "precip_prob": 80, "precip_mm": 1 }, "14:00-19:00": { "precip_prob": 80, "precip_mm": 1 } } } } },
+      "expect": { "outing.window": { "start": "12:00" }, "outing.why": "Au sec entre deux averses · 10° ressentis" }
+    },
+    {
+      "id": "pourquoi-doux-et-sec",
+      "description": "Doux l'après-midi et averse à 16 h : doux et au sec, les mots du créneau d'abord",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 8 }, "overrides": { "13:00-16:00": { "feels_c": 16 }, "16:00": { "feels_c": 15, "precip_prob": 70, "precip_mm": 0.8 } } } } },
+      "expect": { "outing.window": { "start": "13:00" }, "outing.why": "Doux et au sec avant la pluie de 16 h · 16° ressentis" }
+    },
+    {
+      "id": "pourquoi-fortes-chaleurs",
+      "description": "33 °C : avant les fortes chaleurs, et un soleil moins fort qu'à 10 h",
+      "input": { "date": "2026-07-15", "forecast": { "daylight": { "sunrise": "06:05", "sunset": "21:50" }, "hourly": { "from": "06:00", "to": "22:00", "base": { "feels_c": 31, "uv": 7 }, "overrides": { "06:00-09:00": { "feels_c": 21, "uv": 1 }, "09:00": { "feels_c": 24, "uv": 3 }, "10:00": { "feels_c": 27, "uv": 5 }, "11:00-17:00": { "feels_c": 33, "uv": 8 }, "20:00-22:00": { "feels_c": 26, "uv": 0 } } } } },
+      "expect": { "outing.window.why": [{ "id": "outing.why.chaleur.avant" }, { "id": "outing.why.uv.moins", "hour": "10:00" }] }
+    },
+    {
+      "id": "pourquoi-soleil",
+      "description": "UV 6 à midi, bébé de 8 mois : soleil moins fort qu'à 12 h",
+      "input": { "date": "2026-05-20", "profile": { "birth": "2025-09-15" }, "forecast": { "daylight": { "sunrise": "06:00", "sunset": "21:30" }, "hourly": { "from": "06:00", "to": "22:00", "base": { "feels_c": 20, "uv": 2 }, "overrides": { "10:00": { "uv": 3 }, "11:00": { "feels_c": 21, "uv": 4 }, "12:00-16:00": { "feels_c": 22, "uv": 6 }, "16:00": { "feels_c": 22, "uv": 4 }, "17:00": { "feels_c": 21, "uv": 2 } } } } },
+      "expect": { "outing.why": "Soleil moins fort qu'à 12 h · 20° ressentis" }
+    },
+    {
+      "id": "pourquoi-soleil-faible",
+      "description": "Indice UV de 2,6 l'après-midi : trop faible pour être une raison",
+      "input": { "forecast": { "hourly": { "overrides": { "14:00-18:00": { "uv": 2.6 } } } } },
+      "expect": { "outing.why": "Même temps toute la journée · 6° ressentis" }
+    },
+    {
+      "id": "pourquoi-rafales",
+      "description": "Rafales de 13 h à 16 h : créneau juste avant",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 9 }, "overrides": { "12:00": { "feels_c": 11 }, "13:00-16:00": { "feels_c": 12, "gust_kmh": 65 } } } } },
+      "expect": { "outing.why": "Avant les rafales de 13 h · 11° ressentis" }
+    },
+    {
+      "id": "pourquoi-temps-egal",
+      "description": "Même temps toute la journée : rien ne départage, le plus tôt",
+      "input": {},
+      "expect": { "outing.window": { "start": "09:00" }, "outing.why": "Même temps toute la journée · 6° ressentis" }
+    },
+    {
+      "id": "pourquoi-seul-creneau",
+      "description": "À 15 h 20, une seule heure de jour reste avant le coucher du soleil",
+      "input": { "now": "15:20" },
+      "expect": { "outing.window": { "start": "16:00" }, "outing.why": "Seul créneau possible · 6° ressentis" }
+    },
+    {
       "id": "tenue-poussette-12",
       "description": "12 °C ressentis en poussette",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 12 } } } },

@@ -134,6 +134,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 .content.no-tabbar { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px); }
 .card { background: var(--card); border-radius: 24px; padding: 18px; box-shadow: var(--shadow); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+/* Dehors : un peu plus serré, pour que la tenue tienne au premier écran sous les créneaux et leur pourquoi */
+.card.day { gap: 12px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .card-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 650; color: var(--ink-2); }
 .card-title .ico { color: var(--ink-3); }
@@ -163,16 +165,18 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .pick[aria-expanded="true"] .ico { color: var(--blue); }
 .pick[aria-expanded="true"]::after { transform: rotate(225deg); margin-top: 4px; border-color: var(--blue); }
 /* Quand sortir, en tête de la carte Dehors */
-.when { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.when { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 .when-ico { color: var(--ink-3); margin-right: 2px; }
 .when .tag { justify-self: start; white-space: normal; }
 .slots { display: contents; }
-.slots li { display: inline-flex; align-items: baseline; gap: 4px; padding: 5px 10px; border-radius: 999px; background: var(--fill); font-variant-numeric: tabular-nums; }
+.slots li { display: inline-flex; align-items: baseline; gap: 4px; padding: 5px 9px; border-radius: 999px; background: var(--fill); font-variant-numeric: tabular-nums; }
 .slots li.best { background: var(--blue-soft); color: var(--blue); }
 .slots .w-flag { color: inherit; font-size: 0.64rem; }
 .slots .w-time { font-size: 0.9rem; }
 .slots .w-feels { font-size: 0.82rem; color: var(--ink-3); opacity: 1; }
 .slots li.best .w-feels { color: inherit; opacity: 0.8; }
+.when-why { font-size: 0.86rem; line-height: 1.35; color: var(--ink-2); margin-top: -6px; }
+.when-why strong { color: var(--blue); font-weight: 650; }
 .icon-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--fill); color: var(--ink-2); }
 .hint { color: var(--ink-3); font-size: 0.88rem; }
 .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--fill); color: var(--ink-2); white-space: nowrap; }
@@ -227,13 +231,21 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .w-feels { font-size: 0.78rem; opacity: 0.85; }
 .status-pill.tonight { margin: 0 0 10px; }
 /* La journée en couches */
-.day-step { display: grid; gap: 10px; }
+/* La suite de la journée : une frise, de l'étape en cours (point plein) à la dernière */
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; position: relative; }
+.timeline::before { content: ""; position: absolute; left: 5px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: var(--fill); }
+.tl-step { display: grid; gap: 8px; padding-left: 24px; position: relative; min-width: 0; }
+.tl-step::before { content: ""; box-sizing: border-box; position: absolute; left: 0; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 3px solid var(--blue); }
+.tl-step.first::before { background: var(--blue); }
+.tl-head { display: flex; align-items: baseline; gap: 0 8px; flex-wrap: wrap; font-size: 0.95rem; line-height: 1.35; }
+.tl-head strong { font-weight: 650; }
+.tl-weather { font-size: 0.86rem; color: var(--ink-2); }
+.tl-legend { font-size: 0.82rem; margin-top: -6px; }
 .change-time { font-size: 0.86rem; font-weight: 650; color: var(--ink-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .change-time .hint { font-weight: 500; }
 .changes { display: grid; gap: 10px; }
 .change { background: var(--fill); border-radius: 16px; padding: 10px 12px 12px; display: grid; gap: 8px; align-content: start; }
 p.change { display: block; font-size: 0.92rem; color: var(--ink-2); }
-.past { opacity: 0.5; }
 .dress.small { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px 4px; }
 .dress.small .dress-name { overflow-wrap: normal; font-size: 0.72rem; }
 .dress.small .dress-ico { width: 44px; height: 44px; border-radius: 14px; }

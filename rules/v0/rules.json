@@ -60,7 +60,8 @@
     },
     "none_reason_priority": [
       "canicule_heures_chaudes", "ozone_apres_midi", "froid_extreme", "vent", "pluie", "duree"
-    ]
+    ],
+    "why": { "min_gain": 5, "max_reasons": 2 }
   },
   "outfit": {
     "bands": [

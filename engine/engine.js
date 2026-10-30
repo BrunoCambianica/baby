@@ -45,6 +45,65 @@ function heatActive(input, R) {
   return canicule || tmax >= cfg.trigger_tmax_c_at_least;
 }
 
+// Pourquoi le meilleur créneau : ce qui le place devant les autres heures de jour qui restent, cause par cause,
+// les plus nettes d'abord (outing.why.max_reasons). Une heure écartée compte pour sa seule cause (pluie, rafales…) ;
+// sinon, seuls les écarts d'au moins min_gain points, et le soleil à partir de l'indice UV des repères (3).
+// Sans écart, le temps est le même : le plus tôt l'emporte. Les mots qui qualifient le créneau (« doux ») passent devant.
+// Chaque raison : { id du message, hour } (l'heure de comparaison, ou celle où commence la pluie qu'on évite).
+const EXCLUDED_CAUSE = { pluie: 'pluie', vent: 'vent', froid_extreme: 'froid', canicule_heures_chaudes: 'chaleur', ozone_apres_midi: 'ozone' };
+const WHY_ORDER = ['pluie', 'froid', 'chaleur', 'vent', 'uv', 'ozone'];
+const WHY_FIRST = ['outing.why.froid.doux', 'outing.why.froid.max', 'outing.why.chaleur.max'];
+function bestWhy(run, others, R) {
+  if (!others.length) return [{ id: 'outing.why.seul' }];
+  const cfg = R.outing;
+  const W = cfg.why;
+  const own = Object.fromEntries(Object.keys(run[0].penalty).map((c) => [c, Math.max(...run.map((sl) => sl.penalty[c]))]));
+  const causes = new Map();
+  for (const sl of others) {
+    const excluded = [...new Set(sl.reasons.map((r) => EXCLUDED_CAUSE[r]).filter(Boolean))];
+    const gains = excluded.length
+      ? excluded.map((c) => [c, cfg.scoring.base])
+      : Object.entries(sl.penalty).map(([c, p]) => [c, p - own[c]])
+        .filter(([c, g]) => g >= W.min_gain && (c !== 'uv' || sl.uv >= R.relay_triggers.uv_at_least));
+    for (const [c, g] of gains) {
+      if (!causes.has(c)) causes.set(c, { cause: c, gain: 0, gap: 0, worst: null, excluded: [] });
+      const k = causes.get(c);
+      k.gain += g;
+      if (g > k.gap) Object.assign(k, { gap: g, worst: sl });
+      if (excluded.includes(c)) k.excluded.push(sl);
+    }
+  }
+  const top = [...causes.values()]
+    .sort((a, b) => b.gain - a.gain || WHY_ORDER.indexOf(a.cause) - WHY_ORDER.indexOf(b.cause))
+    .slice(0, W.max_reasons);
+  if (!top.length) return [{ id: 'outing.why.egal' }];
+  const start = run[0].start;
+  const feels = mean(run.map((sl) => sl.feels_c));
+  return top.map((k) => {
+    const before = k.excluded.filter((sl) => sl.start < start);
+    const after = k.excluded.filter((sl) => sl.start > start);
+    const worst = { hour: fmtMin(k.worst.start) };
+    // Pluie, rafales ou fortes chaleurs écartées : avant, après, ou entre deux ; sinon, moins qu'à l'heure la plus touchée.
+    const around = (id, between) => {
+      if (after.length && !before.length) return { id: `outing.why.${id}.avant`, hour: fmtMin(after[0].start) };
+      if (before.length && !after.length) return { id: `outing.why.${id}.apres` };
+      return before.length && between ? { id: `outing.why.${id}.entre` } : { id: `outing.why.${id}.moins`, ...worst };
+    };
+    if (k.cause === 'pluie') return around('pluie', true);
+    if (k.cause === 'vent') return around('vent', false);
+    if (k.cause === 'chaleur') {
+      if (k.excluded.length) return around('chaleur', false);
+      return feels <= Math.min(...others.map((sl) => sl.feels_c)) + 0.5 ? { id: 'outing.why.chaleur.max' } : { id: 'outing.why.chaleur.moins', ...worst };
+    }
+    if (k.cause === 'froid') {
+      if (own.froid === 0) return { id: 'outing.why.froid.doux' };
+      return feels >= Math.max(...others.map((sl) => sl.feels_c)) - 0.5 ? { id: 'outing.why.froid.max' } : { id: 'outing.why.froid.moins', ...worst };
+    }
+    if (k.cause === 'uv') return { id: 'outing.why.uv.moins', ...worst };
+    return { id: 'outing.why.ozone' };
+  }).sort((a, b) => WHY_FIRST.includes(b.id) - WHY_FIRST.includes(a.id));
+}
+
 function planOuting(input, R, age) {
   const cfg = R.outing;
   const s = cfg.scoring;
@@ -66,6 +125,14 @@ function planOuting(input, R, age) {
   const { sunrise, sunset } = input.forecast.daylight;
   const within = (start, range) => start >= toMin(range.from) && start < toMin(range.to);
   const uvWeight = age < R.relay_triggers.under_1y_months ? s.uv_weight_under_12m : s.uv_weight;
+  // Ce que chaque cause retire au score d'une heure : la pluie, le froid, la chaleur, le vent, le soleil (UV).
+  const penalties = (h) => ({
+    pluie: Math.max(0, h.precip_prob - s.rain_prob_free) * s.rain_prob_weight,
+    froid: Math.max(0, s.comfort_low_c - h.feels_c) * s.comfort_low_weight,
+    chaleur: Math.max(0, h.feels_c - s.comfort_high_c) * s.comfort_high_weight,
+    vent: Math.max(0, h.gust_kmh - s.gust_free_kmh) * s.gust_weight,
+    uv: Math.max(0, h.uv - s.uv_free) * uvWeight,
+  });
 
   const slots = input.forecast.hourly.map((h) => {
     const start = toMin(h.time.slice(11, 16));
@@ -78,14 +145,9 @@ function planOuting(input, R, age) {
     if (h.feels_c <= x.feels_c_at_most) reasons.push('froid_extreme');
     if (h.precip_prob >= x.precip_prob_at_least || h.precip_mm >= x.precip_mm_at_least) reasons.push('pluie');
     if (h.gust_kmh >= x.gust_kmh_at_least) reasons.push('vent');
-    const score =
-      s.base -
-      Math.max(0, h.precip_prob - s.rain_prob_free) * s.rain_prob_weight -
-      Math.max(0, s.comfort_low_c - h.feels_c) * s.comfort_low_weight -
-      Math.max(0, h.feels_c - s.comfort_high_c) * s.comfort_high_weight -
-      Math.max(0, h.gust_kmh - s.gust_free_kmh) * s.gust_weight -
-      Math.max(0, h.uv - s.uv_free) * uvWeight;
-    return { ...h, start, end, reasons, score: round1(score) };
+    const penalty = penalties(h);
+    const score = s.base - penalty.pluie - penalty.froid - penalty.chaleur - penalty.vent - penalty.uv;
+    return { ...h, start, end, reasons, penalty, score: round1(score) };
   });
 
   const byStart = new Map(slots.map((sl) => [sl.start, sl]));
@@ -134,8 +196,9 @@ function planOuting(input, R, age) {
     uv_max: Math.max(...r.run.map((sl) => sl.uv)),
     gust_max: Math.max(...r.run.map((sl) => sl.gust_kmh)),
   });
-  const window = best && describe(best);
-  const windows = picked.map((r) => ({ ...describe(r), best: r === best })).sort((a, b) => toMin(a.start) - toMin(b.start));
+  const why = best && bestWhy(best.run, daySlots.filter((sl) => !best.run.includes(sl)), R);
+  const window = best && { ...describe(best), why };
+  const windows = picked.map((r) => ({ ...describe(r), best: r === best, ...(r === best ? { why } : {}) })).sort((a, b) => toMin(a.start) - toMin(b.start));
   const inPlage = slots.filter((sl) => !sl.reasons.includes('hors_plage'));
   const refSlots = best ? best.run : inPlage.slice(0, 1);
   return { window, windows, reason, blocking, heat, ozone, slots, inPlage, daySlots, refSlots, plage };
@@ -660,6 +723,13 @@ export function journeeFeels(journee, now, M) {
   return render(M, range.stable ? 'journee.stable' : 'journee.range', 'short', range);
 }
 
+// Pourquoi le créneau idéal, en une ligne : « Au sec avant la pluie de 12 h et plus doux qu'à 9 h · 9° ressentis ».
+export function windowWhy(window, M) {
+  if (!window?.why) return null;
+  const parts = window.why.map((w) => render(M, w.id, 'short', { hour: w.hour ? hourFr(w.hour) : '' }));
+  return render(M, 'outing.why.text', 'short', { why: capitalize(parts.join(' et ')), feels: Math.round(window.feels_c) });
+}
+
 // Ce qui suit dans la journée : le prochain changement, le sac, puis le changement d'après.
 export function journeePlanLine(journee, now, M) {
   const labels = M.labels;
@@ -919,6 +989,7 @@ export function evaluate(input, bundle) {
     outing: {
       window: plan.window,
       windows: plan.windows,
+      why: windowWhy(plan.window, bundle.messages),
       reason: plan.reason,
       slots: plan.inPlage.map((sl) => ({
         time: fmtMin(sl.start),

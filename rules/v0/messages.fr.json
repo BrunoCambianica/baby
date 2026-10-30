@@ -404,6 +404,82 @@
       "text": "Pas de créneau de jour dans votre plage horaire.",
       "short": "Pas de créneau de jour"
     },
+    "outing.why.text": {
+      "kind": "meteo",
+      "short": "{why} · {feels}° ressentis"
+    },
+    "outing.why.pluie.avant": {
+      "kind": "meteo",
+      "short": "au sec avant la pluie de {hour}"
+    },
+    "outing.why.pluie.apres": {
+      "kind": "meteo",
+      "short": "au sec après la pluie"
+    },
+    "outing.why.pluie.entre": {
+      "kind": "meteo",
+      "short": "au sec entre deux averses"
+    },
+    "outing.why.pluie.moins": {
+      "kind": "meteo",
+      "short": "moins de risque d'averse qu'à {hour}"
+    },
+    "outing.why.froid.doux": {
+      "kind": "meteo",
+      "short": "doux"
+    },
+    "outing.why.froid.max": {
+      "kind": "meteo",
+      "short": "le plus doux"
+    },
+    "outing.why.froid.moins": {
+      "kind": "meteo",
+      "short": "plus doux qu'à {hour}"
+    },
+    "outing.why.chaleur.avant": {
+      "kind": "meteo",
+      "short": "avant les fortes chaleurs"
+    },
+    "outing.why.chaleur.apres": {
+      "kind": "meteo",
+      "short": "après les fortes chaleurs"
+    },
+    "outing.why.chaleur.max": {
+      "kind": "meteo",
+      "short": "le plus frais"
+    },
+    "outing.why.chaleur.moins": {
+      "kind": "meteo",
+      "short": "plus frais qu'à {hour}"
+    },
+    "outing.why.vent.avant": {
+      "kind": "meteo",
+      "short": "avant les rafales de {hour}"
+    },
+    "outing.why.vent.apres": {
+      "kind": "meteo",
+      "short": "après les rafales"
+    },
+    "outing.why.vent.moins": {
+      "kind": "meteo",
+      "short": "moins de vent qu'à {hour}"
+    },
+    "outing.why.uv.moins": {
+      "kind": "meteo",
+      "short": "soleil moins fort qu'à {hour}"
+    },
+    "outing.why.ozone": {
+      "kind": "meteo",
+      "short": "hors du pic d'ozone"
+    },
+    "outing.why.egal": {
+      "kind": "meteo",
+      "short": "même temps toute la journée"
+    },
+    "outing.why.seul": {
+      "kind": "meteo",
+      "short": "seul créneau possible"
+    },
     "journee.range": {
       "kind": "meteo",
       "text": "{when}, de {first} à {extreme} °C ressentis.",

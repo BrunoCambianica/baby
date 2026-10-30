@@ -64,6 +64,10 @@ Suggestions pratiques, sans portée sanitaire, sur `horizon_weeks` semaines : la
 - Gigoteuses (`sleepbags`) : notées par taille et par TOG (`gigoteuse: ['6-18m|2,5']`). Chaque saison a sa catégorie et ses TOG (`togs`), pris dans le tableau de nuit des fabricants (contrôlé par lint) : hiver (`week_tmean_below`) 2 à 3,5 TOG, mi-saison 1 à 2 TOG, été (`week_tmax_at_least`) 0,2 à 1 TOG ; une gigoteuse compte pour chaque saison où son TOG sert. Celles notées avant la 0.16 sans TOG (`legacy`) comptent comme 2,5 TOG (chaude) ou 1 TOG (légère).
 - `suggest_once_noted` (bodies, hauts, pantalons, pyjamas, chaussettes) : proposé seulement quand le parent en a noté dans sa garde-robe ; sans rien noté, on ne sait pas ce qu'il a.
 
+## Pourquoi le créneau idéal (`outing.why`)
+
+Le créneau idéal est celui qui perd le moins de points (`outing.scoring`) à cause de la pluie, du froid, de la chaleur, du vent et du soleil. Le moteur dit ce qui le place devant les autres heures de jour qui restent (`outing.window.why`, et en une ligne `outing.why`) : au plus `max_reasons` causes, les plus nettes d'abord. Une heure écartée (pluie, rafales, fortes chaleurs…) compte pour sa seule cause ; sinon, seuls les écarts d'au moins `min_gain` points comptent, et le soleil seulement à partir de l'indice UV des repères (`relay_triggers.uv_at_least`). Exemples : « Au sec avant la pluie de 12 h · 9° ressentis », « Le plus doux et soleil moins fort qu'à 13 h · 14° ressentis ». Sans écart : « Même temps toute la journée » (le plus tôt l'emporte).
+
 ## La journée en couches (`journee`)
 
 Habillé une fois le matin pour la journée dehors (la plage horaire des réglages) :

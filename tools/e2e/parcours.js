@@ -394,15 +394,22 @@ await test('Assistant du widget iPhone : un widget par enfant, choisi par son pr
   assert((await page.textContent('.w-head')).startsWith('Léo · Lyon'), await page.textContent('.w-head'));
 });
 
-await test('Journée : tenue du matin, changements, sac, geste de la nuque', async (use) => {
+await test('Journée : tenue du matin, changements, sac, geste de la nuque, pourquoi du créneau, ressenti', async (use) => {
   const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
   await page.waitForSelector('.day');
   assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '5°→19°', await page.textContent('.hero-big'));
-  const times = await page.locator('.change .change-time').allTextContents();
-  assert(times.length === 2 && times[0].startsWith('Vers 11 h') && times[1].startsWith('Vers 16 h'), times.join(' / '));
-  const first = await page.locator('.change').first().textContent();
+  // Le ressenti, de la première heure à la dernière ; chaque étape avec son temps.
+  assert((await page.textContent('.hero-label')) === 'Ressenti dehors de 8 h à 18 h', await page.textContent('.hero-label'));
+  const steps = await page.locator('.timeline .tl-step .tl-head strong').allTextContents();
+  assert(steps.length === 3 && steps[0] === 'Dès 8 h' && /^Vers 11 h · plus doux/.test(steps[1]) && /^Vers 16 h · plus doux/.test(steps[2]), steps.join(' / '));
+  const weather = await page.locator('.timeline .tl-weather').allTextContents();
+  assert(weather.length === 3 && weather.every((w) => / ressentis · /.test(w)), weather.join(' / '));
+  const first = await page.locator('.tl-step:not(.first)').first().textContent();
   assert(/Combi pilote/.test(first) && /Gilet/.test(first), first);
+  // Pourquoi le créneau idéal : ce qui le place devant les autres heures, avec son ressenti.
+  const why = await page.textContent('.when-why');
+  assert(/^Pourquoi \d+–\d+ h \? .+ · -?\d+° ressentis$/.test(why.trim()), why);
   assert((await page.textContent('.bag')).includes('Gilet'), await page.textContent('.bag'));
   assert(await page.isVisible('text=Touchez sa nuque, pas ses mains'), 'geste de la nuque absent');
   assert(!(await page.isVisible('text=Touchez une heure')), 'ancienne invite « touchez une heure »');
@@ -410,11 +417,11 @@ await test('Journée : tenue du matin, changements, sac, geste de la nuque', asy
   const inside = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name').allTextContents();
   assert(inside.join() === 'Body ML,Haut ML,Pantalon,Chaussettes', `dedans : ${inside.join()}`);
   assert((await page.textContent('.day .card-sub')) === 'On ajoute par-dessus pour sortir (+)', await page.textContent('.day .card-sub'));
-  const added = await page.locator('.day-step .dress-name').allTextContents();
-  assert(added.length && !added.some((t) => /Body|Pantalon/.test(t)) && await page.locator('.day-step .plus').count() === added.length, `dehors : ${added.join()}`);
+  const added = await page.locator('.tl-step.first .dress-name').allTextContents();
+  assert(added.length && !added.some((t) => /Body|Pantalon/.test(t)) && await page.locator('.tl-step.first .plus').count() === added.length, `dehors : ${added.join()}`);
   // Les deux tenues tiennent sur le premier écran, au-dessus de la barre d'onglets.
   const tabbar = (await page.locator('.tabbar').boundingBox()).y;
-  assert((await page.locator('.day-step .dress-ico').first().boundingBox()).y + 58 <= tabbar, 'tenue de dehors sous la barre d\'onglets');
+  assert((await page.locator('.tl-step.first .dress-ico').first().boundingBox()).y + 58 <= tabbar, 'tenue de dehors sous la barre d\'onglets');
   await shot(page, 'l2-journee-matin');
   // Heure par heure : les heures défilent dans la carte, la page ne s'élargit pas.
   await page.click('summary:has-text("Heure par heure")');
@@ -423,13 +430,17 @@ await test('Journée : tenue du matin, changements, sac, geste de la nuque', asy
   assert(width[0] === width[1] && hours[0] > hours[1], `page ${width.join(' / ')}, heures ${hours.join(' / ')}`);
 });
 
-await test('Journée à 14 h : l\'étape en cours est marquée, les précédentes estompées', async (use) => {
+await test('Journée à 14 h : maintenant et la suite, sans le matin ni le changement passé', async (use) => {
   const page = use(await phone({ at: '2026-10-27T14:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
   await page.waitForSelector('.day');
-  assert((await page.locator('.change').first().textContent()).includes('maintenant'), 'étape de 11 h non marquée');
-  assert(await page.locator('.day-step.past').count() === 1, 'matin non estompé');
-  assert((await page.textContent('.hero-label')).includes('Dehors cet après-midi'), await page.textContent('.hero-label'));
+  const steps = await page.locator('.timeline .tl-step .tl-head strong').allTextContents();
+  assert(steps.length === 2 && steps[0] === 'Maintenant' && /^Vers 16 h/.test(steps[1]), steps.join(' / '));
+  // Ce qu'il porte depuis 11 h, dit par rapport à sa tenue du dedans ; ni la combinaison du matin ni l'heure de 11 h.
+  const now = await page.textContent('.tl-step.first');
+  assert(/Gilet/.test(now) && !/Combi pilote/.test(now) && / ressentis · /.test(now), now);
+  assert(!(await page.textContent('.day')).includes('Vers 11 h') && !(await page.textContent('.day')).includes('Dès 8 h'), 'étape passée affichée');
+  assert((await page.textContent('.hero-label')) === "Ressenti dehors d'ici 18 h", await page.textContent('.hero-label'));
   await shot(page, 'l2-journee-14h');
 });
 
@@ -485,7 +496,7 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
   await page.goto(APP);
   await page.waitForSelector('.day');
   assert((await page.textContent('.hero .tonight')).includes('Pas de sortie conseillée ce soir'), 'ce soir non dit');
-  assert((await page.textContent('.hero-label')).includes('Demain'), await page.textContent('.hero-label'));
+  assert((await page.textContent('.hero-label')).startsWith('Ressenti demain'), await page.textContent('.hero-label'));
   // Demain : jusqu'à trois créneaux, dans l'ordre de la journée, un seul marqué idéal.
   const windows = await page.locator('.day .slots .w-time').allTextContents();
   const starts = windows.map((t) => parseInt(t, 10));
@@ -494,7 +505,7 @@ await test('La veille au soir : la journée de demain à préparer, et la nuit q
   assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '5°→19°', await page.textContent('.hero-big'));
   assert(!(await page.isVisible('.days')), 'choix du jour affiché le soir');
   assert((await page.textContent('.hero-label')).includes('à préparer ce soir') && await page.isVisible('#t-dedans') && await page.isVisible('#t-dehors'), await page.textContent('.hero-label'));
-  assert((await page.textContent('.day .change-time')).startsWith('Demain matin'), await page.textContent('.day .change-time'));
+  assert((await page.textContent('.day .tl-step.first .tl-head')).startsWith('Demain, dès 8 h'), await page.textContent('.day .tl-step.first .tl-head'));
   assert(await page.isVisible('text=Ce soir') && await page.isVisible('text=Gigoteuse 2 TOG'), 'carte de la nuit absente');
   assert((await page.getAttribute('[data-value="sortir"]', 'aria-selected')) === 'true', 'l\'app doit rester sur Sorties');
   await shot(page, 'l3-veille-au-soir');
@@ -686,7 +697,7 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   // Avec pyjama dedans, dehors aussi : la carte Dehors ajoute seulement par-dessus.
   assert((await page.textContent('.day .card-sub')) === 'On ajoute par-dessus pour sortir (+)', await page.textContent('.day .card-sub'));
   await page.selectOption('select[data-action="day-style"]', 'sans_pyjama');
-  const morning = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name, .day-step .dress-name').allTextContents();
+  const morning = await page.locator('[aria-labelledby="t-dedans"] > .dress .dress-name, .tl-step.first .dress-name').allTextContents();
   assert(!morning.some((t) => /Pyjama/.test(t)) && morning.some((t) => /Pantalon/.test(t)), `journée : ${morning.join(', ')}`);
   // Créneaux de sortie : jusqu'à trois, dans l'ordre de la journée, le meilleur marqué.
   assert((await page.locator('.day .slots li.best').count()) === 1, 'créneau idéal non marqué');
@@ -774,7 +785,7 @@ await test('Achats : quantités conseillées, garde-robe comptée par taille, ry
   await page.click('.tabbar [data-value="sortir"]');
   const outside = await page.textContent('.day');
   assert(outside.includes('Chancelière') && /Combi[^]*s'il sort de la poussette/.test(outside), outside);
-  assert(!(await page.locator('.day-step .dress-name', { hasText: 'Combi' }).count()), 'combinaison gardée avec la chancelière');
+  assert(!(await page.locator('.tl-step.first .dress-name', { hasText: 'Combi' }).count()), 'combinaison gardée avec la chancelière');
   await shot(page, 'l7-chanceliere');
 });
 

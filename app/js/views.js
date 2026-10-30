@@ -1,5 +1,5 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { addDays, ageMonths, baseTransport, homeStatus, hourFr, journeeRange, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
+import { addDays, ageMonths, baseTransport, homeStatus, hourFr, journeeAt, journeeRange, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
 import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
@@ -7,7 +7,7 @@ import { ageLabel } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.17.1';
+export const VERSION = '0.18.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -197,7 +197,7 @@ function heroEvening(state, ctx) {
   // D'abord ce soir (pas de sortie), puis demain : on lit la journée qui vient comme une tenue à préparer, pas à mettre.
   return `<header class="hero hero--nuit">${heroArt('moonStars')}${heroTop(state, ctx.date)}
     <p class="status-pill glass tonight">${icon('moon', { size: 18 })}Pas de sortie conseillée ce soir</p>
-    <p class="hero-label">${who}Demain dehors · à préparer ce soir</p>
+    <p class="hero-label">${who}Ressenti demain · à préparer ce soir</p>
     <p class="hero-big">${range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`}</p>
     <p class="hero-sub"><span>${esc([slots.length ? conditions(slots) : '', outing].filter(Boolean).join(' · '))}</span></p>
   </header>`;
@@ -214,15 +214,17 @@ function heroSortir(state, ctx) {
     .map(([v, l]) => `<button role="tab" aria-selected="${state.day === v}" data-action="day" data-value="${v}">${l}</button>`).join('')}</div>`;
   let main;
   if (j && result.outing.reason !== 'vigilance') {
-    // La journée : le ressenti du matin (ou de l'heure qu'il est) jusqu'au plus chaud ou au plus froid ; la sortie idéale ensuite.
+    // La journée : le ressenti de la première heure (ou de l'heure qu'il est) jusqu'au plus chaud ou au plus froid,
+    // jamais celui des heures passées ; la sortie idéale ensuite.
     const range = journeeRange(j, tomorrow ? j.from : ctx.input.now);
+    const started = !tomorrow && toMin(ctx.input.now) >= toMin(j.from);
     const who = state.profile.count > 1 ? `${esc(childName(state.profile, state.profile.index))} · ` : '';
     const slots = result.outing.slots.filter((s) => s.time >= j.from && s.time < j.to);
     const first = (w && slots.find((s) => s.time === w.start)) ?? slots[0];
     const night = first ? first.time >= ctx.input.forecast.daylight.sunset : false;
     const outing = w ? '' : render(M, `outing.none.${result.outing.reason}`, 'short');
     // Le ciel dit le temps qu'il fait dehors ; les tenues (dedans, dehors) et les créneaux sont dans les cartes.
-    main = `<p class="hero-label">${who}Dehors ${tomorrow ? 'demain' : range.when.toLowerCase()}</p>
+    main = `<p class="hero-label">${who}Ressenti dehors ${tomorrow ? 'demain, ' : ''}${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}</p>
       <p class="hero-big">${range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`}</p>
       <p class="hero-sub">${first ? icon(weatherIcon(first.weather_code, { night, precipProb: first.precip_prob }), { size: 22 }) : ''}<span>${esc([slots.length ? conditions(slots) : '', outing].filter(Boolean).join(' · '))}</span></p>`;
   } else if (w) {
@@ -453,40 +455,78 @@ function insideCard(state, ctx, { today = true } = {}) {
 const span = (w) => (w.start.endsWith(':00') && w.end.endsWith(':00')
   ? `${Number(w.start.slice(0, 2))}–${hourFr(w.end)}`
   : `${hourFr(w.start)} – ${hourFr(w.end)}`);
+// « 14 h » ne se coupe pas en fin de ligne.
+const nbsp = (s) => s.replace(/(\d) h\b/g, '$1\u00a0h');
+
+// Sous les créneaux, ce qui fait le meilleur : « Pourquoi 10–11 h ? Au sec avant la pluie de 12 h · 9° ressentis ».
 function whenRow(state, result) {
   const windows = result.outing.windows ?? [];
+  const best = windows.find((w) => w.best);
   const body = windows.length
     ? `<ol class="slots" aria-label="Créneaux de sortie">${windows.map((w) => `<li${w.best ? ' class="best"' : ''}>
         ${w.best ? '<span class="w-flag">idéal</span>' : ''}<span class="w-time">${span(w)}</span></li>`).join('')}</ol>`
     : `<p class="tag amber">${esc(render(state.bundle.messages, `outing.none.${result.outing.reason}`, 'short'))}</p>`;
-  return `<div class="when"><span class="when-ico" role="img" aria-label="Quand sortir">${icon('clock', { size: 18 })}</span>${body}</div>`;
+  return `<div class="when"><span class="when-ico" role="img" aria-label="Quand sortir">${icon('clock', { size: 18 })}</span>${body}</div>
+    ${best && result.outing.why ? `<p class="when-why"><strong>Pourquoi ${span(best)} ?</strong> ${esc(nbsp(result.outing.why))}</p>` : ''}`;
 }
 
-// Dehors : ce qu'on change sur la tenue du dedans pour sortir, « + » ce qu'on ajoute par-dessus, « − » ce qu'on
-// enlève (un gilet fin qui laisse la place à un gilet chaud). Si le dessous change aussi (body, pyjama ou pantalon,
-// chaussettes), la tenue complète. Puis au plus deux changements, le sac, et la fiche du jour.
-// Au fil de la journée, l'étape en cours est marquée « maintenant ».
+// Le temps d'une étape de la journée, de `from` à `to` (minutes) : « 9 à 12° ressentis · pluie vers 16 h »,
+// « pluie jusqu'à 16 h, puis vers 17 h » quand elle reprend.
+function stepWeather(state, j, from, to) {
+  const hours = j.hours.filter((h) => toMin(h.time) + 60 > from && toMin(h.time) < to);
+  if (!hours.length) return '';
+  const feels = hours.map((h) => Math.round(h.feels_c));
+  const [lo, hi] = [Math.min(...feels), Math.max(...feels)];
+  const wet = (h) => h.precip_prob >= state.bundle.rules.journee.bag.rain_prob_at_least;
+  const k = hours.findIndex(wet);
+  const dry = hours.findIndex((h) => !wet(h));
+  const again = dry > 0 ? hours.findIndex((h, i) => i > dry && wet(h)) : -1;
+  const rain = k < 0 ? 'sec' : k > 0 ? `pluie vers ${hourFr(hours[k].time)}` : dry < 0 ? 'pluie'
+    : `pluie jusqu'à ${hourFr(hours[dry].time)}${again > 0 ? `, puis vers ${hourFr(hours[again].time)}` : ''}`;
+  return `${lo === hi ? lo : `${lo} à ${hi}`}° ressentis · ${rain}`;
+}
+
+// Dehors : la suite de la journée, de l'étape en cours à la dernière. Aujourd'hui, ni le matin passé ni les
+// changements déjà faits : une fois la journée commencée, la première étape est « Maintenant », la tenue qu'il porte.
+// Chaque étape dit son temps (ressenti, pluie) ; un changement dit s'il fait plus doux ou plus frais, avec « + » ce
+// qu'on ajoute et « − » ce qu'on enlève. La tenue se lit à partir de celle du dedans (« + » par-dessus) ; si le
+// dessous change aussi (body, pyjama ou pantalon, chaussettes), la tenue complète. Puis le sac, et la fiche du jour.
 function outsideCard(state, ctx) {
   const M = state.bundle.messages;
-  const J = state.bundle.rules.journee;
+  const R = state.bundle.rules;
+  const J = R.journee;
   const labels = M.labels;
   const j = ctx.result.journee;
   const inside = ctx.result.indoor.wear;
-  const under = (items) => items.filter((item) => J.fixed_slots.some((sl) => J.slots[sl].includes(item))).sort().join();
-  const over = under(inside) === under(j.morning);
-  const extra = j.morning.filter((item) => !inside.includes(item));
-  const less = inside.filter((item) => !j.morning.includes(item));
   const now = ctx.tomorrow ? null : ctx.input.now;
-  const passed = now ? j.changes.filter((ch) => toMin(ch.time) <= toMin(now)).length : -1;
-  const started = now && toMin(now) >= toMin(j.from);
-  const mark = (k) => (k === passed && started ? ' <span class="tag blue">maintenant</span>' : '');
-  const dim = (k) => (now && k < passed ? ' past' : '');
+  const started = Boolean(now) && toMin(now) >= toMin(j.from);
+  const wearing = started ? journeeAt(j, now).items : j.morning;
+  const under = (items) => items.filter((item) => J.fixed_slots.some((sl) => J.slots[sl].includes(item))).sort().join();
+  const over = under(inside) === under(wearing);
+  const extra = wearing.filter((item) => !inside.includes(item));
+  const less = inside.filter((item) => !wearing.includes(item));
   const text = !drawingsOn(state);
   const piece = { where: 'dehors', date: ctx.date, swapped: j.swapped };
-  const changes = j.changes.map((ch, k) => (text
-    ? `<p class="change${dim(k + 1)}"><strong>Vers ${hourFr(ch.time)}</strong>${mark(k + 1)} : ${[ch.remove.length ? `enlever ${esc(ch.remove.map((i) => labels.items[i]).join(', '))}` : '', ch.add.length ? `mettre ${esc(ch.add.map((i) => labels.items[i]).join(', '))}` : ''].filter(Boolean).join(' ; ')}</p>`
-    : `<div class="change${dim(k + 1)}"><p class="change-time">Vers ${hourFr(ch.time)}${mark(k + 1)}<span class="hint">${[ch.remove.length ? '− à enlever' : '', ch.add.length ? '+ à mettre' : ''].filter(Boolean).join(' · ')}</span></p>
-        <ul class="dress small">${ch.remove.map((i) => changeItem(state, i, '−', 28, piece)).join('')}${ch.add.map((i) => changeItem(state, i, '+', 28, piece)).join('')}</ul></div>`)).join('');
+  const ahead = j.changes.filter((ch) => !started || toMin(ch.time) > toMin(now));
+  const end = toMin(j.to);
+  const until = (k) => (ahead[k] ? toMin(ahead[k].time) : end);
+  const bandIdx = (id) => R.outfit.bands.findIndex((b) => b.id === id);
+  // Chaque changement dit pourquoi : plus doux ou plus frais que l'étape d'avant (les tranches vont du plus chaud au plus froid).
+  const trend = (ch) => {
+    const k = j.changes.indexOf(ch);
+    return bandIdx(ch.band) < bandIdx(k > 0 ? j.changes[k - 1].band : j.band) ? 'plus doux' : 'plus frais';
+  };
+  // L'heure et son temps sur une ligne, pour que la tenue tienne au premier écran ; « − à enlever · + à mettre » dessous.
+  const head = (title, weather, legend = '') => `<p class="tl-head"><strong>${title}</strong>${weather ? `<span class="tl-weather">${esc(nbsp(weather))}</span>` : ''}</p>
+      ${legend ? `<p class="hint tl-legend">${legend}</p>` : ''}`;
+  const changes = ahead.map((ch, k) => {
+    const title = `Vers ${hourFr(ch.time)} · ${trend(ch)}`;
+    const weather = stepWeather(state, j, toMin(ch.time), until(k + 1));
+    return text
+      ? `<li class="tl-step">${head(title, weather)}<p class="layer-items">${[ch.remove.length ? `enlever ${esc(ch.remove.map((i) => labels.items[i]).join(', '))}` : '', ch.add.length ? `mettre ${esc(ch.add.map((i) => labels.items[i]).join(', '))}` : ''].filter(Boolean).join(' ; ')}</p></li>`
+      : `<li class="tl-step">${head(title, weather, [ch.remove.length ? '− à enlever' : '', ch.add.length ? '+ à mettre' : ''].filter(Boolean).join(' · '))}
+        <ul class="dress small">${ch.remove.map((i) => changeItem(state, i, '−', 28, piece)).join('')}${ch.add.map((i) => changeItem(state, i, '+', 28, piece)).join('')}</ul></li>`;
+  }).join('');
   const rainHot = j.bag.some((b) => b.reason === 'pluie' && b.item === 'habillage_pluie'
     && (j.hours.find((h) => h.time === b.time)?.feels_c ?? 0) >= state.bundle.rules.outfit.overlays.rain_cover_warm_feels_c_at_least);
   const bag = j.bag.length
@@ -497,11 +537,16 @@ function outsideCard(state, ctx) {
     : '';
   const tips = j.notes.map((n) => `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${esc(render(M, n, 'text', ctx.result.params))}</span></li>`).join('');
   const names = (items) => esc(items.map((i) => labels.items[i]).join(', '));
-  let morning;
-  if (!over) morning = dressList(state, { items: j.morning }, piece);
-  else if (!extra.length && !less.length) morning = '<p class="hint">Rien de plus : la même tenue que dedans.</p>';
-  else if (text) morning = `<p class="layer-items">${[less.length ? `− ${names(less)}` : '', extra.length ? `+ ${names(extra)}` : ''].filter(Boolean).join(' ; ')}</p>`;
-  else morning = `<ul class="dress">${less.map((i) => changeItem(state, i, '−', 34, piece)).join('')}${extra.map((i) => changeItem(state, i, '+', 34, piece)).join('')}</ul>`;
+  let first;
+  if (!over) first = dressList(state, { items: wearing }, piece);
+  else if (!extra.length && !less.length) first = '<p class="hint">Rien de plus : la même tenue que dedans.</p>';
+  else if (text) first = `<p class="layer-items">${[less.length ? `− ${names(less)}` : '', extra.length ? `+ ${names(extra)}` : ''].filter(Boolean).join(' ; ')}</p>`;
+  else first = `<ul class="dress">${less.map((i) => changeItem(state, i, '−', 34, piece)).join('')}${extra.map((i) => changeItem(state, i, '+', 34, piece)).join('')}</ul>`;
+  // Le temps de la première étape, s'il en vient d'autres (sinon, c'est celui du ciel) ; l'heure en cours compte :
+  // à 12 h 30, le temps de 12 h à la prochaine étape.
+  const from = started ? Math.floor(toMin(now) / 60) * 60 : toMin(j.from);
+  const weather = ahead.length ? stepWeather(state, j, from, until(0)) : '';
+  const title = started ? 'Maintenant' : `${ctx.tomorrow ? 'Demain, dès' : 'Dès'} ${hourFr(j.from)}`;
   return `<section class="card day" aria-labelledby="t-dehors">
     <div class="card-head">
       <h2 class="card-title main" id="t-dehors">${icon('sun', { size: 20 })}Dehors</h2>
@@ -509,11 +554,11 @@ function outsideCard(state, ctx) {
     </div>
     <p class="card-sub">${!over ? 'Sa tenue complète pour sortir' : less.length ? 'Pour sortir : − à enlever, + à ajouter' : 'On ajoute par-dessus pour sortir (+)'}</p>
     ${whenRow(state, ctx.result)}
-    <div class="day-step${now && passed > 0 ? ' past' : ''}">
-      <p class="change-time">${ctx.tomorrow ? 'Demain matin' : 'Le matin'}, dès ${hourFr(j.from)}${mark(0)}</p>
-      ${morning}
-    </div>
-    ${changes ? `<div class="changes">${changes}</div>` : `<p class="hint">Pas de changement à prévoir ${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}.</p>`}
+    <ol class="timeline" aria-label="${started ? "D'ici" : `De ${hourFr(j.from)} à`} ${hourFr(j.to)}">
+      <li class="tl-step first">${head(title, weather)}${first}</li>
+      ${changes}
+    </ol>
+    ${changes ? '' : `<p class="hint">Pas de changement à prévoir ${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}.</p>`}
     ${swapNote(state, j.swapped)}
     ${bag}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
@@ -548,7 +593,7 @@ function hoursCard(state, ctx) {
       <span class="h-temp">${Math.round(s.feels_c)}°</span></div>`;
   }).join('');
   return `<details class="card fold" data-details="heures"${state.open.has('heures') ? ' open' : ''}>
-    <summary>${icon('clock', { size: 18 })}Heure par heure${chev()}</summary>
+    <summary>${icon('clock', { size: 18 })}Heure par heure<span class="hint">ressenti</span>${chev()}</summary>
     <div class="hours" role="list" aria-label="Heures de la journée">${cells}</div>
   </details>`;
 }
