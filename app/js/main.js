@@ -1,5 +1,5 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
-import { addDays, ageMonths, clamp, displayMoment, evaluate, homeMoment, hourFr, render, toMin } from '../../engine/engine.js';
+import { addDays, ageMonths, baseTransport, clamp, displayMoment, evaluate, homeMoment, hourFr, render, toMin } from '../../engine/engine.js';
 import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
@@ -7,7 +7,7 @@ import {
   api, apiBase, familyKeys, fromB64url, mergeHousehold, newSecret, seal, sharedPart, shortFicheLink, unseal,
 } from './famille.js';
 import { dayLong, dayShort } from './format.js';
-import { ageLabel, fromConfig, fromShared, isNewer, liveSwaps, migrate, newChild, profileOf } from './household.js';
+import { ageLabel, feedbackStats, fromConfig, fromShared, isNewer, liveSwaps, migrate, newChild, profileOf, withFeedback } from './household.js';
 import { closeSheet, openSheet } from './listes.js';
 import { store } from './storage.js';
 import * as V from './views.js';
@@ -606,6 +606,20 @@ function shareText(ctx) {
   return lines.join('\n');
 }
 
+// « C'était juste ? » : le compte des réponses, puis les 14 dernières de chaque enfant (jour, mode, ressenti, tranche).
+function feedbackReport(children) {
+  const all = children.flatMap((c) => Object.values(c.feedback ?? {}));
+  const stats = feedbackStats(Object.fromEntries(all.map((e, k) => [k, e])));
+  if (!stats.total) return ['Tenues jugées : pas encore de réponse à « C\'était juste ? »'];
+  const word = { juste: 'juste', chaud: 'trop chaud', froid: 'trop froid' };
+  const mode = (t) => (V.TRANSPORTS.find(([v]) => v === t)?.[1] ?? t ?? '').toLowerCase();
+  return [
+    `Tenues jugées : ${stats.total} réponse(s), ${stats.juste} juste(s) (${Math.round((100 * stats.juste) / stats.total)} %), ${stats.chaud} trop chaud, ${stats.froid} trop froid`,
+    ...children.filter((c) => Object.keys(c.feedback ?? {}).length).map((c) => `  Enfant ${children.indexOf(c) + 1} : ${Object.entries(c.feedback).slice(-14)
+      .map(([day, e]) => `${dayShort(day)} ${mode(e.t)} ${e.f?.[0]}°→${e.f?.[1]}° (${e.b}) ${word[e.v]}`).join(' ; ')}`),
+  ];
+}
+
 // Sans prénom : seulement l'âge, le mode et la tendance de chaque enfant.
 function reportText() {
   const h = state.household;
@@ -622,6 +636,7 @@ function reportText() {
     `Enfants : ${kids.join(' ; ')}`,
     `Sorties : de ${hourFr(h.outing_window.from)} à ${hourFr(h.outing_window.to)}, ${h.outing_duration_h} h`,
     `Garde-robe : ${owned} article(s) ; ${store.hidden().length} suggestion(s) masquée(s)`,
+    ...feedbackReport(h.children),
     `Widget : ${(host === 'android' ? state.widgets > 0 : state.widgetReady) ? 'posé' : 'pas encore'}`,
     host === 'android' ? `App Android : ${ask(() => android.version(), '?')}` : `Ouverture : ${host === 'scriptable' ? 'depuis le widget iPhone' : standalone ? 'app installée' : 'navigateur'}`,
   ].join('\n');
@@ -961,6 +976,36 @@ const actions = {
     updateChild({ inventory });
     if (Number(el.dataset.value) > 0 && el.classList.contains('btn')) toast('Ajouté à votre garde-robe.');
     paint();
+  },
+  // « C'était juste ? » : la réponse du jour, avec ce qu'il faut pour la relire (mode, tranche, ressenti, tendance) ;
+  // toucher la réponse déjà donnée la retire.
+  feedback(el) {
+    const ctx = compute('aujourdhui');
+    const j = ctx?.result.journee;
+    if (!j) return;
+    const v = el.dataset.value;
+    const p = state.profile;
+    const entry = p.feedback?.[state.today]?.v === v ? null : {
+      v, t: baseTransport(ctx.result.transport, state.bundle.rules), b: j.band, f: [j.feels.first, j.feels.extreme], o: p.outfit_offset ?? 0,
+    };
+    updateChild({ feedback: withFeedback(p.feedback, state.today, entry) });
+    paint();
+  },
+  // La tendance proposée après deux réponses dans le même sens : un cran plus léger ou plus chaud, comme dans les réglages.
+  'feedback-tendance'(el) {
+    const value = Number(el.dataset.value);
+    const lighter = value < (state.profile.outfit_offset ?? 0);
+    updateChild({ outfit_offset: value });
+    toast(`Tendance « ${{ '-1': 'a chaud', 0: 'normal', 1: 'a froid' }[value]} » : ses tenues sont un cran plus ${lighter ? 'légères' : 'chaudes'}. Réglages, Tendance, pour revenir.`);
+    paint();
+  },
+  // Depuis une tenue : la garde-robe, ouverte sur l'onglet Achats.
+  'open-wardrobe'() {
+    closeSheet();
+    state.tab = 'prevoir';
+    state.open.add('garde-robe');
+    paint();
+    document.querySelector('.wardrobe')?.scrollIntoView({ block: 'start' });
   },
   // Rythme de lessive, commun au foyer : il fixe les quantités conseillées des vêtements de tous les jours.
   wash(el) {

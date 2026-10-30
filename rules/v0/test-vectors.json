@@ -281,6 +281,60 @@
       "expect": { "outing.window": null, "outing.reason": "journee_terminee" }
     },
     {
+      "id": "garde-robe-gilet-chaud-plutot-que-pull",
+      "description": "Pas de pull dans sa taille, mais un gilet chaud : la tenue propose le gilet chaud qu'il a",
+      "input": { "profile": { "inventory": { "gilets_chauds": ["6m"] } } },
+      "expect": { "journee.morning.include": ["gilet_chaud"], "journee.morning.exclude": ["pull"], "journee.wardrobe": { "gilet_chaud": "pull" } }
+    },
+    {
+      "id": "garde-robe-rien-note",
+      "description": "Rien de noté dans les gilets et pulls : la tenue conseillée, telle quelle",
+      "input": {},
+      "expect": { "journee.morning.include": ["pull"], "journee.wardrobe": {} }
+    },
+    {
+      "id": "garde-robe-piece-presente",
+      "description": "Il a un pull dans sa taille : le pull reste",
+      "input": { "profile": { "inventory": { "pulls": ["6m"], "gilets_chauds": ["6m"] } } },
+      "expect": { "journee.morning.include": ["pull"], "journee.morning.exclude": ["gilet_chaud"] }
+    },
+    {
+      "id": "garde-robe-taille-depassee",
+      "description": "Un gilet chaud en 3 mois seulement, à 6 mois : rien ne remplace le pull",
+      "input": { "profile": { "inventory": { "gilets_chauds": ["3m"] } } },
+      "expect": { "journee.morning.include": ["pull"], "journee.wardrobe": {} }
+    },
+    {
+      "id": "garde-robe-plus-leger-d-abord",
+      "description": "Gilet conseillé, ni gilet : entre un gilet fin et un gilet chaud, le plus léger",
+      "input": { "profile": { "inventory": { "gilets_fins": ["6m"], "gilets_chauds": ["6m"] } }, "forecast": { "hourly": { "base": { "feels_c": 15 } } } },
+      "expect": { "journee.morning.include": ["gilet_fin"], "journee.morning.exclude": ["gilet", "gilet_chaud"] }
+    },
+    {
+      "id": "garde-robe-choix-du-parent-d-abord",
+      "description": "Le gilet chaud choisi par le parent passe devant le gilet fin de la garde-robe",
+      "input": { "profile": { "inventory": { "gilets_fins": ["6m"] }, "swaps": { "gilet": { "to": "gilet_chaud" } } }, "forecast": { "hourly": { "base": { "feels_c": 15 } } } },
+      "expect": { "journee.morning.include": ["gilet_chaud"], "journee.wardrobe": {} }
+    },
+    {
+      "id": "garde-robe-deja-porte",
+      "description": "Gilet chaud à la place du pull le matin et du gilet à midi : il le garde, rien à remettre ni dans le sac",
+      "input": { "profile": { "inventory": { "gilets_chauds": ["6m"] } }, "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "09:00-12:00": { "feels_c": 5 } } } } },
+      "expect": { "journee.morning.include": ["gilet_chaud"], "journee.changes.0.add": [], "journee.bag.*.item.exclude": ["gilet_chaud"], "journee.wardrobe": { "gilet_chaud": "pull" } }
+    },
+    {
+      "id": "garde-robe-piece-manquante",
+      "description": "Seulement des pulls : à midi, le gilet conseillé n'est pas dans sa garde-robe, et l'app le dit",
+      "input": { "profile": { "inventory": { "pulls": ["6m"] } }, "forecast": { "hourly": { "base": { "feels_c": 15 }, "overrides": { "09:00-12:00": { "feels_c": 5 } } } } },
+      "expect": { "journee.morning.include": ["pull"], "journee.missing": ["gilet"] }
+    },
+    {
+      "id": "garde-robe-pas-d-achat",
+      "description": "Les gilets et pulls de la garde-robe ne sont jamais suggérés à l'achat",
+      "input": { "profile": { "inventory": { "gilets_chauds": ["3m"] } }, "outlook": [{ "week_start": "2026-11-05", "tmax_mean": 8, "tmean": 5, "rainy_days": 1, "uv_max_mean": 1 }] },
+      "expect": { "purchases.*.category.exclude": ["gilets_chauds", "pulls", "gilets", "gilets_fins"] }
+    },
+    {
       "id": "pourquoi-plus-doux",
       "description": "Hiver sec : le créneau idéal est le plus doux, dit avec son ressenti",
       "input": { "forecast": { "hourly": { "base": { "feels_c": 4 }, "overrides": { "12:00-15:00": { "feels_c": 7 }, "13:00": { "feels_c": 8 } } } } },

@@ -444,6 +444,60 @@ await test('Journée à 14 h : maintenant et la suite, sans le matin ni le chang
   await shot(page, 'l2-journee-14h');
 });
 
+await test('« C\'était juste ? » : une réponse par jour, la tendance proposée après deux « trop chaud », dans les retours de test', async (use) => {
+  const before = { '2026-10-25': { v: 'chaud', t: 'poussette', b: 'froid', f: [4, 15], o: 0 } };
+  const page = use(await phone({ at: '2026-10-27T14:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([{ ...LEO, feedback: before }], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.feedback');
+  assert((await page.textContent('#t-retour')).includes('Léo avait'), await page.textContent('#t-retour'));
+  await page.click('.fb[data-value="chaud"]');
+  assert((await page.getAttribute('.fb[data-value="chaud"]', 'aria-pressed')) === 'true', 'réponse non marquée');
+  let h = await stored(page);
+  const entry = h.children[0].feedback['2026-10-27'];
+  assert(entry?.v === 'chaud' && entry.t === 'poussette' && entry.o === 0 && entry.f.length === 2, JSON.stringify(entry));
+  // Deux « trop chaud » en 7 jours : un cran plus léger, proposé puis appliqué.
+  await page.click('[data-action="feedback-tendance"]');
+  h = await stored(page);
+  assert(h.children[0].outfit_offset === -1, `tendance ${h.children[0].outfit_offset}`);
+  assert(!(await page.isVisible('[data-action="feedback-tendance"]')), 'tendance encore proposée');
+  await shot(page, 'l2-cetait-juste');
+  // Toucher la même réponse la retire.
+  await page.click('.fb[data-value="chaud"]');
+  assert(!(await stored(page)).children[0].feedback['2026-10-27'], 'réponse non retirée');
+  await page.click('.fb[data-value="juste"]');
+  // Dans les retours de test : le compte et le détail, sans prénom.
+  await page.goto(`${APP}#reglages`);
+  await page.evaluate(() => { window.copied = ''; navigator.clipboard.writeText = (t) => { window.copied = t; return Promise.resolve(); }; });
+  await page.click('[data-action="copy-report"]');
+  const report = await page.evaluate(() => window.copied);
+  assert(/Tenues jugées : 2 réponse\(s\), 1 juste\(s\) \(50 %\)/.test(report) && !report.includes('Léo'), report);
+});
+
+await test('Garde-robe réelle : le gilet chaud qu\'il a plutôt que le pull qu\'il n\'a pas, et la pièce qui manque', async (use) => {
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([{ ...LEO, inventory: { gilets_chauds: ['6m'] } }], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  const first = await page.locator('.tl-step.first .dress-name').allTextContents();
+  assert(first.includes('Gilet chaud') && !first.includes('Pull'), first.join());
+  assert((await page.textContent('.day .swap-notes')).includes("Gilet chaud plutôt que pull : c'est ce qu'il a"), await page.textContent('.day .swap-notes'));
+  // La pièce touchée le dit aussi, et mène à la garde-robe.
+  await page.click('.tl-step.first .dress-btn[data-value="gilet_chaud"]');
+  assert((await page.textContent('.piece-now')).includes("c'est ce qu'il a dans sa taille"), await page.textContent('.piece-now'));
+  await page.click('.piece-now [data-action="open-wardrobe"]');
+  await page.waitForSelector('.wardrobe[open]');
+  assert(await page.isVisible('text=Gilets et pulls') && (await page.getAttribute('[data-value="prevoir"]', 'aria-selected')) === 'true', 'garde-robe non ouverte');
+  // Gilets et pulls : jamais suggérés à l'achat.
+  assert(!(await page.locator('.buy h3', { hasText: /Gilets|Pulls/ }).count()), 'gilet ou pull suggéré à l\'achat');
+  // Sans gilet chaud ni pull dans sa taille : le pull conseillé, et ce qui manque.
+  await page.click('.cat:has-text("Gilets chauds") .step-btn[data-value="-1"]');
+  await page.click('.cat:has-text("Gilets fins") .step-btn[data-value="1"]');
+  await page.click('.tabbar [data-value="sortir"]');
+  const after = await page.locator('.tl-step.first .dress-name').allTextContents();
+  assert(after.includes('Pull'), after.join());
+  assert((await page.textContent('.day .swap-notes')).includes('Pas de pull dans sa taille'), await page.textContent('.day .swap-notes'));
+  await shot(page, 'l7-garde-robe-reelle');
+});
+
 await test('Fiche du jour : image et lien envoyés, page lisible sans l\'app, sans nom de famille ni commune', async (use) => {
   const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);

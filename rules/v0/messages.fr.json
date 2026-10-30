@@ -795,7 +795,11 @@
       "hauts": "hauts",
       "pantalons": "pantalons",
       "pyjamas": "pyjamas",
-      "chaussettes": "paires de chaussettes"
+      "chaussettes": "paires de chaussettes",
+      "gilets_fins": "gilets fins",
+      "gilets": "gilets",
+      "gilets_chauds": "gilets chauds",
+      "pulls": "pulls"
     },
     "sleepbag_seasons": {
       "gigoteuse_hiver": "hiver",
@@ -810,7 +814,8 @@
       "pluie": "pluie fréquente",
       "soleil": "soleil",
       "taille": "changement de taille",
-      "lessive": "pour tenir entre deux lessives"
+      "lessive": "pour tenir entre deux lessives",
+      "tenue": "pour ses tenues"
     },
     "vigilance_colors": {
       "jaune": "jaune",

@@ -250,6 +250,13 @@ export function profileToConfig(profile) {
 // et s'il y a lieu s, style de la journée, g, tenues de nuit choisies par tranche, w, pièces au choix, et cm, une
 // chancelière dans sa garde-robe, que les widgets n'ont pas) et m, date du dernier changement :
 // la plus récente l'emporte entre l'app et les widgets.
+// Catégories de la garde-robe qui changent la tenue (règles : outfit.alternatives.wardrobe) : passées aux widgets
+// pour qu'ils proposent, comme l'app, le pull qu'il a plutôt que le gilet chaud qu'il n'a pas.
+export const WARDROBE_CATEGORIES = ['gilets_fins', 'gilets', 'gilets_chauds', 'pulls'];
+const wardrobeOf = (inventory) => Object.fromEntries(WARDROBE_CATEGORIES
+  .map((cat) => [cat, Array.isArray(inventory?.[cat]) ? inventory[cat].filter((size) => typeof size === 'string') : []])
+  .filter(([, sizes]) => sizes.length));
+
 export function householdToConfig(household) {
   return {
     v: 2,
@@ -268,6 +275,7 @@ export function householdToConfig(household) {
       ...(Object.keys(c.night_options ?? {}).length ? { g: c.night_options } : {}),
       ...(Object.keys(c.swaps ?? {}).length ? { w: c.swaps } : {}),
       ...((c.inventory?.chanceliere ?? []).length ? { cm: 1 } : {}),
+      ...(Object.keys(wardrobeOf(c.inventory)).length ? { gr: wardrobeOf(c.inventory) } : {}),
     })),
     m: household.updated ?? 0,
   };
@@ -282,6 +290,7 @@ export function configChildren(cfg) {
     night_options: c.g && typeof c.g === 'object' && !Array.isArray(c.g) ? { ...c.g } : {},
     swaps: c.w && typeof c.w === 'object' && !Array.isArray(c.w) ? { ...c.w } : {},
     stroller_muff: c.cm === 1,
+    wardrobe: c.gr && typeof c.gr === 'object' && !Array.isArray(c.gr) ? wardrobeOf(c.gr) : {},
   }));
 }
 
@@ -321,6 +330,6 @@ export function configToProfile(cfg, ref = '') {
     outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
     room_temp_c: null,
     day_room_temp_c: null,
-    inventory: {},
+    inventory: { ...child.wardrobe },
   };
 }

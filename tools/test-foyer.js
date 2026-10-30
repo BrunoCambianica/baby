@@ -1,6 +1,6 @@
 // Tests du foyer (app/js/household.js) : reprise du profil à un seul enfant, configurations reçues, âges.
 import { decodeConfig, encodeConfig, householdToConfig } from '../engine/adapter.js';
-import { ageLabel, fromConfig, isNewer, migrate, profileOf } from '../app/js/household.js';
+import { ageLabel, feedbackHint, feedbackStats, fromConfig, isNewer, migrate, profileOf, withFeedback } from '../app/js/household.js';
 
 const toB64 = (s) => Buffer.from(s, 'binary').toString('base64');
 const fromB64 = (b) => Buffer.from(b, 'base64').toString('binary');
@@ -69,6 +69,31 @@ test('Configuration v1 : seulement au premier lancement', () => {
   assert(isNewer(cfg, null) && !isNewer(cfg, migrate(v1)), 'v1 appliquée sur un foyer existant');
   const h = fromConfig(cfg, null);
   assert(h.children.length === 1 && h.children[0].transport === 'voiture' && h.commune.code === '48.8566,2.3522', JSON.stringify(h));
+});
+
+test('« C\'était juste ? » : une réponse par jour, changée ou retirée, les 60 derniers jours gardés', () => {
+  let fb = withFeedback({}, '2026-10-20', { v: 'chaud', o: 0 });
+  fb = withFeedback(fb, '2026-10-20', { v: 'juste', o: 0 });
+  assert(Object.keys(fb).length === 1 && fb['2026-10-20'].v === 'juste', JSON.stringify(fb));
+  assert(!Object.keys(withFeedback(fb, '2026-10-20', null)).length, 'réponse non retirée');
+  let many = {};
+  for (let k = 0; k < 70; k++) many = withFeedback(many, `2026-0${1 + Math.floor(k / 28)}-${String(1 + (k % 28)).padStart(2, '0')}`, { v: 'juste' });
+  assert(Object.keys(many).length === 60 && !many['2026-01-01'], `${Object.keys(many).length} réponses gardées`);
+  const stats = feedbackStats({ a: { v: 'juste' }, b: { v: 'juste' }, c: { v: 'chaud' } });
+  assert(stats.total === 3 && stats.juste === 2 && stats.chaud === 1 && stats.froid === 0, JSON.stringify(stats));
+});
+
+test('« C\'était juste ? » : deux fois trop chaud en 7 jours proposent un cran plus léger, pas au-delà', () => {
+  const two = { '2026-10-25': { v: 'chaud', o: 0 }, '2026-10-29': { v: 'chaud', o: 0 } };
+  const hint = feedbackHint(two, '2026-10-30', 0);
+  assert(hint?.v === 'chaud' && hint.n === 2 && hint.offset === -1, JSON.stringify(hint));
+  assert(!feedbackHint(two, '2026-10-30', -1), 'déjà « a chaud » : rien de plus léger');
+  assert(!feedbackHint({ ...two, '2026-10-26': { v: 'froid', o: 0 } }, '2026-10-30', 0), 'chaud et froid : rien à proposer');
+  assert(!feedbackHint({ '2026-10-20': { v: 'chaud', o: 0 }, '2026-10-29': { v: 'chaud', o: 0 } }, '2026-10-30', 0), 'plus de 7 jours');
+  // Après le changement de tendance, les réponses d'avant ne comptent plus.
+  assert(!feedbackHint({ '2026-10-28': { v: 'froid', o: 1 }, '2026-10-29': { v: 'froid', o: 1 } }, '2026-10-30', 0), 'réponses d\'une autre tendance');
+  const cold = feedbackHint({ '2026-10-28': { v: 'froid', o: 0 }, '2026-10-29': { v: 'froid', o: 0 } }, '2026-10-30', 0);
+  assert(cold?.v === 'froid' && cold.offset === 1, JSON.stringify(cold));
 });
 
 test('Âge affiché', () => {

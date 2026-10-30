@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { evaluate, lint, pieceChoices } from '../engine/engine.js';
 import {
   buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
-  householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, weeklyOutlook, widgetView,
+  householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, WARDROBE_CATEGORIES, weeklyOutlook, widgetView,
 } from '../engine/adapter.js';
 import { loadRules, readJSON, ROOT } from './load-rules.js';
 
@@ -169,6 +169,30 @@ test('Chancelière de la garde-robe : signalée aux widgets, qui l\'utilisent à
   const morning = (ref) => widgetView({ forecast, profile: configToProfile(cfg, ref), date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle).today.journee.morning;
   assert(morning('leo').includes('chanceliere') && !morning('leo').includes('combi_pilote'), morning('leo').join());
   assert(morning('ema').includes('combi_pilote') && !morning('ema').includes('chanceliere'), morning('ema').join());
+});
+
+test('Garde-robe réelle : gilets et pulls notés passent aux widgets, qui proposent la même pièce que l\'app', () => {
+  const rules = Object.values(bundle.rules.outfit.alternatives.wardrobe).sort().join();
+  assert(rules === [...WARDROBE_CATEGORIES].sort().join(), `catégories : règles ${rules}, adaptateur ${WARDROBE_CATEGORIES.join()}`);
+  const household = {
+    commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 },
+    outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_view: 'dessins', updated: 5,
+    children: [
+      { id: 'leo', name: 'Léo', birth: '2026-05', transport: 'poussette', outfit_offset: 0, inventory: { gilets_chauds: ['6m'], bodies: ['6m'] } },
+      { id: 'ema', name: 'Ema', birth: '2026-05', transport: 'poussette', outfit_offset: 0, inventory: {} },
+    ],
+  };
+  const cfg = decodeConfig(encodeConfig(householdToConfig(household), toB64), fromB64);
+  assert(JSON.stringify(cfg.k[0].gr) === '{"gilets_chauds":["6m"]}' && !('gr' in cfg.k[1]), JSON.stringify(cfg.k));
+  const today = (ref) => widgetView({ forecast, profile: configToProfile(cfg, ref), date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle).today;
+  const leo = today('leo');
+  const app = evaluate(buildInput({ forecast, profile: { ...configToProfile(cfg, 'leo'), inventory: household.children[0].inventory }, date: '2026-10-27', now: '07:30', lat: 45.758 }), bundle);
+  assert(leo.journee.morning.includes('gilet_chaud') && !leo.journee.morning.includes('pull'), leo.journee.morning.join());
+  assert(leo.journee.morning.join() === app.journee.morning.join(), `widget ${leo.journee.morning.join()} / app ${app.journee.morning.join()}`);
+  assert(today('ema').journee.morning.includes('pull'), today('ema').journee.morning.join());
+  // Une configuration abîmée ne casse pas le widget.
+  const bad = configChildren({ v: 2, k: [{ id: 'x', b: '2026-05', gr: { pulls: 'beaucoup', gilets: [3, '6m'] } }] })[0];
+  assert(JSON.stringify(bad.wardrobe) === '{"gilets":["6m"]}', JSON.stringify(bad.wardrobe));
 });
 
 test('Tenues au choix : style de la journée et tenue de nuit passent par la configuration jusqu\'au widget', () => {

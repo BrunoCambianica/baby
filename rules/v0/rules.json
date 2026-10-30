@@ -172,6 +172,8 @@
         ["gilet_chaud", "pull"],
         ["combi_pilote_doublee", "combi_ski"]
       ],
+      "wardrobe_note": "Garde-robe réelle : une pièce conseillée qu'il n'a pas dans sa taille devient l'équivalent qu'il a (une des paires ci-dessus), le plus léger d'abord ; seulement quand le parent a noté au moins une pièce de ces catégories (wardrobe_only, sans suggestion d'achat).",
+      "wardrobe": { "gilet_fin": "gilets_fins", "gilet": "gilets", "gilet_chaud": "gilets_chauds", "pull": "pulls" },
       "locked_slots": {
         "peau": "swap.locked.base",
         "corps": "swap.locked.base",
@@ -476,7 +478,11 @@
       {
         "id": "chaussettes", "size_system": "accessoire", "priority": 3, "per_day": 1, "suggest_once_noted": true,
         "need_if": {}, "reason": "lessive", "relays": []
-      }
+      },
+      { "id": "gilets_fins", "size_system": "vetement", "priority": 3, "wardrobe_only": true, "need_if": {}, "reason": "tenue", "relays": [] },
+      { "id": "gilets", "size_system": "vetement", "priority": 3, "wardrobe_only": true, "need_if": {}, "reason": "tenue", "relays": [] },
+      { "id": "gilets_chauds", "size_system": "vetement", "priority": 3, "wardrobe_only": true, "need_if": {}, "reason": "tenue", "relays": [] },
+      { "id": "pulls", "size_system": "vetement", "priority": 3, "wardrobe_only": true, "need_if": {}, "reason": "tenue", "relays": [] }
     ],
     "never_suggest": [
       { "id": "tour_de_lit", "relay": "relay.sleep.basics" },

@@ -284,6 +284,10 @@ export const CATEGORY_DRAWINGS = {
   pantalons: 'pantalon',
   pyjamas: 'pyjama',
   chaussettes: 'chaussettes',
+  gilets_fins: 'gilet',
+  gilets: 'gilet',
+  gilets_chauds: 'gilet_chaud',
+  pulls: 'pull',
 };
 
 // Dessin au format SVG (app web).

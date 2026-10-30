@@ -55,7 +55,7 @@ export async function unseal(key, bloc) {
   return JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.subarray(0, 12) }, key, bytes.subarray(12))));
 }
 
-// Ce que partagent les parents : commune, horaires, rythme de lessive, enfants (avec garde-robe et relevés). L'affichage, l'enfant
+// Ce que partagent les parents : commune, horaires, rythme de lessive, enfants (avec garde-robe, relevés et retours). L'affichage, l'enfant
 // affiché, le rappel du soir et les suggestions masquées restent propres à chaque téléphone.
 export function sharedPart(h) {
   return {
@@ -65,9 +65,9 @@ export function sharedPart(h) {
     outing_duration_h: h.outing_duration_h,
     wash_days: h.wash_days ?? null,
     settings_at: h.settings_at ?? 0,
-    children: h.children.map(({ id, name, birth, transport, outfit_offset, day_style, night_options, swaps, inventory, room, room_day, updated }) => ({
+    children: h.children.map(({ id, name, birth, transport, outfit_offset, day_style, night_options, swaps, inventory, room, room_day, feedback, updated }) => ({
       id, name, birth, transport, outfit_offset, day_style: day_style ?? null, night_options: night_options ?? {}, swaps: swaps ?? {},
-      inventory: inventory ?? {}, room: room ?? null, room_day: room_day ?? null, updated: updated ?? 0,
+      inventory: inventory ?? {}, room: room ?? null, room_day: room_day ?? null, feedback: feedback ?? {}, updated: updated ?? 0,
     })),
     removed: h.removed ?? {},
   };

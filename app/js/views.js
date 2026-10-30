@@ -3,11 +3,11 @@ import { addDays, ageMonths, baseTransport, homeStatus, hourFr, journeeAt, journ
 import { configChildren } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
-import { ageLabel } from './household.js';
+import { ageLabel, feedbackHint } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.18.0';
+export const VERSION = '0.19.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -301,7 +301,7 @@ function outfitCard(state, ctx) {
     </div>
     ${bandTitle(state, outfit)}
     ${dressList(state, outfit, { where: 'dehors', date: ctx.date, swapped: outfit.swapped })}
-    ${swapNote(state, outfit.swapped)}
+    ${swapNote(state, outfit)}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
   </section>`;
 }
@@ -335,14 +335,21 @@ const pieceText = (state, item, piece, text) => (piece
   : esc(capitalize(text)));
 const changeItem = (state, item, sign, size = 28, piece = null) => pieceTile(state, item, { piece, sign, size });
 
-// Les pièces choisies à la place des pièces conseillées, en clair sous la tenue, avec de quoi revenir.
-function swapNote(state, swapped) {
-  const entries = Object.entries(swapped ?? {});
-  if (!entries.length) return '';
+// Les pièces choisies à la place des pièces conseillées, en clair sous la tenue, avec de quoi revenir. Celles que la
+// garde-robe a remplacées le disent (« c'est celui qu'il a »), comme celles qu'il n'a pas, avec le lien vers la garde-robe.
+function swapNote(state, plan) {
+  const entries = Object.entries(plan.swapped ?? {});
+  const missing = plan.missing ?? [];
+  if (!entries.length && !missing.length) return '';
   const labels = state.bundle.messages.labels;
   const swaps = state.profile.swaps ?? {};
-  return `<ul class="swap-notes">${entries.map(([to, from]) => `<li>${icon('refresh', { size: 16 })}<span>${esc(capitalize(labels.items_short[to]))} plutôt que ${esc(labels.items_short[from])} · ${swaps[from]?.day ? (swaps[from].day === state.today ? "aujourd'hui" : 'demain') : 'toujours'}</span>
-      <button class="link" data-action="unswap" data-value="${esc(from)}">Revenir</button></li>`).join('')}</ul>`;
+  const name = (item) => esc(labels.items_short[item]);
+  const wardrobe = `<button class="link" data-action="open-wardrobe">Garde-robe</button>`;
+  return `<ul class="swap-notes">${entries.map(([to, from]) => (plan.wardrobe?.[to] === from
+    ? `<li>${icon('hanger', { size: 16 })}<span>${esc(capitalize(labels.items_short[to]))} plutôt que ${name(from)} : c'est ce qu'il a</span>${wardrobe}</li>`
+    : `<li>${icon('refresh', { size: 16 })}<span>${esc(capitalize(labels.items_short[to]))} plutôt que ${name(from)} · ${swaps[from]?.day ? (swaps[from].day === state.today ? "aujourd'hui" : 'demain') : 'toujours'}</span>
+      <button class="link" data-action="unswap" data-value="${esc(from)}">Revenir</button></li>`)).join('')}
+    ${missing.map((item) => `<li class="missing">${icon('hanger', { size: 16 })}<span>Pas de ${name(item)} dans sa taille dans la garde-robe</span>${wardrobe}</li>`).join('')}</ul>`;
 }
 
 // Ce qu'ouvre une pièce touchée : son rôle et pour quoi elle est là, puis ses équivalents, pour ce jour-là ou toujours ;
@@ -360,6 +367,8 @@ export function pieceSheet(state, ctx, item, where) {
   const base = from ?? item;
   const choices = pieceChoices(base, R, outdoor ? r.transport : null);
   const swap = from ? state.profile.swaps?.[from] : null;
+  // Remplacée par la garde-robe : la pièce qu'il a, à la place de celle conseillée.
+  const owned = Boolean(from) && plan.wardrobe?.[item] === from;
   const today = ctx.date === state.today;
   const dayLabel = today ? "Aujourd'hui" : 'Demain';
   const always = state.profile.name ? `Toujours pour ${state.profile.name}` : 'Toujours';
@@ -378,7 +387,11 @@ export function pieceSheet(state, ctx, item, where) {
   const less = R.outfit.alternatives.coverage[base] === 'corps_entier';
   const html = `<div class="piece-head"><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[item], { size: 34 })}</span>
       <div><p class="piece-role">${esc(role)}</p><p class="hint">${esc(context)}</p></div></div>
-    ${from ? `<div class="piece-now"><p>${icon('refresh', { size: 18 })}<span>Plutôt que ${esc(labels.items_short[from])}, ${swap?.day ? (swap.day === state.today ? "aujourd'hui" : 'demain') : 'toujours'}</span></p>
+    ${owned ? `<div class="piece-now"><p>${icon('hanger', { size: 18 })}<span>Plutôt que ${esc(labels.items_short[from])} : c'est ce qu'il a dans sa taille</span></p>
+      <div class="piece-btns"><button class="btn small soft" data-action="open-wardrobe">Ma garde-robe</button></div></div>`
+    : plan?.missing?.includes(item) ? `<div class="piece-now"><p>${icon('hanger', { size: 18 })}<span>Pas dans sa taille dans la garde-robe</span></p>
+      <div class="piece-btns"><button class="btn small soft" data-action="open-wardrobe">Ma garde-robe</button></div></div>`
+    : from ? `<div class="piece-now"><p>${icon('refresh', { size: 18 })}<span>Plutôt que ${esc(labels.items_short[from])}, ${swap?.day ? (swap.day === state.today ? "aujourd'hui" : 'demain') : 'toujours'}</span></p>
       <div class="piece-btns"><button class="btn small soft" data-action="unswap" data-value="${esc(from)}">Revenir : ${esc(name(from))}</button>
       ${swap?.day ? `<button class="btn small tint" data-action="swap" data-from="${esc(from)}" data-to="${esc(item)}" data-scope="always" data-date="${esc(ctx.date)}">${esc(always)}</button>` : ''}</div></div>` : ''}
     ${options.length ? `<p class="piece-sub">${from ? 'Ou à la place' : 'À la place'}</p>
@@ -439,7 +452,7 @@ function insideCard(state, ctx, { today = true } = {}) {
       </div>
       <p class="card-sub">Sa tenue de la journée</p>
       ${wear}
-      ${swapNote(state, i.swapped)}
+      ${swapNote(state, i)}
       ${hot.length ? `<ul class="tips">${hot.map((id) => `<li>${icon('sun', { size: 20 })}<span>${esc(render(M, id, 'short'))}</span></li>`).join('')}</ul>` : ''}
       ${open ? `<div class="more-body" id="dedans-reglages">
           ${room}
@@ -559,7 +572,7 @@ function outsideCard(state, ctx) {
       ${changes}
     </ol>
     ${changes ? '' : `<p class="hint">Pas de changement à prévoir ${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}.</p>`}
-    ${swapNote(state, j.swapped)}
+    ${swapNote(state, j)}
     ${bag}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
     <button class="btn soft" data-action="share-fiche">${icon('share', { size: 18 })}Envoyer la fiche du jour</button>
@@ -573,6 +586,33 @@ function checkLine(state) {
       <summary>${icon('info', { size: 18 })}<strong>${esc(check.short)}</strong>${chev(16)}</summary>
       <p>${esc(check.text)}</p><p class="source">Source : ${sourceLinks(state, check.sources ?? [])}</p>
     </details>`;
+}
+
+// « C'était juste ? » : sa tenue de dehors d'aujourd'hui, jugée par le parent, une fois la journée commencée depuis
+// une heure (et le soir). Une réponse par jour, changeable ; elle reste dans le foyer (et chez l'autre parent).
+// Avant d'ajouter une couche, le geste de la nuque ; deux réponses dans le même sens en 7 jours proposent la tendance.
+const FEEDBACK = [['chaud', 'Trop chaud'], ['juste', 'Juste'], ['froid', 'Trop froid']];
+function feedbackCard(state, ctx) {
+  const j = ctx.result.journee;
+  if (!j || ctx.tomorrow || (!ctx.evening && toMin(ctx.input.now) < toMin(j.from) + 60)) return '';
+  const M = state.bundle.messages;
+  const p = state.profile;
+  const entry = p.feedback?.[state.today];
+  const hint = entry && entry.v !== 'juste' ? feedbackHint(p.feedback, state.today, p.outfit_offset ?? 0) : null;
+  const after = {
+    juste: 'Merci, c\'est noté.',
+    chaud: 'Noté. Si ça se répète, vous pourrez l\'habiller plus léger.',
+    froid: `Noté. Avant d'ajouter une couche : ${render(M, state.bundle.rules.journee.check, 'short').toLowerCase()}.`,
+  };
+  const tendance = hint && `<div class="fb-hint"><p>${hint.n} fois « trop ${hint.v} » cette semaine.</p>
+      <button class="btn small tint" data-action="feedback-tendance" data-value="${hint.offset}">${hint.v === 'chaud' ? 'Habiller plus léger désormais' : 'Habiller plus chaudement désormais'}</button></div>`;
+  return `<section class="card feedback" aria-labelledby="t-retour">
+      <h2 class="card-title" id="t-retour">${icon('check', { size: 18 })}Aujourd'hui dehors, ${esc(p.name || 'il')} avait…</h2>
+      <div class="fb-btns" role="group" aria-labelledby="t-retour">${FEEDBACK.map(([v, l]) =>
+        `<button class="fb" data-action="feedback" data-value="${v}" aria-pressed="${entry?.v === v}">${l}</button>`).join('')}</div>
+      <p class="hint">${entry ? esc(hint ? 'Noté.' : after[entry.v]) : 'Une réponse par jour : elle aide à ajuster ses tenues.'}</p>
+      ${tendance || ''}
+    </section>`;
 }
 
 function hoursCard(state, ctx) {
@@ -663,7 +703,7 @@ function sortirContent(state, ctx) {
   // La veille au soir : la journée de demain à préparer, dedans et dehors, puis la nuit qui vient.
   if (ctx.evening?.result.journee) {
     const next = ctx.evening;
-    return [insideCard(state, next, { today: false }), outsideCard(state, next), checkLine(state), tonightCard(state, ctx),
+    return [insideCard(state, next, { today: false }), outsideCard(state, next), checkLine(state), feedbackCard(state, ctx), tonightCard(state, ctx),
       officialCard(state, next.result.relays, next.result.params), promoCard(state), foot()].join('');
   }
   if (!ctx.tomorrow && !ctx.result.outfit && !ctx.result.journee) return `${tonightCard(state, ctx)}${promoCard(state)}${foot()}`;
@@ -671,6 +711,7 @@ function sortirContent(state, ctx) {
     insideCard(state, ctx, { today: !ctx.tomorrow }),
     ctx.result.journee ? outsideCard(state, ctx) : outfitCard(state, ctx),
     checkLine(state),
+    feedbackCard(state, ctx),
     hoursCard(state, ctx),
     officialCard(state, ctx.result.relays, ctx.result.params),
     ctx.tomorrow ? '' : promoCard(state),
@@ -808,6 +849,9 @@ function counter(label, cat, size, n) {
     </div>`;
 }
 
+// Une taille de la garde-robe par rapport à la sienne : la suivante « bientôt », une plus petite « trop petit ».
+const sizeTag = (system, sz, now) => (sz === now ? '' : ` <span class="tag">${system.indexOf(sz) < system.indexOf(now) ? 'trop petit' : 'bientôt'}</span>`);
+
 // Achats à prévoir, avec leur quantité conseillée (suggestion pratique) : de quoi tenir entre deux lessives plus une
 // pièce de rechange pour les vêtements de tous les jours, deux gigoteuses (une portée, une au lavage), une combinaison.
 // La garde-robe note combien il en a par taille ; le rythme de lessive, commun au foyer, se règle en tête.
@@ -852,10 +896,10 @@ function prevoirContent(state, ctx) {
     const have = inv[cat.id] ?? [];
     const sizes = system.filter((sz) => sz === now || sz === soon || have.includes(sz.code));
     const rows = sizes.map((sz) => `<div class="size-row">
-        <span>${esc(sz.code === 'unique' ? 'Vous en avez' : sz.label)}${sz === now || sz.code === 'unique' ? '' : ' <span class="tag">bientôt</span>'}</span>
+        <span>${esc(sz.code === 'unique' ? 'Vous en avez' : sz.label)}${sz.code === 'unique' ? '' : sizeTag(system, sz, now)}</span>
         ${counter(`${name(cat.id)}${sz.code === 'unique' ? '' : `, ${sz.label}`}`, cat.id, sz.code, ownedCount(inv, cat.id, sz.code))}
       </div>`).join('');
-    return `<div class="cat"><p class="cat-name"><span>${esc(name(cat.id))}</span><span class="cat-qty">conseillé : ${quantityFor(cat, state.profile, R)}</span></p>${rows}</div>`;
+    return `<div class="cat"><p class="cat-name"><span>${esc(name(cat.id))}</span>${cat.wardrobe_only ? '' : `<span class="cat-qty">conseillé : ${quantityFor(cat, state.profile, R)}</span>`}</p>${rows}</div>`;
   };
   // Gigoteuses : par taille, une ligne par TOG utile aux saisons des semaines qui viennent (ou déjà notée), avec les
   // saisons où il sert ; deux conseillées par saison.
@@ -873,7 +917,7 @@ function prevoirContent(state, ctx) {
       || Object.keys(P.sleepbags.legacy).some((id) => (inv[id] ?? []).includes(sz.code)));
     const rows = sizes.map((sz) => {
       const togs = P.sleepbags.togs.filter((tog) => coming.some((c) => c.togs.includes(tog)) || sleepbagCount(inv, sz.code, [tog], R));
-      return `<p class="size-title">${esc(sz.label)}${sz === now ? '' : ' <span class="tag">bientôt</span>'}</p>${togs.map((tog) => `<div class="size-row">
+      return `<p class="size-title">${esc(sz.label)}${sizeTag(system, sz, now)}</p>${togs.map((tog) => `<div class="size-row">
           <span>${tog} TOG<span class="hint"> · ${esc(seasonsOf(tog))}</span></span>
           ${counter(`Gigoteuse ${tog} TOG, ${sz.label}`, P.sleepbags.inventory, `${sz.code}|${tog}`, sleepbagCount(inv, sz.code, [tog], R))}
         </div>`).join('')}`;
@@ -881,8 +925,10 @@ function prevoirContent(state, ctx) {
     return `<div class="cat"><p class="cat-name"><span>Gigoteuses</span><span class="cat-qty">2 par saison</span></p>${rows}</div>`;
   };
   const group = (title, list, first = '') => (list.length || first ? `<p class="cat-group">${title}</p>${first}${list.map(catBlock).join('')}` : '');
+  // Gilets et pulls : notés, ils font proposer à la tenue ceux qu'il a (jamais suggérés à l'achat).
   const cats = group('Tous les jours', P.categories.filter((c) => c.suggest_once_noted && fits(c)))
-    + group('Selon la saison', P.categories.filter((c) => !c.suggest_once_noted && !c.togs && fits(c)), sleepbagBlock());
+    + group('Gilets et pulls', P.categories.filter((c) => c.wardrobe_only && fits(c)), `<p class="hint">Notez ceux qu'il a : ses tenues proposeront ceux-là, à chaleur égale.</p>`)
+    + group('Selon la saison', P.categories.filter((c) => !c.suggest_once_noted && !c.wardrobe_only && !c.togs && fits(c)), sleepbagBlock());
   const wash = state.profile.wash_days ?? P.quantities.wash_days_default;
   const washPick = `<label class="wash"><span>Lessive tous les</span>
       <select data-action="wash" aria-label="Lessive tous les combien de jours" data-title="Une lessive tous les…">${P.quantities.wash_days_choices.map((d) =>

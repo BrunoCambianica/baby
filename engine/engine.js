@@ -645,7 +645,8 @@ function planPurchases(input, R) {
       if (found.has(cat.id)) continue;
       if (cat.min_age_m && ageWeek < cat.min_age_m) continue;
       if (cat.max_age_m && ageWeek >= cat.max_age_m) continue;
-      if (!needMet(cat.need_if, week, band, baseTransport(transportFor(profile, ageWeek, R), R))) continue;
+      // Les catégories de la garde-robe réelle (gilets, pulls) servent aux tenues, pas aux achats.
+      if (cat.wardrobe_only || !needMet(cat.need_if, week, band, baseTransport(transportFor(profile, ageWeek, R), R))) continue;
       const system = P.size_systems[cat.size_system];
       // Les vêtements de tous les jours ne sont proposés qu'une fois notés dans la garde-robe : sans rien noté, on ne
       // sait pas ce qu'il a déjà.
@@ -947,12 +948,48 @@ function activeSwaps(input, R, mode) {
   return out;
 }
 
+// Garde-robe réelle : une pièce conseillée qu'il n'a pas dans sa taille devient l'équivalent qu'il a (une paire de
+// outfit.alternatives.pairs, permise dans ce mode de sortie), le plus léger d'abord : trop couvert pèse plus que pas
+// assez. Seulement les pièces qui ont leur catégorie (outfit.alternatives.wardrobe), et seulement quand le parent en a
+// noté au moins une : sans rien noté, on ne sait pas ce qu'il a. { swaps : { pièce conseillée : pièce qu'il a },
+// missing : les pièces qu'il n'a pas, sans équivalent qu'il ait }.
+function wardrobeSwaps(input, R, mode, age) {
+  const cats = R.outfit.alternatives.wardrobe ?? {};
+  const inv = input.profile.inventory ?? {};
+  const out = { swaps: {}, missing: [] };
+  if (!Object.values(cats).some((cat) => (inv[cat] ?? []).length)) return out;
+  const sizeOf = (cat) => sizeFor(R.purchases.size_systems[R.purchases.categories.find((c) => c.id === cat).size_system], age).code;
+  const has = (item) => ownedCount(inv, cats[item], sizeOf(cats[item])) > 0;
+  for (const item of Object.keys(cats)) {
+    if (has(item)) continue;
+    const owned = pieceChoices(item, R, mode).options.filter((o) => cats[o.item] && has(o.item)).sort((a, b) => a.gap - b.gap);
+    if (owned.length) out.swaps[item] = owned[0].item;
+    else out.missing.push(item);
+  }
+  return out;
+}
+
+// Pièces remplacées ce jour-là : celles de la garde-robe, puis celles choisies par le parent, qui passent devant.
+// `wardrobe` garde les seules remplacées par la garde-robe, pour les dire autrement (« c'est celui qu'il a ») ;
+// `missing`, les pièces conseillées qu'il n'a pas.
+function daySwaps(input, R, mode, age) {
+  const chosen = activeSwaps(input, R, mode);
+  const own = wardrobeSwaps(input, R, mode, age);
+  const wardrobe = Object.fromEntries(Object.entries(own.swaps).filter(([from]) => !chosen[from]));
+  return { swaps: { ...wardrobe, ...chosen }, wardrobe, missing: own.missing.filter((item) => !chosen[item]) };
+}
+// Parmi les pièces remplacées d'un plan ({ pièce portée : pièce conseillée }), celles qui viennent de la garde-robe.
+const fromWardrobe = (swapped, wardrobe) => Object.fromEntries(Object.entries(swapped).filter(([to, from]) => wardrobe[from] === to));
+// Les pièces d'une tenue qu'il n'a pas dans sa garde-robe.
+const notOwned = (items, missing) => [...new Set(items)].filter((item) => missing.includes(item));
+
 // Une liste de pièces, l'équivalent à la place ; `swapped` retient la pièce conseillée de chaque pièce remplacée.
 function swapItems(items, swaps, swapped) {
   return [...new Set(items.map((item) => {
     const to = swaps[item];
     if (!to) return item;
-    swapped[to] = item;
+    // La première pièce remplacée reste celle qu'on dit : le pull du matin, pas le gilet de midi devenu le même.
+    if (!swapped[to]) swapped[to] = item;
     return to;
   }))];
 }
@@ -966,7 +1003,10 @@ function swapJournee(j, swaps) {
     const add = swapItems(ch.add, swaps, swapped);
     return { ...ch, remove: remove.filter((i) => !add.includes(i)), add: add.filter((i) => !remove.includes(i)) };
   }).filter((ch) => ch.remove.length || ch.add.length);
-  const bag = j.bag.map((b) => ({ ...b, item: swapItems([b.item], swaps, swapped)[0] }));
+  // Une couche « pour plus tard » qu'aucun changement ne remet plus (il la porte déjà) quitte le sac.
+  const added = new Set(j.changes.flatMap((ch) => ch.add));
+  const bag = j.bag.map((b) => ({ ...b, item: swapItems([b.item], swaps, swapped)[0] }))
+    .filter((b) => b.reason !== 'plus_tard' || added.has(b.item));
   j.bag = bag.filter((b, i) => bag.findIndex((x) => x.item === b.item) === i);
   j.swapped = swapped;
 }
@@ -1010,15 +1050,25 @@ export function evaluate(input, bundle) {
     night: planNight(input, R, plan.heat, age),
     purchases: planPurchases(input, R),
   };
-  // Pièces au choix : dehors selon le mode de sortie, à la maison sans.
-  const outdoor = activeSwaps(input, R, result.transport);
+  // Pièces au choix et garde-robe : dehors selon le mode de sortie, à la maison sans.
+  const outdoor = daySwaps(input, R, result.transport, age);
   if (outfit) {
     outfit.swapped = {};
-    outfit.items = swapItems(outfit.items, outdoor, outfit.swapped);
+    outfit.items = swapItems(outfit.items, outdoor.swaps, outfit.swapped);
+    outfit.wardrobe = fromWardrobe(outfit.swapped, outdoor.wardrobe);
+    outfit.missing = notOwned(outfit.items, outdoor.missing);
   }
-  if (result.journee) swapJournee(result.journee, outdoor);
+  if (result.journee) {
+    const j = result.journee;
+    swapJournee(j, outdoor.swaps);
+    j.wardrobe = fromWardrobe(j.swapped, outdoor.wardrobe);
+    j.missing = notOwned([...j.morning, ...j.changes.flatMap((ch) => ch.add)], outdoor.missing);
+  }
+  const indoor = daySwaps(input, R, null, age);
   result.indoor.swapped = {};
-  result.indoor.wear = swapItems(result.indoor.wear, activeSwaps(input, R, null), result.indoor.swapped);
+  result.indoor.wear = swapItems(result.indoor.wear, indoor.swaps, result.indoor.swapped);
+  result.indoor.wardrobe = fromWardrobe(result.indoor.swapped, indoor.wardrobe);
+  result.indoor.missing = notOwned(result.indoor.wear, indoor.missing);
   // Alerte officielle qui passe avant le plan de la journée dans le widget (vigilance, grand froid, chaleur…).
   if (result.journee) result.journee.alert = result.relays.find((id) => R.journee.widget_urgent_relays.includes(id)) ?? null;
   const moment = displayMoment(result, input.now);
@@ -1042,8 +1092,11 @@ export function outfitAt(input, bundle, hhmm) {
   const outfit = chooseOutfit(slot.feels_c, input.profile, R, age);
   const params = {};
   addOverlays(outfit, plan, [slot], R, params, bundle.messages.labels);
+  const swaps = daySwaps(input, R, outfit.transport, age);
   outfit.swapped = {};
-  outfit.items = swapItems(outfit.items, activeSwaps(input, R, outfit.transport), outfit.swapped);
+  outfit.items = swapItems(outfit.items, swaps.swaps, outfit.swapped);
+  outfit.wardrobe = fromWardrobe(outfit.swapped, swaps.wardrobe);
+  outfit.missing = notOwned(outfit.items, swaps.missing);
   return { ...outfit, params, reasons: slot.reasons.filter((r) => r !== 'hors_plage') };
 }
 
@@ -1136,6 +1189,13 @@ export function lint(bundle) {
     if (!M.messages[id]) errors.push(`message manquant : ${id}`);
   }
   for (const slot of Object.keys(R.journee.slots)) if (!M.labels.slot_roles?.[slot]) errors.push(`rôle sans libellé : ${slot}`);
+  // Garde-robe réelle : chaque pièce a sa catégorie de garde-robe, sans suggestion d'achat, et au moins un équivalent
+  // parmi les paires (seules les paires contrôlées ci-dessus remplacent une pièce).
+  for (const [item, catId] of Object.entries(A.wardrobe ?? {})) {
+    const cat = R.purchases.categories.find((c) => c.id === catId);
+    if (!cat?.wardrobe_only) errors.push(`garde-robe ${item} : catégorie ${catId} absente ou suggérée à l'achat`);
+    if (!A.pairs.some((p) => p.includes(item))) errors.push(`garde-robe ${item} : aucun équivalent`);
+  }
   const binIds = new Set();
   for (const bin of R.night.tog_hint.bins) {
     if (!bin.id || binIds.has(bin.id)) errors.push(`tranche de nuit sans identifiant unique : ${bin.max_c}`);
