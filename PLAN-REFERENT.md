@@ -77,7 +77,7 @@ Responsable : **C** pour Claude, **B** pour Bruno.
 - [x] Nuque : citation française (Assurance Maladie) avant la source étrangère (C)
 - [x] Brochure de 2005 (épaisseur de gigoteuse selon la saison) : aucune source publique récente n'en parle (recherche du 01/11/2026). Elle reste, présentée comme telle, et le guide ne la cite pas (C)
 - [x] Toutes les sources relues, aucune « à relire » : OMS (aide-mémoire de 2022, seuil UV 3), Météo-France, Love to Dream, norme NF EN 16781 (édition 2026 parue) (C, 0.21.0)
-- [ ] **À trancher : la nuit de 25 à 27 °C.** L'app propose une gigoteuse de 0,5 TOG avec un body à manches courtes. Les trois fabricants relus donnent 0,2 TOG (Love to Dream, Tommee Tippee, ergoPouch). Proposition : 0,2 TOG avec un body sans manches, ou la couche seule. Le TOG 0,5 sortirait alors de la garde-robe et des achats (B décide, C fait)
+- [x] Nuit de 25 à 27 °C (validé par B, C, 0.21.3) : 0,2 TOG avec un body léger, comme Love to Dream, Tommee Tippee et ergoPouch, au lieu de 0,5 TOG avec un body à manches courtes. Au choix : la couche seule, ou une gigoteuse de 0,5 TOG avec la couche seule (Loulou Lollipop). Les gigoteuses de 0,5 TOG déjà notées restent dans la garde-robe.
 - [ ] **Relecture des textes par un professionnel de santé** (pédiatre, puéricultrice ou sage-femme), nommé ensuite sur la page Sources (B)
 - [ ] Relecture juridique : mentions légales, responsabilité (B)
 - [x] Repères du couchage jusqu'à 3 ans (C, 0.21.0). De 2 à 3 ans : « Ne couvrez pas votre bébé avec un drap ou une couette (utilisable seulement à partir de 3 ans) » (Ameli). Les repères du nourrisson (« sur le dos »…) restent jusqu'à 2 ans : Ameli les donne pour le nourrisson.
@@ -182,11 +182,10 @@ Assistants : ChatGPT, Gemini, Google (aperçu IA), Copilot, Perplexity, Claude, 
 ## 9. Ce qui attend Bruno
 
 1. **Relecteur santé :** qui ? C'est le préalable à toute promotion.
-2. **La nuit de 25 à 27 °C :** passer à 0,2 TOG, comme les trois fabricants relus ? (phase 0)
-3. **Domaine :** réserver superbebe.fr.
-4. **Search Console et Bing :** créer les propriétés. C ajoute ensuite le fichier de validation.
-5. **GitHub « About »** : description, sujets, lien vers le site. Ou un accès `gh` pour que C le fasse.
-6. **Play Store :** compte développeur (25 $). La page de confidentialité est prête.
+2. **Domaine :** réserver superbebe.fr.
+3. **Search Console et Bing :** créer les propriétés. C ajoute ensuite le fichier de validation.
+4. **GitHub « About »** : description, sujets, lien vers le site. Ou un accès `gh` pour que C le fasse.
+5. **Play Store :** compte développeur (25 $). La page de confidentialité est prête.
 
 ## 10. Journal
 
@@ -199,3 +198,4 @@ Assistants : ChatGPT, Gemini, Google (aperçu IA), Copilot, Perplexity, Claude, 
   - Version 0.21.0 (APK 26), 25 pages, en ligne.
   - Version 0.21.1 : page « une couche de plus que soi ? », 26 pages. Toutes les adresses signalées à IndexNow (202 Accepted).
   - Version 0.21.2 : lien « Pourquoi cette tenue ? » depuis la carte Dehors.
+- **2026-11-01, soir.** Version 0.21.3 (APK 27) : nuit de 25 à 27 °C à 0,2 TOG. Domaine superbebe.fr disponible chez OVH (4,99 € HT la première année). Bruno attend la validation de son compte Play Console.

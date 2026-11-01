@@ -335,7 +335,13 @@
             { "id": "body-mc", "tog": "1", "wear": ["body_mc"], "sources": ["tommee-tippee-what-to-wear"] }
           ]
         },
-        { "id": "n27", "max_c": 27, "tog": "0,5", "wear": ["body_mc"], "sources": ["fabricants-tog"] },
+        {
+          "id": "n27", "max_c": 27, "tog": "0,2", "wear": ["body_leger"], "sources": ["tommee-tippee-what-to-wear", "fabricants-tog"],
+          "alternatives": [
+            { "id": "couche", "tog": "0,2", "wear": ["couche"], "sources": ["tommee-tippee-what-to-wear"] },
+            { "id": "tog-0-5", "tog": "0,5", "wear": ["couche"], "sources": ["loulou-lollipop-tog"] }
+          ]
+        },
         {
           "id": "chaud", "max_c": null, "tog": "0,2", "wear": ["body_leger"], "sources": ["ergopouch-what-to-wear"],
           "alternatives": [

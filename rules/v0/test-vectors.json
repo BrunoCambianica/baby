@@ -545,6 +545,17 @@
       "expect": { "night.room_status": "below", "night.tog": "2,5" }
     },
     {
+      "id": "nuit-26",
+      "description": "Chambre à 26 °C : gigoteuse 0,2 TOG et body léger (Tommee Tippee, Love to Dream) ; une gigoteuse de 0,5 TOG va avec la couche seule (Loulou Lollipop)",
+      "input": { "now": "20:30", "profile": { "room_temp_c": 26 } },
+      "expect": {
+        "night.tog": "0,2",
+        "night.wear": ["body_leger"],
+        "night.options.1": { "id": "couche", "tog": "0,2", "wear": ["couche"] },
+        "night.options.2": { "id": "tog-0-5", "tog": "0,5", "wear": ["couche"] }
+      }
+    },
+    {
       "id": "nuit-27-5",
       "description": "Chambre à 27,5 °C : relais volets et aération",
       "input": { "now": "20:30", "profile": { "room_temp_c": 27.5 } },

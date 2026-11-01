@@ -203,7 +203,7 @@
       "published": null,
       "level": "C",
       "verification": "lu",
-      "notes": "Love to Dream relu le 01/11/2026 (page servie en allemand) : 3,5 TOG sous 16 °C, 2,5 TOG de 16 à 20 °C, 1,5 TOG de 18 à 22 °C, 1 TOG de 20 à 24 °C, 0,2 TOG de 24 à 27 °C ; « 22–24 °C : 1,0 TOG avec un body à manches courtes ». Plages relues le 22/10/2026 chez Tommee Tippee, Sterntaler, Bemini, Petit Bateau et Vertbaudet : voisines, pas identiques. L'étiquette du produit fait foi. À noter : de 24 à 27 °C, Love to Dream, Tommee Tippee et ergoPouch donnent 0,2 TOG ; la tranche n27 des règles (0,5 TOG, body à manches courtes) est plus chaude."
+      "notes": "Love to Dream relu le 01/11/2026 (page servie en allemand) : 3,5 TOG sous 16 °C, 2,5 TOG de 16 à 20 °C, 1,5 TOG de 18 à 22 °C, 1 TOG de 20 à 24 °C, 0,2 TOG de 24 à 27 °C ; « 22–24 °C : 1,0 TOG avec un body à manches courtes ». Plages relues le 22/10/2026 chez Tommee Tippee, Sterntaler, Bemini, Petit Bateau et Vertbaudet : voisines, pas identiques. L'étiquette du produit fait foi. De 24 à 27 °C, Love to Dream, Tommee Tippee et ergoPouch donnent 0,2 TOG : la tranche n27 des règles est passée de 0,5 TOG (body à manches courtes) à 0,2 TOG (body léger) en 0.21.3 ; le 0,5 TOG ne reste qu'avec la couche seule (Loulou Lollipop)."
     },
     {
       "id": "ergopouch-what-to-wear",
@@ -248,6 +248,17 @@
       "level": "C",
       "verification": "lu",
       "notes": "Lu le 23/10/2026 : « le TOG ne tient compte que de la gigoteuse : ce qu'on met dessous s'additionne » ; à 19 °C, TOG 2 à 2,5 avec un pyjama en coton à manches longues, ou TOG 3 avec une tenue plus légère dessous."
+    },
+    {
+      "id": "loulou-lollipop-tog",
+      "publisher": "Loulou Lollipop (fabricant de gigoteuses)",
+      "short": "Loulou Lollipop",
+      "title": "What Is TOG? Dressing Your Baby for Great Sleep",
+      "url": "https://louloulollipop.com/blogs/the-lastest-scoop/what-is-tog-dressing-your-baby-for-great-sleep",
+      "published": null,
+      "level": "C",
+      "verification": "lu",
+      "notes": "Lu le 01/11/2026 : « 0.5 TOG for room temp of 24-27 degrees Celsius (75-81 Fahrenheit). Baby may need only a short sleeved onesie or even just a diaper under the sleep bag in this environment. » Sert seulement à la tenue au choix 0,5 TOG avec la couche seule, de 25 à 27 °C : la tenue principale suit les trois autres fabricants (0,2 TOG)."
     },
     {
       "id": "norme-nf-en-16781",
