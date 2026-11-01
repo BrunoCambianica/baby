@@ -564,7 +564,7 @@
         "night.tog": "2",
         "night.wear": ["body_ml", "pyjama"],
         "night.relays.include": ["relay.sleep.basics", "relay.sleep.room_range", "relay.sleep.check_temp"],
-        "night.relays.exclude": ["relay.sleep.season_thickness"],
+        "night.relays.exclude": ["relay.sleep.season_thickness", "relay.sleep.duvet_age"],
         "widget.lines.length": 3,
         "widget.lines.0.contains": "18 à 20",
         "widget.lines.1.contains": "Body ML + pyjama + gigoteuse ≈ 2 TOG"
@@ -971,12 +971,21 @@
     },
     {
       "id": "enfant-nuit-sans-reperes-nourrisson",
-      "description": "Le soir, enfant de 2 ans et demi : pas de repères de couchage du nourrisson, le geste de la nuque reste",
+      "description": "Le soir, enfant de 2 ans et demi : pas de repères de couchage du nourrisson, mais ni drap ni couette avant 3 ans (Assurance Maladie) ; le geste de la nuque reste",
       "input": { "now": "20:30", "profile": { "birth": "2024-03-15" } },
       "expect": {
         "night.relays.exclude": ["relay.sleep.basics"],
-        "night.relays.include": ["relay.sleep.check_temp"],
+        "night.relays.include": ["relay.sleep.duvet_age", "relay.sleep.check_temp"],
         "widget.lines.2.contains": "nuque"
+      }
+    },
+    {
+      "id": "enfant-4-ans-nuit",
+      "description": "Le soir, enfant de 4 ans : ni repères du nourrisson ni repère de la couette, réservé aux moins de 3 ans",
+      "input": { "now": "20:30", "profile": { "birth": "2022-09-10" } },
+      "expect": {
+        "night.relays.exclude": ["relay.sleep.basics", "relay.sleep.duvet_age"],
+        "night.relays.include": ["relay.sleep.check_temp"]
       }
     },
     {

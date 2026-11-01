@@ -245,7 +245,7 @@ test('Charte : une tenue de nuit non compensée (gigoteuse plus légère sans co
   assert(errors.some((e) => e.includes('style sans_pyjama')), errors.join(' | '));
   assert(!lint(bundle).errors.length, lint(bundle).errors.join(' | '));
   const unsourced = structuredClone(bundle);
-  unsourced.rules.night.tog_hint.bins[0].alternatives[0].sources = ['carnet-1000-jours'];
+  unsourced.rules.night.tog_hint.bins[0].alternatives[0].sources = ['ameli-coucher-bebe'];
   assert(lint(unsourced).errors.some((e) => e.includes('sans fabricant cité')), 'tenue de nuit sans fabricant acceptée');
 });
 

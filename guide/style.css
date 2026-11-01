@@ -1,0 +1,140 @@
+/* Guide public de Superbébé : pages statiques, sans JavaScript. Mêmes couleurs que l'app, pensé d'abord pour le téléphone. */
+:root {
+  --bg: #f2f3f7;
+  --card: #ffffff;
+  --ink: #12151a;
+  --ink-2: #4c5563;
+  --ink-3: #6b7482;
+  --line: rgba(18, 21, 26, 0.1);
+  --blue: #2463d6;
+  --blue-soft: #e6efff;
+  --green: #17824a;
+  --green-soft: #e2f5e9;
+  --amber: #8a5300;
+  --amber-soft: #fcefd9;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0d11;
+    --card: #161a21;
+    --ink: #f2f4f7;
+    --ink-2: #b4bcc8;
+    --ink-3: #8b94a3;
+    --line: rgba(255, 255, 255, 0.1);
+    --blue: #6aa5ff;
+    --blue-soft: #15264a;
+    --green: #52d18c;
+    --green-soft: #12301f;
+    --amber: #f2ad42;
+    --amber-soft: #3a2a12;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+a { color: var(--blue); text-underline-offset: 2px; }
+a:focus-visible, .btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+main.wrap { padding-bottom: 32px; }
+
+/* En-tête : la marque et l'app, toujours à portée */
+.top { background: var(--card); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 1.1rem; color: var(--ink); text-decoration: none; }
+.brand img { border-radius: 7px; }
+
+.btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.3;
+}
+.btn.primary { background: var(--blue); color: #fff; }
+@media (prefers-color-scheme: dark) { .btn.primary { color: #0b0d11; } }
+.btn.small { padding: 7px 12px; font-size: 0.9rem; border-radius: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 8px; }
+
+/* Fil d'Ariane */
+.crumbs ol { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 0; padding: 0; font-size: 0.88rem; color: var(--ink-3); }
+.crumbs li + li::before { content: "›"; margin-right: 4px; }
+.crumbs a { color: var(--ink-2); }
+
+h1 { font-family: var(--display); font-size: clamp(1.6rem, 6vw, 2.2rem); line-height: 1.2; margin: 12px 0 10px; letter-spacing: -0.01em; }
+h2 { font-family: var(--display); font-size: 1.25rem; line-height: 1.3; margin: 32px 0 10px; }
+p { margin: 10px 0; }
+.lead { font-size: 1.1rem; }
+.applies, .muted { color: var(--ink-3); font-size: 0.92rem; }
+.src { color: var(--ink-3); font-size: 0.88rem; }
+
+/* La tenue, en dessins, couche par couche */
+.outfit { display: grid; gap: 10px; margin: 16px 0; padding: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+.layer-name { margin: 0 0 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.outfit ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 0; }
+.outfit li { display: flex; align-items: center; gap: 8px; }
+.outfit svg { color: var(--blue); flex: none; }
+
+/* Tableaux : défilent seuls si l'écran est étroit, jamais la page */
+.table { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+th, td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+thead th { font-size: 0.82rem; color: var(--ink-3); font-weight: 600; }
+tbody th { font-weight: 600; white-space: nowrap; }
+.band { display: block; font-weight: 400; font-size: 0.82rem; color: var(--ink-3); }
+.or { display: block; color: var(--ink-3); font-size: 0.9rem; }
+table.sources td:first-child { min-width: 14em; }
+
+/* Repères officiels : la citation, quand elle s'applique, sa source */
+.relays { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 10px; }
+.relay { padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--green); border-radius: 12px; }
+.relay p { margin: 4px 0; }
+.relay ul { margin: 4px 0; padding-left: 20px; }
+.when { font-size: 0.85rem; font-weight: 700; color: var(--green); }
+
+.note { padding: 10px 12px; background: var(--amber-soft); border-radius: 12px; }
+.tag { display: inline-block; margin-right: 4px; padding: 1px 8px; border-radius: 999px; background: var(--card); color: var(--amber); font-size: 0.78rem; font-weight: 700; }
+
+.variants { margin: 12px 0; display: grid; gap: 10px; }
+.variants div { padding: 10px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.variants dt { font-weight: 700; }
+.variants dd { margin: 2px 0 0; }
+
+.options { padding-left: 20px; }
+.options li { margin: 6px 0; }
+.ticks, .links { padding-left: 20px; }
+.ticks li, .links li { margin: 6px 0; }
+
+/* L'app : la réponse pour aujourd'hui, chez soi */
+.cta { margin: 32px 0 8px; padding: 18px; background: var(--blue-soft); border-radius: 18px; }
+.cta h2 { margin-top: 0; }
+.cta .free { font-weight: 600; }
+
+.foot { border-top: 1px solid var(--line); color: var(--ink-3); font-size: 0.88rem; padding: 18px 0 28px; }
+.foot nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; padding: 0; }
+.foot a { color: var(--ink-2); }
+
+/* Sur téléphone, les tableaux à trois colonnes s'empilent : une carte par ligne, chaque cellule avec son titre */
+@media (max-width: 560px) {
+  table.stack thead { display: none; }
+  table.stack tr { display: block; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  table.stack tbody tr:last-child { border-bottom: 0; }
+  table.stack th, table.stack td { display: block; padding: 2px 0; border: 0; white-space: normal; }
+  table.stack td::before { content: attr(data-label); display: block; margin-top: 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+  table.sources td:first-child { min-width: 0; }
+}

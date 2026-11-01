@@ -1,8 +1,9 @@
 # Superbébé
 
-App web installable et widgets iPhone et Android : quand sortir avec bébé, comment l'habiller, et ce qu'il lui faudra bientôt. Toute information de santé relaie une source officielle citée ; l'app ne donne pas d'avis médical.
+Comment habiller bébé selon la température, dehors, à la maison et la nuit, de la naissance à 6 ans : app web gratuite, sans compte ni publicité, avec widgets iPhone et Android. Elle prend la météo de la commune heure par heure et dit la tenue du matin, ce qu'on enlève ou remet dans la journée, le sac, le meilleur moment pour sortir, la tenue de nuit (gigoteuse et TOG) et ce qu'il lui faudra bientôt. Toute information de santé relaie une source officielle citée (Assurance Maladie, Santé.fr, Santé publique France…) ; l'app ne donne pas d'avis médical.
 
-- App : <https://brunocambianica.github.io/baby/>
+- Guide des tenues par température (pages publiques, sans JavaScript) : <https://brunocambianica.github.io/baby/>
+- App : <https://brunocambianica.github.io/baby/app/>
 - Guide pour les parents qui testent : [TESTER.md](TESTER.md)
 - Règles et charte des sources : [rules/README.md](rules/README.md)
 
@@ -11,6 +12,7 @@ App web installable et widgets iPhone et Android : quand sortir avec bébé, com
 | Dossier | Contenu |
 |---|---|
 | `app/` | App web installable (PWA) : page, styles, modules JS, service worker, icônes |
+| `index.html`, `guide/`, `sitemap.xml` | Guide public, pages statiques générées depuis le moteur et les règles par `tools/build-guide.js` (seul `guide/style.css` s'écrit à la main) : voir [PLAN-REFERENT.md](PLAN-REFERENT.md) |
 | `fiche/` | Page de la fiche du jour envoyée à la nounou, à la crèche ou aux grands-parents : les données sont dans le lien, après le `#` |
 | `engine/` | Moteur de règles, adaptateur Open-Meteo et dessins des vêtements (`drawings.js`), partagés par l'app et les widgets |
 | `rules/` | Règles v0 en JSON, textes, registre des sources, cas de test |
@@ -26,8 +28,8 @@ App web installable et widgets iPhone et Android : quand sortir avec bébé, com
 Node 18 ou plus, aucune dépendance à installer pour l'app et les tests.
 
 ```sh
-npm test          # charte des sources, cas de règles, adaptateur, foyer, widgets iPhone et Android
-npm run build     # icônes, dessins Android, widgets iPhone et Android (moteur embarqué), version reportée dans l'app
+npm test          # charte des sources, cas de règles, guide public, adaptateur, foyer, widgets iPhone et Android
+npm run build     # icônes, dessins Android, widgets iPhone et Android (moteur embarqué), version reportée dans l'app, guide public
 npm run serve     # http://localhost:8080/baby/app/
 npm run e2e       # parcours de l'app dans Chromium (Playwright), captures dans tools/e2e/captures/
 npm run deploy    # pousse main, puis publie la même version sur la branche gh-pages

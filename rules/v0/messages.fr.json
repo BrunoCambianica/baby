@@ -199,17 +199,44 @@
       "kind": "officiel",
       "verbatim": false,
       "sources": [
-        "awsr-siege-auto",
-        "notices-sieges-auto"
+        "santefr-sieges-auto",
+        "awsr-siege-auto"
       ],
-      "text": "Siège auto : enlever le manteau d'hiver avant d'attacher l'enfant, puis le couvrir par-dessus le harnais (Agence wallonne pour la sécurité routière, notices des sièges).",
+      "text": "Au siège auto, Santé.fr conseille : « Doudoune ou combinaison empêchent le harnais de jouer son rôle, mieux vaut les enlever pour l'attacher, et les replacer sur votre enfant pour qu'il n'ait pas froid. »",
       "short": "Siège auto : manteau enlevé, couvrir par-dessus"
+    },
+    "relay.indoor.hat_off": {
+      "kind": "officiel",
+      "verbatim": false,
+      "sources": [
+        "nhs-sids"
+      ],
+      "text": "En rentrant à l'intérieur, ou en montant en voiture, en bus ou en train, enlevez son bonnet et les vêtements en trop, même s'il faut le réveiller (NHS, Royaume-Uni).",
+      "short": "À l'intérieur : bonnet et couches en trop enlevés"
+    },
+    "relay.sleep.few_layers": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": [
+        "ameli-coucher-bebe"
+      ],
+      "text": "« Évitez de multiplier les couches de vêtements, pour que votre enfant n'ait pas trop chaud. »",
+      "short": "Pas trop de couches pour dormir"
+    },
+    "relay.sleep.duvet_age": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": [
+        "ameli-coucher-bebe"
+      ],
+      "text": "« Ne couvrez pas votre bébé avec un drap ou une couette (utilisable seulement à partir de 3 ans). »",
+      "short": "Ni drap ni couette avant 3 ans"
     },
     "relay.sleep.basics": {
       "kind": "officiel",
       "verbatim": false,
       "sources": [
-        "carnet-1000-jours"
+        "ameli-coucher-bebe"
       ],
       "text": "Pour dormir : sur le dos, à plat, dans son lit, dans une turbulette ou gigoteuse adaptée à sa taille, sur un matelas ferme ; ni couverture, ni couette, ni oreiller, ni tour de lit.",
       "short": "Sur le dos, turbulette, ni couette ni tour de lit",
@@ -224,7 +251,7 @@
       "kind": "officiel",
       "verbatim": false,
       "sources": [
-        "carnet-1000-jours"
+        "ameli-coucher-bebe"
       ],
       "text": "Température de la chambre recommandée : entre 18 et 20 °C.",
       "short": "Chambre entre 18 et 20 °C"
@@ -242,13 +269,13 @@
       "kind": "officiel",
       "verbatim": false,
       "sources": [
-        "inspq-chaleur-froid",
+        "ameli-coucher-bebe",
         "nhs-sids"
       ],
-      "text": "Pour vérifier s'il a trop chaud, « touchez sa nuque : elle ne doit pas être mouillée » (Mieux vivre, Québec). Des mains ou des pieds frais, c'est normal (NHS).",
+      "text": "Pour vérifier s'il a trop chaud, « placez votre main sur sa nuque : vous ne devez pas sentir de sueur sous vos doigts » (Assurance Maladie). Des mains ou des pieds frais, c'est normal (NHS).",
       "short": "Touchez sa nuque, pas ses mains",
       "tiny": "Touchez sa nuque",
-      "card": "Touchez sa nuque, pas ses mains : nuque moite, une couche de moins (Mieux vivre, Québec ; NHS)."
+      "card": "Touchez sa nuque, pas ses mains : nuque moite, une couche de moins (Assurance Maladie ; NHS)."
     },
     "relay.indoor.temperature": {
       "kind": "officiel",
@@ -290,18 +317,18 @@
       "kind": "officiel",
       "verbatim": false,
       "sources": [
-        "carnet-1000-jours"
+        "ameli-coucher-bebe"
       ],
       "text": "La turbulette ou gigoteuse doit être adaptée à la taille de bébé.",
       "short": "Gigoteuse adaptée à sa taille"
     },
     "relay.sleep.no_positioners": {
       "kind": "officiel",
-      "verbatim": false,
+      "verbatim": true,
       "sources": [
-        "has-contention-presse"
+        "ameli-coucher-bebe"
       ],
-      "text": "La HAS juge les dispositifs de contention, dont les réducteurs de lit, « inutiles, délétères et dangereux ».",
+      "text": "« N'utilisez pas de dispositifs pour maintenir votre bébé sur le dos (ex. : serviette roulée, coussin, cale-bébé, cale-tête, réducteur de lit). »",
       "short": "Ni cale-bébé ni réducteur de lit"
     },
     "relay.emergency": {

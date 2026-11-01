@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.20.1';
+export const VERSION = '0.21.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -717,7 +717,7 @@ function promoCard(state) {
 }
 
 const foot = () => `<p class="foot"><span>Repères officiels relayés, pas d'avis médical. Urgence : 15 ou 112.</span>
-  <span><a href="#apropos">Charte et sources</a> · Météo Open-Meteo · v${VERSION}</span></p>`;
+  <span><a href="#apropos">Charte et sources</a> · <a href="../">Le guide des tenues</a> · Météo Open-Meteo · v${VERSION}</span></p>`;
 
 // Ce soir, à côté de la journée de demain : la chambre, ce qu'on met sous la gigoteuse et son TOG.
 function tonightCard(state, ctx) {

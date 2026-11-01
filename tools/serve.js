@@ -1,5 +1,5 @@
 // Serveur local qui imite GitHub Pages : le dépôt est servi sous /baby/.
-// Usage : npm run serve, puis http://localhost:8080/baby/app/
+// Usage : npm run serve, puis http://localhost:8080/baby/ (le guide) ou http://localhost:8080/baby/app/ (l'app)
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
@@ -22,7 +22,7 @@ const TYPES = {
 const server = createServer((req, res) => {
   const url = decodeURIComponent((req.url ?? '/').split('?')[0]);
   if (url === '/' || url === '/baby') {
-    res.writeHead(302, { Location: '/baby/app/' });
+    res.writeHead(302, { Location: '/baby/' });
     res.end();
     return;
   }

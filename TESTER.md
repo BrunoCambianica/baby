@@ -4,7 +4,7 @@ Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir
 
 ## 1. Installer l'app (2 minutes)
 
-- **iPhone** : ouvrez <https://brunocambianica.github.io/baby/> dans **Safari**, bouton Partager, puis « Sur l'écran d'accueil ». Ouvrez ensuite Superbébé depuis son icône : plein écran, sans les barres de Safari.
+- **iPhone** : ouvrez <https://brunocambianica.github.io/baby/app/> dans **Safari** (l'adresse de l'app, avec `app/` : la page d'accueil du site est le guide des tenues), bouton Partager, puis « Sur l'écran d'accueil ». Ouvrez ensuite Superbébé depuis son icône : plein écran, sans les barres de Safari.
 - **Android** : installez directement l'app Superbébé (voir 2 bis) : elle s'ouvre en plein écran et contient le widget.
 
 Au premier lancement, trois questions : votre commune, le mois de naissance de votre enfant (et son prénom ou un surnom, si vous voulez), et comment vous sortez le plus souvent (poussette, porte-bébé, à pied à partir de 2 ans, ou voiture).
@@ -41,7 +41,7 @@ Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chamb
 
 ## 2 bis. Installer l'app et le widget sur Android (3 minutes)
 
-1. Ouvrez <https://brunocambianica.github.io/baby/> dans Chrome, puis **Réglages**, **Ajouter le widget**, onglet **Android**, **Télécharger**.
+1. Ouvrez <https://brunocambianica.github.io/baby/app/> dans Chrome, puis **Réglages**, **Ajouter le widget**, onglet **Android**, **Télécharger**.
 2. Installez le fichier téléchargé ; si Android le demande, autorisez Chrome à installer des applications (version de test, hors Play Store ; si Play Protect avertit, « Installer quand même »).
 3. **Ouvrir l'app Superbébé** : l'app installée s'ouvre en plein écran avec vos réglages.
 4. Dans l'app, carte « Ajoutez le widget », **Ajouter** : Android propose de le poser sur l'écran d'accueil.

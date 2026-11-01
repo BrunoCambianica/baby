@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "consulted": "2026-10-30",
+  "consulted": "2026-11-01",
   "levels": {
     "A": "Autorité publique française (santé, solidarités, Santé publique France, HAS, ARS, Santé.fr, collectivité/PMI, Météo-France, service public)",
     "A-etranger": "Autorité publique étrangère ou internationale, utilisée seulement faute de source française, et nommée comme telle",
@@ -14,15 +14,15 @@
   },
   "sources": [
     {
-      "id": "carnet-1000-jours",
-      "publisher": "Ministère des Solidarités et de la Santé",
-      "short": "Ministère de la Santé",
-      "title": "1000 premiers jours : carnet de bienvenue dans la parentalité",
-      "url": "https://solidarites.gouv.fr/sites/solidarite/files/2023-01/1000-premiers-jours-carnet-de-bienvenue-dans-la-parentalite_0.pdf",
-      "published": "2023-01",
+      "id": "ameli-coucher-bebe",
+      "publisher": "Assurance Maladie (ameli.fr)",
+      "short": "Assurance Maladie",
+      "title": "Comment bien coucher un bébé ?",
+      "url": "https://www.ameli.fr/assure/sante/bons-gestes/bebe/coucher-bebe",
+      "published": "2024-10-10",
       "level": "A",
-      "verification": "lu_via_recherche",
-      "notes": "Serveur indisponible (503) le 21/10/2026 : relire le PDF. Couchage sur le dos, à plat, dans son lit, turbulette ou gigoteuse adaptée à sa taille, matelas ferme, ni couverture, ni couette, ni oreiller, ni tour de lit, chambre entre 18 et 20 °C."
+      "verification": "lu",
+      "notes": "Lu le 01/11/2026 (page du 10 octobre 2024, appuyée sur le ministère de la Santé, Santé publique France et la fiche mémo HAS de 2020). Remplace le carnet « 1000 premiers jours » du ministère, dont le lien répond 404. « Dès sa naissance, couchez votre bébé dans son propre lit. » ; « Mettez votre nourrisson sur le dos, à plat, pendant la nuit et pour tous les moments de sommeil (y compris une courte sieste dans la journée). » ; « N'utilisez pas de dispositifs pour maintenir votre bébé sur le dos (ex. : serviette roulée, coussin, cale-bébé, cale-tête, réducteur de lit) » ; « Ne couvrez pas votre bébé avec un drap ou une couette (utilisable seulement à partir de 3 ans). Préférez un surpyjama ou une gigoteuse (ou turbulette), bien adaptée à sa taille. » ; « Évitez de multiplier les couches de vêtements, pour que votre enfant n'ait pas trop chaud. Pour vérifier s'il est à l'aise, placez votre main sur sa nuque : vous ne devez pas sentir de sueur sous vos doigts. » ; « La chambre doit garder une température de 18 à 20 °C, et être aérée tous les jours. » ; en résumé : sur le dos, sur un matelas ferme, « dans une turbulette adaptée, sans oreiller, ni couette, ni couverture, ni tour de lit », « dans une chambre chauffée à 18-20 °C »."
     },
     {
       "id": "nhs-sids",
@@ -30,10 +30,10 @@
       "short": "NHS (Royaume-Uni)",
       "title": "Reduce the risk of sudden infant death syndrome (SIDS)",
       "url": "https://www.nhs.uk/conditions/baby/caring-for-a-newborn/reduce-the-risk-of-sudden-infant-death-syndrome/",
-      "published": null,
+      "published": "2025-11-25",
       "level": "A-etranger",
       "verification": "lu",
-      "notes": "Lu le 22/10/2026 : « Check your baby's temperature by feeling their chest or the back of their neck. Do not worry if their hands or feet feel cool, this is normal. » Retirer une couche si la peau est chaude ou moite. Source étrangère faute de source française lue sur ce geste."
+      "notes": "Relu le 01/11/2026 (page revue le 25 novembre 2025) : « Check your baby's temperature by feeling their chest or the back of their neck. Do not worry if their hands or feet feel cool, this is normal. » ; « remove 1 or more layers of clothing or bedding if your baby skin is hot or sweating » ; « remove hats and extra clothing as soon as you come indoors or enter a car, bus or train even if it means waking your baby ». Chambre « between about 16 to 20C » : le repère français (18 à 20 °C, Assurance Maladie) prime. Source étrangère faute de source française lue sur ces gestes."
     },
     {
       "id": "inspq-chaleur-froid",
@@ -137,60 +137,52 @@
       "url": "https://vigilance.meteofrance.fr/fr/guide-vigilance-meteo",
       "published": null,
       "level": "A",
-      "verification": "lu_via_recherche",
-      "notes": "Les conseils de comportement des niveaux orange et rouge sont élaborés par les pouvoirs publics et figurent dans les bulletins."
+      "verification": "lu",
+      "notes": "Lu le 01/11/2026 : en vigilance orange, « Soyez très vigilant. Des phénomènes dangereux sont prévus. Tenez-vous au courant de l'évolution de la situation et suivez les conseils de sécurité émis par les pouvoirs publics. » ; les bulletins précisent « les conseils de comportement définis par les pouvoirs publics »."
     },
     {
       "id": "cd06-pmi-min",
-      "publisher": "Département des Alpes-Maritimes (protection maternelle et infantile)",
+      "publisher": "Département des Alpes-Maritimes (protection maternelle et infantile), brochure de l'association Assureurs Prévention Santé",
       "short": "PMI des Alpes-Maritimes",
-      "title": "Prévention de la mort inattendue du nourrisson",
+      "title": "Prévenir la mort subite du nourrisson (brochure n° 16)",
       "url": "https://departement06.fr/sites/default/files/media/downloads/prevention_mort_inattendue_du_nourrisson.pdf",
-      "published": null,
+      "published": "2005-03",
       "level": "A",
-      "verification": "lu_via_recherche"
-    },
-    {
-      "id": "has-contention-presse",
-      "publisher": "Haute Autorité de santé, citée par Pourquoi Docteur",
-      "short": "HAS",
-      "title": "Morts subites du nourrisson : oreillers, peluches, tours de lit en accusation",
-      "url": "https://www.pourquoidocteur.fr/Articles/Question-d-actu/36176-Morts-subites-nourrisson-oreillers-peluches-tours-lit-accusation",
-      "published": null,
-      "level": "A",
-      "verification": "a_verifier",
-      "notes": "Position HAS rapportée par la presse : retrouver le texte HAS d'origine avant publication."
+      "verification": "lu",
+      "notes": "PDF lu le 01/11/2026 : brochure de l'association Assureurs Prévention Santé (mars 2005, avec le Dr Elisabeth Briand-Huchet, pédiatre), diffusée par le Département. P. 4 : « 18 à 20° » ; « Un surpyjama, une gigoteuse, ou une turbulette dont l'épaisseur variera avec la saison convient très bien. » Document ancien : chercher une source publique récente pour le remplacer."
     },
     {
       "id": "oms-indice-uv",
       "publisher": "Organisation mondiale de la santé",
       "short": "OMS",
-      "title": "Global Solar UV Index: A Practical Guide (2002)",
-      "url": "https://www.who.int/publications/i/item/9241590076",
-      "published": "2002",
+      "title": "Rayonnement ultraviolet (aide-mémoire)",
+      "url": "https://www.who.int/fr/news-room/fact-sheets/detail/ultraviolet-radiation",
+      "published": "2022-06-21",
       "level": "A-etranger",
-      "verification": "a_verifier",
-      "notes": "Sert uniquement à justifier le seuil technique UV ≥ 3 (catégorie « modéré », protection nécessaire). Vérifier dans le PDF."
+      "verification": "lu",
+      "notes": "Lu le 01/11/2026 (aide-mémoire du 21 juin 2022, qui renvoie au guide « L'indice universel de rayonnement UV solaire » de 2002) : « Une protection solaire est recommandée lorsque l'indice ultraviolet est de 3 ou plus. » ; « Des mesures de protection solaire doivent être appliquées lorsque l'IUV atteint 3 ou plus. » Sert uniquement à justifier le seuil technique UV ≥ 3."
+    },
+    {
+      "id": "santefr-sieges-auto",
+      "publisher": "Santé.fr",
+      "short": "Santé.fr",
+      "title": "Sièges auto : que choisir ?",
+      "url": "https://www.sante.fr/sieges-auto-que-choisir",
+      "published": "2023-07-17",
+      "level": "A",
+      "verification": "lu",
+      "notes": "Lu le 01/11/2026 : « Doudoune ou combinaison empêchent le harnais de jouer son rôle, mieux vaut les enlever pour l'attacher, et les replacer sur votre enfant pour qu'il n'ait pas froid. »"
     },
     {
       "id": "awsr-siege-auto",
       "publisher": "Agence wallonne pour la sécurité routière (Belgique)",
       "short": "AWSR (Belgique)",
-      "title": "Communiqué siège auto, janvier 2026",
+      "title": "Sièges auto : une enquête de l'AWSR pointe des erreurs fréquentes (communiqué)",
       "url": "https://www.awsr.be/wp-content/uploads/2026/01/cp-siege-auto-def.pdf",
-      "published": "2026-01",
+      "published": "2026-01-16",
       "level": "A-etranger",
-      "verification": "lu_via_recherche",
-      "notes": "Aucune page française officielle trouvée sur le manteau dans le siège auto : chercher une source Sécurité routière avant publication."
-    },
-    {
-      "id": "notices-sieges-auto",
-      "publisher": "Fabricants de sièges auto",
-      "title": "Notices d'utilisation des sièges auto",
-      "url": null,
-      "published": null,
-      "level": "C",
-      "verification": "lu_via_recherche"
+      "verification": "lu",
+      "notes": "Communiqué du 16 janvier 2026, lu le 01/11/2026, p. 2 : « Il est donc conseillé de retirer le manteau avant d'attacher l'enfant et éventuellement, de le placer ensuite par-dessus le harnais pour éviter qu'il n'ait froid. » En complément de Santé.fr."
     },
     {
       "id": "fabricants-tog",
@@ -199,8 +191,8 @@
       "url": "https://lovetodream.de/en/blogs/baby-sleep/what-is-a-tog-worth",
       "published": null,
       "level": "C",
-      "verification": "lu_via_recherche",
-      "notes": "Plages relues le 22/10/2026 : Love to Dream (3,5 TOG sous 16 °C, 2,5 TOG 16-20 °C, 1 TOG 20-24 °C, 0,2 TOG 24-27 °C), Tommee Tippee (3,5 / 2,5 / 1 / 0,5 ou 0,2 TOG, mêmes seuils), Sterntaler, Bemini, Petit Bateau et Vertbaudet : plages voisines, pas identiques. L'étiquette du produit fait foi."
+      "verification": "lu",
+      "notes": "Love to Dream relu le 01/11/2026 (page servie en allemand) : 3,5 TOG sous 16 °C, 2,5 TOG de 16 à 20 °C, 1,5 TOG de 18 à 22 °C, 1 TOG de 20 à 24 °C, 0,2 TOG de 24 à 27 °C ; « 22–24 °C : 1,0 TOG avec un body à manches courtes ». Plages relues le 22/10/2026 chez Tommee Tippee, Sterntaler, Bemini, Petit Bateau et Vertbaudet : voisines, pas identiques. L'étiquette du produit fait foi. À noter : de 24 à 27 °C, Love to Dream, Tommee Tippee et ergoPouch donnent 0,2 TOG ; la tranche n27 des règles (0,5 TOG, body à manches courtes) est plus chaude."
     },
     {
       "id": "ergopouch-what-to-wear",
@@ -249,20 +241,22 @@
     {
       "id": "norme-nf-en-16781",
       "publisher": "AFNOR",
-      "title": "NF EN 16781 : articles textiles de puériculture, gigoteuses (exigences de sécurité)",
+      "title": "NF EN 16781 : articles textiles de puériculture, exigences de sécurité et méthodes d'essai pour les gigoteuses",
       "url": "https://www.boutique.afnor.org/fr-fr/norme/nf-en-16781/articles-textiles-de-puericulture-exigences-de-securite-et-methodes-dessai-/fa206855/605260",
       "published": "2018",
       "level": "C",
-      "verification": "lu_via_recherche"
+      "verification": "lu",
+      "notes": "Page AFNOR lue le 01/11/2026 : « Articles textiles de puériculture - Exigences de sécurité et méthodes d'essai pour les gigoteuses destinées à être utilisées dans un lit à nacelle » ; la boutique liste aussi l'édition EN 16781:2026."
     },
     {
       "id": "service-public-urgences",
       "publisher": "Service-Public.fr",
       "title": "Numéros d'urgence",
       "url": "https://www.service-public.gouv.fr/particuliers/actualites/A17758?lang=fr",
-      "published": null,
+      "published": "2024-10-16",
       "level": "A",
-      "verification": "lu_via_recherche"
+      "verification": "lu",
+      "notes": "Lu le 01/11/2026 (mis à jour le 18 octobre 2024) : « 15 - Samu (Service d'aide médicale d'urgence) » ; « 112 - Numéro d'urgence européen »."
     }
   ]
 }

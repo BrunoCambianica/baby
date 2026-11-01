@@ -592,6 +592,8 @@ function planNight(input, R, heat, age) {
   const n = R.night;
   const room = input.profile.room_temp_c ?? null;
   const relays = n.always.filter((id) => age < n.baby_until_months || !n.baby_only.includes(id));
+  // Repères bornés par l'âge (night.by_age) : de 2 à 3 ans, ni drap ni couette (Assurance Maladie).
+  for (const r of n.by_age ?? []) if (age >= (r.from_months ?? 0) && age < r.until_months) relays.push(r.relay);
   let status = 'unknown';
   if (room !== null) {
     status = room < n.room_range_c.min ? 'below' : room > n.room_range_c.max ? 'above' : 'in_range';
@@ -1153,6 +1155,7 @@ export function lint(bundle) {
     ...R.relay_priority,
     ...R.night.always,
     ...R.night.when_room_known,
+    ...(R.night.by_age ?? []).map((r) => r.relay),
     ...Object.values(R.outfit.transport).flatMap((t) => [...t.notes, ...(t.option_note ? [t.option_note] : [])]),
     ...Object.values(R.outfit.transport).flatMap((t) => (t.safety ? [t.safety.cover_relay, t.safety.heat_relay, t.safety.slippery_relay, ...t.safety.principles] : [])),
     ...R.purchases.never_suggest.map((p) => p.relay),
