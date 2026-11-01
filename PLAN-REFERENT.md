@@ -112,7 +112,7 @@ Responsable : **C** pour Claude, **B** pour Bruno.
 - [x] Repère UV « de midi à 16 heures » publié dans le guide, une fois l'OMS relue (C, 0.21.0)
 - [x] « Faut-il une couche de plus que soi ? » (C, 0.21.1). La règle vient de l'Académie américaine de pédiatrie (citée comme société savante, niveau B) ; les repères publics disent « comme vous » à la maison.
 - [x] Lien « Le guide des tenues » dans le pied de l'app (C, 0.21.0). Sur Android, il s'ouvre dans le navigateur.
-- [ ] Lien « Pourquoi cette tenue ? » depuis la carte Dehors vers la page de sa tranche (C)
+- [x] Lien « Pourquoi cette tenue ? » en bas de la carte Dehors, vers la page de la tranche du moment (C, 0.21.2)
 - [x] Image de partage, 1200 × 630 (`guide/partage.png`, faite par `tools/e2e/partage.js`) (C, 0.21.0)
 - [x] Page de confidentialité, demandée par le Play Store (C, 0.21.0)
 - [ ] Réserver superbebe.fr (environ 10 € par an) ; migration plus tard, avec un transfert des profils (B)
@@ -197,4 +197,5 @@ Assistants : ChatGPT, Gemini, Google (aperçu IA), Copilot, Perplexity, Claude, 
   - Ni drap ni couette avant 3 ans, dans l'app.
   - Pages hiver, été et confidentialité, image de partage, lien vers le guide depuis l'app.
   - Version 0.21.0 (APK 26), 25 pages, en ligne.
-  - Version 0.21.1 : page « une couche de plus que soi ? », 26 pages. Toutes les adresses signalées à IndexNow.
+  - Version 0.21.1 : page « une couche de plus que soi ? », 26 pages. Toutes les adresses signalées à IndexNow (202 Accepted).
+  - Version 0.21.2 : lien « Pourquoi cette tenue ? » depuis la carte Dehors.

@@ -4,6 +4,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, normalize } from 'node:path';
 import { addDays, evaluate } from '../engine/engine.js';
+import { guideBandPath } from '../app/js/format.js';
 import { buildGuide, SITE } from './build-guide.js';
 import { loadRules, ROOT } from './load-rules.js';
 
@@ -104,6 +105,16 @@ test('Le guide reprend les repères des règles : chambre, maison, tranches', ()
   assert((hub.match(/href="guide\/nuit\/chambre-[^"/]+\/"/g) ?? []).length >= R.night.tog_hint.bins.length, 'nuit : une ligne par tranche');
   const maison = html(pages.find((p) => p.path === 'guide/maison/'));
   assert(maison.includes(`entre ${R.indoor.comfort_range_c.min} et ${R.indoor.comfort_range_c.max}`), 'maison : plage de jour absente');
+});
+
+test('Le lien « Pourquoi cette tenue ? » de l\'app mène à la page du guide de chaque ressenti, de −15 à 40 °C', () => {
+  const paths = new Set(pages.map((p) => p.path));
+  for (let feels = -15; feels <= 40; feels += 0.5) {
+    const path = guideBandPath(bundle.rules.outfit.bands, feels);
+    assert(paths.has(path), `${feels} °C : ${path} n'est pas une page du guide`);
+    const band = bundle.rules.outfit.bands.find((b) => b.min_feels_c === null || feels >= b.min_feels_c);
+    assert(html(pages.find((p) => p.path === path)).includes(`(tranche « ${bundle.messages.labels.bands[band.id].toLowerCase()} »)`), `${feels} °C : pas la bonne tranche`);
+  }
 });
 
 test('Aucune source à vérifier n\'est citée en dehors du registre', () => {

@@ -1,13 +1,13 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
 import { addDays, ageMonths, baseTransport, homeStatus, hourFr, journeeAt, journeeRange, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
 import { configChildren } from '../../engine/adapter.js';
-import { dayLong, dayShort, decimal, esc, MONTHS } from './format.js';
+import { dayLong, dayShort, decimal, esc, guideBandPath, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
 import { ageLabel, feedbackHint } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.21.1';
+export const VERSION = '0.21.2';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -596,6 +596,8 @@ function outsideCard(state, ctx) {
   const from = started ? Math.floor(toMin(now) / 60) * 60 : toMin(j.from);
   const weather = ahead.length ? stepWeather(state, j, from, until(0)) : '';
   const title = started ? 'Maintenant' : `${ctx.tomorrow ? 'Demain, dès' : 'Dès'} ${hourFr(j.from)}`;
+  // La page du guide pour le ressenti de la première étape : la tenue expliquée, avec ses sources (s'ouvre hors de l'app).
+  const guide = guideBandPath(R.outfit.bands, (j.hours.find((h) => toMin(h.time) === from) ?? j.hours[0])?.feels_c);
   return `<section class="card day" aria-labelledby="t-dehors">
     <div class="card-head">
       <h2 class="card-title main" id="t-dehors">${icon('sun', { size: 20 })}Dehors</h2>
@@ -611,6 +613,7 @@ function outsideCard(state, ctx) {
     ${swapNote(state, j)}
     ${bag}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
+    ${guide ? `<p class="hint guide-link"><a class="link" href="../${guide}">Pourquoi cette tenue ? Le guide, avec ses sources</a></p>` : ''}
     <button class="btn soft" data-action="share-fiche">${icon('share', { size: 18 })}Envoyer la fiche du jour</button>
   </section>`;
 }
