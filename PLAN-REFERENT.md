@@ -16,8 +16,8 @@ D'abord en français (France, puis Belgique, Suisse, Québec), l'anglais ensuite
 
 | Ce que j'avais proposé | Ce qu'on sait maintenant | Décision |
 |---|---|---|
-| Rendre le contenu lisible par les IA | Confirmé et pire que prévu : la racine du site redirige vers l'app, l'app affiche « Chargement… » sans JavaScript, pas de plan du site. Les robots des IA n'exécutent pas le JavaScript : pour eux, Superbébé n'existe pas. | Fait en 0.21.0 : guide de 25 pages statiques. |
-| Une centaine de pages température × âge × situation | Le moteur ne donne que 18 réponses vraiment différentes (7 tranches dehors, 5 à la maison, 6 la nuit). Des pages par degré seraient des doublons, que Google classe comme contenu produit en masse. | Une page par réponse réelle, plus les pages par situation et par saison : 25 pages. |
+| Rendre le contenu lisible par les IA | Confirmé et pire que prévu : la racine du site redirige vers l'app, l'app affiche « Chargement… » sans JavaScript, pas de plan du site. Les robots des IA n'exécutent pas le JavaScript : pour eux, Superbébé n'existe pas. | Fait en 0.21.0 et 0.21.1 : guide de 26 pages statiques. |
+| Une centaine de pages température × âge × situation | Le moteur ne donne que 18 réponses vraiment différentes (7 tranches dehors, 5 à la maison, 6 la nuit). Des pages par degré seraient des doublons, que Google classe comme contenu produit en masse. | Une page par réponse réelle, plus les pages par situation et par saison : 26 pages. |
 | schema.org, FAQ, llms.txt | Mesures de 2026 : FAQ et schema.org n'ont pas d'effet sur les citations des IA à rang égal. Aucun grand moteur ne dit lire llms.txt, qui doit de toute façon être à la racine d'un domaine. | Schema minimal (fil d'Ariane, app gratuite), pas de llms.txt. |
 | Un serveur MCP ou une API | Ne nourrit ni la recherche des IA ni leur mémoire. | Phase 4, à reconsidérer. |
 | *Oublié* : la mémoire des modèles | « Les pages sont citées quand elles sont trouvées, les marques nommées quand elles sont connues. » ChatGPT écrit une marque connue dans ses requêtes 67 % du temps, contre 11 % sinon. | Les mentions sur d'autres sites sont la moitié du travail (phase 3), et prennent des mois. |
@@ -84,12 +84,12 @@ Responsable : **C** pour Claude, **B** pour Bruno.
 
 ### Phase 1 : être lisible (0.21.0, prête, en attente du Go)
 
-- [x] Guide public généré depuis le moteur (`tools/build-guide.js`), 25 pages sans JavaScript :
+- [x] Guide public généré depuis le moteur (`tools/build-guide.js`), 26 pages sans JavaScript :
   - accueil : tableaux dehors, maison et nuit, puis les repères officiels ;
   - dehors : une page de synthèse et une page par tranche de ressenti (7) ;
   - à la maison ;
   - la nuit : une page de synthèse et une page par température de chambre (6) ;
-  - nouveau-né, hiver, été et fortes chaleurs, porte-bébé, voiture, trop chaud ou trop froid, sources et méthode, confidentialité.
+  - nouveau-né, hiver, été et fortes chaleurs, porte-bébé, voiture, trop chaud ou trop froid, « une couche de plus que soi ? », sources et méthode, confidentialité.
 - [x] Un repère officiel n'est publié dans le guide que si toutes ses sources sont relues : plus strict que l'app.
 - [x] Tests (`tools/test-guide.js`, dans `npm test`), qui vérifient :
   - que les pages sont à jour, avec titre, description et adresse canonique ;
@@ -110,7 +110,7 @@ Responsable : **C** pour Claude, **B** pour Bruno.
 
 - [x] Pages de saison : hiver, et été avec fortes chaleurs (C, 0.21.0)
 - [x] Repère UV « de midi à 16 heures » publié dans le guide, une fois l'OMS relue (C, 0.21.0)
-- [ ] « Faut-il une couche de plus que soi ? » : une idée reçue que les IA répètent. Seulement avec des sources (C)
+- [x] « Faut-il une couche de plus que soi ? » (C, 0.21.1). La règle vient de l'Académie américaine de pédiatrie (citée comme société savante, niveau B) ; les repères publics disent « comme vous » à la maison.
 - [x] Lien « Le guide des tenues » dans le pied de l'app (C, 0.21.0). Sur Android, il s'ouvre dans le navigateur.
 - [ ] Lien « Pourquoi cette tenue ? » depuis la carte Dehors vers la page de sa tranche (C)
 - [x] Image de partage, 1200 × 630 (`guide/partage.png`, faite par `tools/e2e/partage.js`) (C, 0.21.0)
@@ -166,7 +166,7 @@ Assistants : ChatGPT, Gemini, Google (aperçu IA), Copilot, Perplexity, Claude, 
 
 | Échéance | Cible |
 |---|---|
-| Un mois après la mise en ligne | Les 25 pages indexées par Google et par Bing. |
+| Un mois après la mise en ligne | Les 26 pages indexées par Google et par Bing. |
 | Trois mois | Top 10 de la Search Console sur au moins 5 questions du panel. Le guide cité par au moins un assistant sur 5 questions. |
 | Six mois | Cité par trois assistants. Dix mentions sur d'autres sites. |
 | Six à douze mois | Superbébé nommé spontanément aux questions 14 et 15 (cela dépend des mentions et des cycles d'entraînement des modèles). |
@@ -174,7 +174,7 @@ Assistants : ChatGPT, Gemini, Google (aperçu IA), Copilot, Perplexity, Claude, 
 ## 8. Risques
 
 - **Santé.** Une erreur serait reprise par les IA. Parades : la charte, des sources relues, des tests avant chaque mise en ligne, la relecture par un professionnel de santé.
-- **Contenu produit en masse.** Parade : 25 pages qui donnent chacune une réponse différente, aucune page par degré.
+- **Contenu produit en masse.** Parade : 26 pages qui donnent chacune une réponse différente, aucune page par degré.
 - **Règles encore en brouillon.** La page Sources le dit (relecture santé prévue) ; pas de promotion active avant cette relecture.
 - **Changement de domaine.** Il faudra transférer les profils (le lien de partage entre parents peut servir) et rediriger depuis GitHub Pages.
 - **Face aux sites officiels.** On ne les concurrence pas : on les cite, et on applique leurs repères à la météo du jour.
@@ -196,4 +196,5 @@ Assistants : ChatGPT, Gemini, Google (aperçu IA), Copilot, Perplexity, Claude, 
   - Toutes les sources relues, plus aucune « à relire ».
   - Ni drap ni couette avant 3 ans, dans l'app.
   - Pages hiver, été et confidentialité, image de partage, lien vers le guide depuis l'app.
-  - Version 0.21.0 (APK 26), 25 pages.
+  - Version 0.21.0 (APK 26), 25 pages, en ligne.
+  - Version 0.21.1 : page « une couche de plus que soi ? », 26 pages. Toutes les adresses signalées à IndexNow.

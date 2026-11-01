@@ -475,6 +475,7 @@ function hubPage(ctx) {
         <li><a href="guide/nuit/">Comment habiller bébé pour la nuit</a> : ${ctx.nightBins.map((b) => `<a href="guide/nuit/chambre-${rangeSlug(b)}/">chambre ${esc(rangeLabel(b))}</a>`).join(', ')}</li>
         <li><a href="guide/nouveau-ne/">Comment habiller un nouveau-né</a></li>
         <li><a href="guide/hiver/">Comment habiller bébé en hiver</a> · <a href="guide/ete-canicule/">en été et par fortes chaleurs</a></li>
+        <li><a href="guide/une-couche-de-plus/">Faut-il une couche de plus que soi ?</a></li>
         <li><a href="guide/porte-bebe/">En porte-bébé</a> · <a href="guide/voiture/">En voiture</a> · <a href="guide/trop-chaud-trop-froid/">A-t-il trop chaud ou trop froid ?</a></li>
         <li><a href="guide/sources/">Sources et méthode</a></li>
       </ul>
@@ -822,6 +823,7 @@ function checkPage(ctx) {
     <section>
       <h2>Les repères officiels</h2>
       ${relays(ctx, ids.map((id) => ({ id, when: null })))}
+      <p><a href="../une-couche-de-plus/">Faut-il l'habiller avec une couche de plus que soi ?</a></p>
     </section>
     <section>
       <h2>Ce que Superbébé ne fait pas</h2>
@@ -1072,6 +1074,47 @@ function etePage(ctx) {
   };
 }
 
+// « Une couche de plus que soi » : une règle que les IA répètent. D'où elle vient (une société savante américaine,
+// citée comme telle, pas comme repère officiel), et ce que disent les repères publics, cités.
+function coucheDePlusPage(ctx) {
+  const path = 'guide/une-couche-de-plus/';
+  const aap = ctx.sourceById.get('aap-dressing-newborn');
+  const ids = ['relay.indoor.dress_like_you', 'relay.indoor.no_overwrap', 'relay.sleep.few_layers', 'relay.cold.layers', 'relay.indoor.hat_off', 'relay.check_neck'];
+  const body = `
+    <p class="lead"><strong>À la maison, non : habillez-le comme vous.</strong> La règle « une couche de plus que l'adulte » vient de l'Académie américaine de pédiatrie. Les repères publics disent plutôt : comme vous à la maison, sans trop l'envelopper ; plusieurs couches superposées dehors quand il fait froid ; et toujours, touchez sa nuque.</p>
+    <section>
+      <h2>D'où vient la règle</h2>
+      <p>L'Académie américaine de pédiatrie, une société savante et non une autorité publique, écrit : « A good rule of thumb is to dress the baby in one more layer of clothing than you are wearing to be comfortable in the same environment » (une couche de plus que ce que vous portez pour être à l'aise au même endroit).</p>
+      <p class="src">Source : ${citeSource(ctx, aap.id)}</p>
+    </section>
+    <section>
+      <h2>Ce que disent les repères officiels</h2>
+      ${relays(ctx, [
+    { id: 'relay.indoor.dress_like_you', when: 'À la maison' },
+    { id: 'relay.indoor.no_overwrap', when: 'À la maison' },
+    { id: 'relay.sleep.few_layers', when: 'Pour dormir' },
+    'relay.cold.layers',
+    { id: 'relay.indoor.hat_off', when: 'En rentrant' },
+    { id: 'relay.check_neck', when: 'Toujours' },
+  ])}
+    </section>
+    <section>
+      <h2>Et dans Superbébé ?</h2>
+      <p>Les tenues ne se comptent pas en « couches de plus » : elles suivent la température ressentie dehors, celle de la pièce à la maison, celle de la chambre la nuit, avec des repères chiffrés. Ensuite, la nuque dit s'il faut enlever une couche.</p>
+      <p><a href="../dehors/">Dehors</a> · <a href="../maison/">à la maison</a> · <a href="../nuit/">la nuit</a></p>
+    </section>
+    ${cta(ctx, path)}`;
+  return {
+    path,
+    title: 'Faut-il habiller bébé avec une couche de plus que soi ? | Superbébé',
+    h1: 'Faut-il habiller bébé avec une couche de plus que soi ?',
+    description: 'La règle « une couche de plus que l\'adulte » vient de l\'Académie américaine de pédiatrie. Les repères publics disent : à la maison, habillez-le comme vous, sans trop l\'envelopper ; dehors par le froid, plusieurs couches ; touchez sa nuque.',
+    crumbs: [HOME, crumb('Une couche de plus ?', path)],
+    citations: [aap.url, ...citations(ctx, ids)],
+    body,
+  };
+}
+
 // Confidentialité : ce que fait l'app aujourd'hui (sans serveur à elle), dit simplement. Exigée par le Play Store.
 function confidentialitePage(ctx) {
   const path = 'guide/confidentialite/';
@@ -1132,6 +1175,7 @@ export function buildGuide(bundle, { site = SITE } = {}) {
     porteBebePage(ctx),
     voiturePage(ctx),
     checkPage(ctx),
+    coucheDePlusPage(ctx),
     sourcesPage(ctx),
     confidentialitePage(ctx),
   ];
