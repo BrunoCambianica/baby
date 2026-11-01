@@ -840,6 +840,17 @@
       }
     },
     {
+      "id": "poussette-sans-chanceliere-alternative",
+      "description": "6 °C en poussette, aucune chancelière notée : la combinaison, et la chancelière dite alternative (à sa place, jamais en plus)",
+      "input": { "profile": {} },
+      "expect": {
+        "transport": "poussette",
+        "journee.morning.include": ["combi_pilote"], "journee.morning.exclude": ["chanceliere"],
+        "journee.notes": ["practical.stroller_muff_option"],
+        "outfit.notes.include": ["practical.stroller_muff_option"]
+      }
+    },
+    {
       "id": "porte-bebe-chanceliere-ignoree",
       "description": "Chancelière notée, sortie en porte-bébé : elle ne sert que dans la poussette",
       "input": { "profile": { "transport": "porte_bebe", "inventory": { "chanceliere": ["unique"] } } },
@@ -946,7 +957,7 @@
       "id": "a-pied-avant-2-ans",
       "description": "Mode à pied pour un bébé de 6 mois : la tenue reste celle de la poussette",
       "input": { "profile": { "transport": "a_pied" } },
-      "expect": { "transport": "poussette", "outfit.band": "froid", "outfit.notes": [], "outfit.items.include": ["combi_pilote"] }
+      "expect": { "transport": "poussette", "outfit.band": "froid", "outfit.notes": ["practical.stroller_muff_option"], "outfit.items.include": ["combi_pilote"] }
     },
     {
       "id": "enfant-voiture",

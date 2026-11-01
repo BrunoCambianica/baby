@@ -368,6 +368,11 @@
       "text": "Pas d'équivalent aussi chaud, qui couvre autant, dans nos repères.",
       "short": "Pas d'équivalent"
     },
+    "practical.stroller_muff_option": {
+      "kind": "pratique",
+      "text": "Une chancelière ? Elle se met à la place de la combinaison dans la poussette, jamais en plus : deux couches, ce serait trop chaud. Notée dans la garde-robe (onglet Achats), la tenue s'adapte.",
+      "short": "Chancelière : à la place de la combinaison"
+    },
     "practical.stroller_muff": {
       "kind": "pratique",
       "text": "Avec la chancelière de votre garde-robe : dans la poussette, elle remplace la combinaison, pieds dedans. La combinaison va dans le sac, pour quand il en sort.",

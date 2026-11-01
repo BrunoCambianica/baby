@@ -522,6 +522,14 @@ function planJournee(input, R, age, plan) {
   };
 }
 
+// En poussette sans chancelière notée, avant l'âge où elle ne sert plus : la chancelière est une alternative à la combinaison,
+// jamais en plus (trop de couches). Seulement quand la tenue a une combinaison qu'elle remplacerait.
+function muffOptionNotes(mode, items, age, R) {
+  const muff = R.outfit.transport.poussette_chanceliere;
+  if (mode !== 'poussette' || !muff?.option_note || (muff.max_age_m && age >= muff.max_age_m)) return [];
+  return items.some((item) => item in muff.replace_items) ? [muff.option_note] : [];
+}
+
 // Repères de sécurité du portage (outfit.transport.<mode>.safety), placés en tête des conseils de la carte Dehors :
 // la couverture ou le manteau de portage jamais sur son visage, dès qu'il est dans la tenue ; par forte chaleur, avant
 // heat_under_months mois, nez et bouche dégagés ; verglas ou neige annoncés dans la suite de la plage, sol glissant.
@@ -1083,10 +1091,15 @@ export function evaluate(input, bundle) {
   result.indoor.wardrobe = fromWardrobe(result.indoor.swapped, indoor.wardrobe);
   result.indoor.missing = notOwned(result.indoor.wear, indoor.missing);
   // Repères du portage, en tête des conseils (ils ne dépendent pas des pièces remplacées : celles du portage sont verrouillées).
-  if (outfit) outfit.notes.unshift(...carrierNotes(result.transport, outfit.items, age, plan, R));
+  if (outfit) {
+    outfit.notes.unshift(...carrierNotes(result.transport, outfit.items, age, plan, R));
+    outfit.notes.push(...muffOptionNotes(result.transport, outfit.items, age, R));
+  }
   if (result.journee) {
     const j = result.journee;
-    j.notes.unshift(...carrierNotes(result.transport, [...j.morning, ...j.changes.flatMap((ch) => ch.add)], age, plan, R));
+    const worn = [...j.morning, ...j.changes.flatMap((ch) => ch.add)];
+    j.notes.unshift(...carrierNotes(result.transport, worn, age, plan, R));
+    j.notes.push(...muffOptionNotes(result.transport, worn, age, R));
   }
   // Alerte officielle qui passe avant le plan de la journée dans le widget (vigilance, grand froid, chaleur…).
   if (result.journee) result.journee.alert = result.relays.find((id) => R.journee.widget_urgent_relays.includes(id)) ?? null;
@@ -1140,7 +1153,7 @@ export function lint(bundle) {
     ...R.relay_priority,
     ...R.night.always,
     ...R.night.when_room_known,
-    ...Object.values(R.outfit.transport).flatMap((t) => t.notes),
+    ...Object.values(R.outfit.transport).flatMap((t) => [...t.notes, ...(t.option_note ? [t.option_note] : [])]),
     ...Object.values(R.outfit.transport).flatMap((t) => (t.safety ? [t.safety.cover_relay, t.safety.heat_relay, t.safety.slippery_relay, ...t.safety.principles] : [])),
     ...R.purchases.never_suggest.map((p) => p.relay),
     ...R.purchases.categories.flatMap((c) => [

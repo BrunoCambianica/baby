@@ -87,6 +87,7 @@
         },
         "carry_reason": "hors_poussette",
         "notes": ["practical.stroller_muff"],
+        "option_note": "practical.stroller_muff_option",
         "rain_gear": "habillage_pluie"
       },
       "porte_bebe": {
@@ -432,7 +433,7 @@
         "id": "chanceliere", "size_system": "unique", "priority": 3, "max_age_m": 24,
         "need_if": { "week_band_in": ["froid", "tres_froid"], "transport_in": ["poussette"] },
         "reason": "froid",
-        "relays": []
+        "relays": ["practical.stroller_muff_option"]
       },
       {
         "id": "habillage_pluie", "size_system": "unique", "priority": 3,
