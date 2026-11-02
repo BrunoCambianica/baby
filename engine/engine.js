@@ -245,15 +245,70 @@ function wornBand(feels, profile, R, mode) {
   return { base, idx };
 }
 
+// ——— En voiture ———
+// Voiture chauffée ou climatisée (outfit.transport.voiture.cabin ; profile.car_climate, oui sans réglage) : l'habitacle
+// n'a pas le temps du dehors. Sans chauffage ni clim, null : la tenue du dehors, la combinaison devenue une couverture.
+const carCabin = (profile, mode, R) => {
+  const C = R.outfit.transport[mode]?.cabin;
+  return C && profile.car_climate !== false ? C : null;
+};
+
+// Tranche de la maison (indoor.bins, avec la variante d'âge) pour une pièce à `temp` °C, et sa liste de vêtements stylée.
+function indoorBin(R, age, temp) {
+  const I = R.indoor;
+  const t = I.round_room_temp ? Math.round(temp) : temp;
+  const variant = (I.age_variants ?? []).filter((v) => age >= v.from_months).at(-1);
+  return (variant?.bins ?? I.bins).find((b) => b.max_c === null || t <= b.max_c);
+}
+
+// En voiture chauffée, pour la tranche du dehors `idx` : `seat`, la tenue dans le siège (celle de la maison pour
+// l'habitacle, ou celle du dehors sans ses couches du dessus si elle est plus légère, l'été) ; `cover`, la couverture
+// par-dessus le harnais au départ quand la tranche le demande ; `arrival`, ce qu'on lui met en sortant de la voiture.
+// Après 2 ans (base_max_drop 0), le pantalon du dehors reste dans le siège : le manteau ne couvre pas les jambes.
+function carOutfit(idx, C, profile, R, age) {
+  const J = R.journee;
+  const t = R.outfit.transport.voiture;
+  const variant = ageVariant(R, age);
+  const style = dayStyle(R, profile);
+  const isFixed = (item) => J.fixed_slots.includes(slotOf(J, item));
+  const heat = (items) => items.reduce((sum, item) => sum + (J.warmth[item] ?? 0), 0);
+  const outside = bandItems(idx, 'poussette', variant, R, style).filter((item) => !t.remove_items.includes(item));
+  const fixed = outside.filter(isFixed);
+  const light = outside.filter((item) => isFixed(item) || slotOf(J, item) === 'haut');
+  const cabin = styled(indoorBin(R, age, C.temp_c).wear, style);
+  let seat;
+  if (heat(cabin) >= heat(light)) seat = light;
+  else seat = variant?.base_max_drop === 0 ? [...fixed, ...cabin.filter((item) => !isFixed(item))] : cabin;
+  return {
+    seat,
+    cover: C.cover_bands.includes(R.outfit.bands[idx].id) ? C.cover_item : null,
+    arrival: outside.filter((item) => !isFixed(item) && !seat.includes(item)),
+  };
+}
+
 function chooseOutfit(feels, profile, R, age) {
   const mode = transportFor(profile, age, R);
   const { base, idx } = wornBand(feels, profile, R, mode);
+  const C = carCabin(profile, mode, R);
+  if (C) {
+    const car = carOutfit(idx, C, profile, R, age);
+    return {
+      band: R.outfit.bands[idx].id,
+      base_band: R.outfit.bands[base].id,
+      feels_c: feels,
+      transport: mode,
+      items: [...car.seat, ...(car.cover ? [car.cover] : [])],
+      car: { cabin_c: C.temp_c, ...car },
+      notes: [...C.notes, ...(car.cover ? C.cover_notes ?? [] : [])],
+    };
+  }
   return {
     band: R.outfit.bands[idx].id,
     base_band: R.outfit.bands[base].id,
     feels_c: feels,
     transport: mode,
     items: bandItems(idx, mode, ageVariant(R, age), R, dayStyle(R, profile)),
+    car: null,
     notes: [...R.outfit.transport[mode].notes],
   };
 }
@@ -381,6 +436,8 @@ function planJournee(input, R, age, plan) {
   const drop = variant?.base_max_drop ?? (worn.has('dessus') ? J.base_max_drop_under_dessus : J.base_max_drop);
   const baseIdx = Math.max(Math.min(...segs.map((sg) => sg.band)), b0 - drop);
   const base = bandItems(baseIdx, mode, variant, R, style).filter(isFixed);
+  const C = carCabin(profile, mode, R);
+  if (C) return carJournee({ input, R, age, plan, hours, needs, b0, baseIdx, C, t });
   const morning = [...base, ...worn.values()];
 
   // Changements. Tête, mains et pieds suivent la tranche : bonnet, moufles, chaussons et chancelière restent tant
@@ -516,8 +573,67 @@ function planJournee(input, R, age, plan) {
     morning,
     changes: kept.map(({ from, ...ch }) => ch),
     bag: packed,
+    car: null,
     hours: hours.map((sl) => ({ time: fmtMin(sl.start), feels_c: sl.feels_c, precip_prob: sl.precip_prob, uv: sl.uv })),
     notes: [...t.notes],
+    check: J.check,
+  };
+}
+
+// La journée en voiture chauffée ou climatisée : dans le siège, la même tenue toute la journée (celle de la tranche la
+// plus douce que la journée garde, comme le dessous d'une journée dehors), avec la couverture au départ si la première
+// heure la demande ; aucun changement en route. Dans le sac, pour la sortie de la voiture, la couche la plus chaude de
+// chaque rôle que demandent les heures qui restent ; puis la protection contre la pluie et un chapeau au soleil.
+// `car.arrival` : heure par heure, ce qu'on lui met en sortant.
+function carJournee({ input, R, age, plan, hours, needs, b0, baseIdx, C, t }) {
+  const J = R.journee;
+  const { profile } = input;
+  const bands = R.outfit.bands;
+  const { seat } = carOutfit(baseIdx, C, profile, R, age);
+  const { cover } = carOutfit(b0, C, profile, R, age);
+  const arrivals = needs.map((idx) => carOutfit(idx, C, profile, R, age).arrival.filter((item) => !seat.includes(item)));
+  const from = input.now ? toMin(input.now) : 0;
+  const ahead = (k) => hours[k].end > from;
+  const slots = Object.keys(J.slots);
+  const warmest = new Map();
+  arrivals.forEach((items, k) => {
+    if (!ahead(k)) return;
+    for (const item of items) {
+      const slot = slotOf(J, item);
+      const had = warmest.get(slot);
+      if (!had || (J.warmth[item] ?? 0) > (J.warmth[had] ?? 0)) warmest.set(slot, item);
+    }
+  });
+  const bag = [...warmest.entries()]
+    .sort(([a], [b]) => slots.indexOf(a) - slots.indexOf(b))
+    .map(([, item]) => ({ item, reason: C.carry_reason }));
+  const rainy = hours.find((sl, k) => ahead(k) && sl.precip_prob >= J.bag.rain_prob_at_least);
+  if (rainy) bag.push({ item: t.rain_gear, reason: 'pluie', time: fmtMin(rainy.start) });
+  const sunny = hours.find((sl, k) => ahead(k) && sl.uv >= R.relay_triggers.uv_at_least && sl.feels_c >= J.bag.sun_feels_c_at_least);
+  if (sunny && !bag.some((x) => J.sun_hats.includes(x.item))) bag.push({ item: 'chapeau', reason: 'soleil', time: fmtMin(sunny.start) });
+  const pocket = (x) => J.bag.pocket_slots.includes(slotOf(J, x.item));
+  const packed = bag.filter((x) => pocket(x) || bag.filter((y) => !pocket(y)).indexOf(x) < J.bag.max_items);
+  const feels = hours.map((sl) => sl.feels_c);
+  const first = feels[0];
+  const extreme = Math.max(...feels) - first >= first - Math.min(...feels) ? Math.max(...feels) : Math.min(...feels);
+  return {
+    from: fmtMin(hours[0].start),
+    to: fmtMin(hours.at(-1).end),
+    feels: { first: Math.round(first), extreme: Math.round(extreme) },
+    band: bands[b0].id,
+    base_band: bands[baseIdx].id,
+    transport: 'voiture',
+    morning: [...seat, ...(cover ? [cover] : [])],
+    changes: [],
+    bag: packed,
+    car: {
+      cabin_c: C.temp_c,
+      seat: [...seat],
+      cover,
+      arrival: hours.map((sl, k) => ({ time: fmtMin(sl.start), items: arrivals[k] })),
+    },
+    hours: hours.map((sl) => ({ time: fmtMin(sl.start), feels_c: sl.feels_c, precip_prob: sl.precip_prob, uv: sl.uv })),
+    notes: [...C.notes, ...(cover ? C.cover_notes ?? [] : [])],
     check: J.check,
   };
 }
@@ -563,10 +679,7 @@ export function journeeAt(journee, hhmm) {
 function planIndoor(input, R, age) {
   const I = R.indoor;
   const room = input.profile.day_room_temp_c ?? null;
-  const ref = room ?? (I.comfort_range_c.min + I.comfort_range_c.max) / 2;
-  const t = I.round_room_temp ? Math.round(ref) : ref;
-  const variant = (I.age_variants ?? []).filter((v) => age >= v.from_months).at(-1);
-  const bin = (variant?.bins ?? I.bins).find((b) => b.max_c === null || t <= b.max_c);
+  const bin = indoorBin(R, age, room ?? (I.comfort_range_c.min + I.comfort_range_c.max) / 2);
   const hot = room !== null && room >= I.heat_room_c_at_least;
   // Tenues au choix : la tenue de la tranche, puis chaque style qui la change (sans pyjama…) ; celui de l'enfant, sinon la première.
   const styles = ['pyjama', ...Object.keys(R.outfit.day_styles ?? {})]
@@ -1078,12 +1191,17 @@ export function evaluate(input, bundle) {
   if (outfit) {
     outfit.swapped = {};
     outfit.items = swapItems(outfit.items, outdoor.swaps, outfit.swapped);
+    if (outfit.car) outfit.car.arrival = swapItems(outfit.car.arrival, outdoor.swaps, outfit.swapped);
     outfit.wardrobe = fromWardrobe(outfit.swapped, outdoor.wardrobe);
     outfit.missing = notOwned(outfit.items, outdoor.missing);
   }
   if (result.journee) {
     const j = result.journee;
     swapJournee(j, outdoor.swaps);
+    if (j.car) {
+      j.car.seat = swapItems(j.car.seat, outdoor.swaps, j.swapped);
+      j.car.arrival = j.car.arrival.map((a) => ({ ...a, items: swapItems(a.items, outdoor.swaps, j.swapped) }));
+    }
     j.wardrobe = fromWardrobe(j.swapped, outdoor.wardrobe);
     j.missing = notOwned([...j.morning, ...j.changes.flatMap((ch) => ch.add)], outdoor.missing);
   }
@@ -1156,7 +1274,7 @@ export function lint(bundle) {
     ...R.night.always,
     ...R.night.when_room_known,
     ...(R.night.by_age ?? []).map((r) => r.relay),
-    ...Object.values(R.outfit.transport).flatMap((t) => [...t.notes, ...(t.option_note ? [t.option_note] : [])]),
+    ...Object.values(R.outfit.transport).flatMap((t) => [...t.notes, ...(t.option_note ? [t.option_note] : []), ...(t.cabin?.notes ?? []), ...(t.cabin?.cover_notes ?? [])]),
     ...Object.values(R.outfit.transport).flatMap((t) => (t.safety ? [t.safety.cover_relay, t.safety.heat_relay, t.safety.slippery_relay, ...t.safety.principles] : [])),
     ...R.purchases.never_suggest.map((p) => p.relay),
     ...R.purchases.categories.flatMap((c) => [

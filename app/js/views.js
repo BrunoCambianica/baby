@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.21.3';
+export const VERSION = '0.22.0';
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -535,6 +535,39 @@ function stepWeather(state, j, from, to) {
   return `${lo === hi ? lo : `${lo} à ${hi}`}° ressentis · ${rain}`;
 }
 
+// En voiture chauffée ou climatisée : deux étapes. Dans le siège auto, la tenue de la maison (ou ce qui change par
+// rapport à elle), et au départ la couverture par-dessus le harnais quand il fait froid ; en sortant de la voiture, ce
+// qu'on lui met, pour l'heure qu'il est une fois la journée commencée, sinon pour le créneau idéal (ou le début de la
+// plage). Le sac garde la couche la plus chaude des heures qui restent.
+function carSteps(state, ctx, { first, started, from, piece, text, head }) {
+  const labels = state.bundle.messages.labels;
+  const { car } = ctx.result.journee;
+  const best = ctx.result.outing.window;
+  const at = started || !best || toMin(best.start) < from ? from : toMin(best.start);
+  const arrival = (car.arrival.find((a) => toMin(a.time) === at) ?? car.arrival.find((a) => toMin(a.time) >= at) ?? car.arrival.at(-1))?.items ?? [];
+  const cover = car.cover && !started
+    ? (text
+      ? `<p class="layer-items">+ ${esc(labels.items[car.cover])} au départ, à enlever quand la voiture est chaude</p>`
+      : `<ul class="dress small">${changeItem(state, car.cover, '+', 28, piece)}</ul><p class="hint">Au départ, à enlever quand la voiture est chaude.</p>`)
+    : '';
+  const out = !arrival.length
+    ? '<p class="hint">Rien à ajouter.</p>'
+    : text
+      ? `<p class="layer-items">mettre ${esc(arrival.map((i) => labels.items[i]).join(', '))}</p>`
+      : `<ul class="dress small">${arrival.map((i) => changeItem(state, i, '+', 28, piece)).join('')}</ul>`;
+  const hour = started && at === from ? '' : ` · vers ${hourFr(fmtHour(at))}`;
+  const feels = ctx.result.journee.hours.find((h) => toMin(h.time) === at)?.feels_c;
+  return `<li class="tl-step first">${head(started ? 'Maintenant, dans le siège auto' : 'Dans le siège auto', `voiture chauffée, vers ${ctx.result.journee.car.cabin_c}°`)}${first}${cover}</li>
+      <li class="tl-step">${head(`En sortant de la voiture${hour}`, typeof feels === 'number' ? `${Math.round(feels)}° ressentis` : '', arrival.length ? '+ à mettre' : '')}${out}</li>`;
+}
+const fmtHour = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:00`;
+
+// Le réglage de la voiture, sous la carte Dehors : chauffée ou climatisée (par défaut), ou ni l'un ni l'autre.
+const carClimateLine = (on) => `<p class="hint">${on
+  ? 'Pas de chauffage ni de clim dans la voiture ?'
+  : 'Voiture sans chauffage ni clim : habillé comme dehors, la combinaison devenue une couverture.'}
+    <button class="link" data-action="car-climate" data-value="${on ? 'non' : 'oui'}">${on ? 'Habiller comme dehors' : 'Elle est chauffée ou climatisée'}</button></p>`;
+
 // Dehors : la suite de la journée, de l'étape en cours à la dernière. Aujourd'hui, ni le matin passé ni les
 // changements déjà faits : une fois la journée commencée, la première étape est « Maintenant », la tenue qu'il porte.
 // Chaque étape dit son temps (ressenti, pluie) ; un changement dit s'il fait plus doux ou plus frais, avec « + » ce
@@ -549,7 +582,8 @@ function outsideCard(state, ctx) {
   const inside = ctx.result.indoor.wear;
   const now = ctx.tomorrow ? null : ctx.input.now;
   const started = Boolean(now) && toMin(now) >= toMin(j.from);
-  const wearing = started ? journeeAt(j, now).items : j.morning;
+  // En voiture chauffée, la tenue du siège (la couverture du départ a sa ligne).
+  const wearing = j.car ? j.car.seat : started ? journeeAt(j, now).items : j.morning;
   const under = (items) => items.filter((item) => J.fixed_slots.some((sl) => J.slots[sl].includes(item))).sort().join();
   const over = under(inside) === under(wearing);
   const extra = wearing.filter((item) => !inside.includes(item));
@@ -597,21 +631,29 @@ function outsideCard(state, ctx) {
   const weather = ahead.length ? stepWeather(state, j, from, until(0)) : '';
   const title = started ? 'Maintenant' : `${ctx.tomorrow ? 'Demain, dès' : 'Dès'} ${hourFr(j.from)}`;
   // La page du guide pour le ressenti de la première étape : la tenue expliquée, avec ses sources (s'ouvre hors de l'app).
-  const guide = guideBandPath(R.outfit.bands, (j.hours.find((h) => toMin(h.time) === from) ?? j.hours[0])?.feels_c);
+  // En voiture, la page de la voiture (dans le siège, au départ, en sortant).
+  const guide = j.car || ctx.result.transport === 'voiture' ? 'guide/voiture/'
+    : guideBandPath(R.outfit.bands, (j.hours.find((h) => toMin(h.time) === from) ?? j.hours[0])?.feels_c);
+  const steps = j.car ? carSteps(state, ctx, { first, started, from, piece, text, head })
+    : `<li class="tl-step first">${head(title, weather)}${first}</li>
+      ${changes}`;
+  const noChange = j.car ? '' : changes ? '' : `<p class="hint">Pas de changement à prévoir ${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}.</p>`;
+  const sub = j.car ? 'Dans le siège auto, puis en sortant de la voiture'
+    : !over ? 'Sa tenue complète pour sortir' : less.length ? 'Pour sortir : − à enlever, + à ajouter' : 'On ajoute par-dessus pour sortir (+)';
   return `<section class="card day" aria-labelledby="t-dehors">
     <div class="card-head">
       <h2 class="card-title main" id="t-dehors">${icon('sun', { size: 20 })}Dehors</h2>
       ${modePick(state, baseTransport(ctx.result.transport, state.bundle.rules), state.profile.birth)}
     </div>
-    <p class="card-sub">${!over ? 'Sa tenue complète pour sortir' : less.length ? 'Pour sortir : − à enlever, + à ajouter' : 'On ajoute par-dessus pour sortir (+)'}</p>
+    <p class="card-sub">${sub}</p>
     ${whenRow(state, ctx.result)}
     <ol class="timeline" aria-label="${started ? "D'ici" : `De ${hourFr(j.from)} à`} ${hourFr(j.to)}">
-      <li class="tl-step first">${head(title, weather)}${first}</li>
-      ${changes}
+      ${steps}
     </ol>
-    ${changes ? '' : `<p class="hint">Pas de changement à prévoir ${started ? "d'ici" : `de ${hourFr(j.from)} à`} ${hourFr(j.to)}.</p>`}
+    ${noChange}
     ${swapNote(state, j)}
     ${bag}
+    ${ctx.result.transport === 'voiture' ? carClimateLine(Boolean(j.car)) : ''}
     ${tips ? `<ul class="tips">${tips}</ul>` : ''}
     ${guide ? `<p class="hint guide-link"><a class="link" href="../${guide}">Pourquoi cette tenue ? Le guide, avec ses sources</a></p>` : ''}
     <button class="btn soft" data-action="share-fiche">${icon('share', { size: 18 })}Envoyer la fiche du jour</button>

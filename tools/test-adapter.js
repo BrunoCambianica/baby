@@ -171,6 +171,22 @@ test('Chancelière de la garde-robe : signalée aux widgets, qui l\'utilisent à
   assert(morning('ema').includes('combi_pilote') && !morning('ema').includes('chanceliere'), morning('ema').join());
 });
 
+test('Voiture sans chauffage ni clim : signalée aux widgets ; chauffée par défaut, la tenue du siège et le reste dans le sac', () => {
+  const household = {
+    commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 },
+    outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_view: 'dessins', updated: 5,
+    children: [
+      { id: 'leo', name: 'Léo', birth: '2026-05', transport: 'voiture', outfit_offset: 0, car_climate: false, inventory: {} },
+      { id: 'ema', name: 'Ema', birth: '2026-05', transport: 'voiture', outfit_offset: 0, inventory: {} },
+    ],
+  };
+  const cfg = decodeConfig(encodeConfig(householdToConfig(household), toB64), fromB64);
+  assert(cfg.k[0].cc === 0 && !('cc' in cfg.k[1]), JSON.stringify(cfg.k));
+  const journee = (ref) => widgetView({ forecast, profile: configToProfile(cfg, ref), date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle).today.journee;
+  assert(journee('leo').car === null, 'sans chauffage : tenue du dehors attendue');
+  assert(journee('ema').car && journee('ema').bag.every((b) => b.reason !== 'voiture' || !journee('ema').morning.includes(b.item)), JSON.stringify(journee('ema').bag));
+});
+
 test('Garde-robe réelle : gilets et pulls notés passent aux widgets, qui proposent la même pièce que l\'app', () => {
   const rules = Object.values(bundle.rules.outfit.alternatives.wardrobe).sort().join();
   assert(rules === [...WARDROBE_CATEGORIES].sort().join(), `catégories : règles ${rules}, adaptateur ${WARDROBE_CATEGORIES.join()}`);

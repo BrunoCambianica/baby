@@ -134,7 +134,16 @@
           "combi_ski": ["couverture_harnais"]
         },
         "notes": [],
-        "rain_gear": "capuche"
+        "rain_gear": "capuche",
+        "cabin": {
+          "note": "Voiture chauffée ou climatisée (profile.car_climate, oui sans réglage) : dans le siège, la tenue de la maison pour l'habitacle à temp_c (indoor.bins, comme la carte Dedans), ou celle du dehors si elle est plus légère (l'été) ; après 2 ans, le pantalon du dehors reste (le manteau ne couvre pas les jambes). Au départ, si la tranche du dehors le demande (cover_bands), la couverture par-dessus le harnais, à enlever quand la voiture est chaude, avec le repère du bonnet enlevé en montant en voiture (cover_notes). Le reste de la tenue du dehors (pull, combinaison, bonnet, moufles, chaussons) va dans le sac pour la sortie de la voiture (carry_reason), le plus chaud de la journée qui reste ; il n'est remis qu'en sortant. Sans chauffage ni clim, la tenue du dehors, combinaison et manteau devenus une couverture (replace_items).",
+          "temp_c": 21,
+          "cover_item": "couverture_harnais",
+          "cover_bands": ["froid_modere", "froid", "tres_froid"],
+          "carry_reason": "voiture",
+          "notes": ["practical.car.cabin"],
+          "cover_notes": ["relay.indoor.hat_off"]
+        }
       }
     },
     "age_variants": [

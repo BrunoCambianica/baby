@@ -116,7 +116,7 @@ export function fromConfig(cfg, local, { keepView = false } = {}) {
     const before = known.get(id);
     return {
       id, name: c.name, birth: c.birth, transport: c.transport, outfit_offset: c.outfit_offset,
-      day_style: c.day_style, night_options: c.night_options, swaps: c.swaps,
+      day_style: c.day_style, night_options: c.night_options, swaps: c.swaps, car_climate: c.car_climate ?? null,
       inventory: before?.inventory ?? {}, room: before?.room ?? null, room_day: before?.room_day ?? null, feedback: before?.feedback ?? {},
     };
   });

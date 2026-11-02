@@ -955,6 +955,24 @@ if (local) await test('API · rappel du soir par notification Web Push : abonnem
   assert(apiServer.db.compte().abonnements === 0, 'désabonnement non transmis');
 });
 
+await test('En voiture : dans le siège comme à la maison, la tenue du dehors en sortant ; sans chauffage ni clim, la tenue du dehors', async (use) => {
+  const page = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([{ ...LEO, transport: 'voiture' }]))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('#t-dehors');
+  const card = () => page.textContent('.card.day');
+  const heated = await card();
+  assert(heated.includes('Dans le siège auto') && heated.includes('En sortant de la voiture') && heated.includes('voiture chauffée'), heated);
+  assert(!/Pas de changement/.test(heated), heated);
+  await shot(page, 'v1-voiture-chauffee');
+  await page.click('[data-action="car-climate"][data-value="non"]');
+  const cold = await card();
+  assert(!cold.includes('Dans le siège auto') && cold.includes('Voiture sans chauffage ni clim'), cold);
+  assert((await stored(page)).children[0].car_climate === false, 'réglage non enregistré');
+  await page.click('[data-action="car-climate"][data-value="oui"]');
+  assert((await card()).includes('Dans le siège auto'), 'retour à la voiture chauffée');
+  assert((await stored(page)).children[0].car_climate === null, 'réglage non remis');
+});
+
 await new Promise((resolve) => apiServer.server.close(resolve));
 await browser.close();
 server?.kill();

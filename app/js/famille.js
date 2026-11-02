@@ -65,8 +65,8 @@ export function sharedPart(h) {
     outing_duration_h: h.outing_duration_h,
     wash_days: h.wash_days ?? null,
     settings_at: h.settings_at ?? 0,
-    children: h.children.map(({ id, name, birth, transport, outfit_offset, day_style, night_options, swaps, inventory, room, room_day, feedback, updated }) => ({
-      id, name, birth, transport, outfit_offset, day_style: day_style ?? null, night_options: night_options ?? {}, swaps: swaps ?? {},
+    children: h.children.map(({ id, name, birth, transport, outfit_offset, day_style, car_climate, night_options, swaps, inventory, room, room_day, feedback, updated }) => ({
+      id, name, birth, transport, outfit_offset, day_style: day_style ?? null, car_climate: car_climate ?? null, night_options: night_options ?? {}, swaps: swaps ?? {},
       inventory: inventory ?? {}, room: room ?? null, room_day: room_day ?? null, feedback: feedback ?? {}, updated: updated ?? 0,
     })),
     removed: h.removed ?? {},

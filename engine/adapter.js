@@ -247,8 +247,8 @@ export function profileToConfig(profile) {
 }
 
 // Configuration v2 : commune et horaires communs, un enfant par entrée de k (identifiant, prénom, naissance, mode, tendance,
-// et s'il y a lieu s, style de la journée, g, tenues de nuit choisies par tranche, w, pièces au choix, et cm, une
-// chancelière dans sa garde-robe, que les widgets n'ont pas) et m, date du dernier changement :
+// et s'il y a lieu s, style de la journée, g, tenues de nuit choisies par tranche, w, pièces au choix, cm, une
+// chancelière dans sa garde-robe, que les widgets n'ont pas, et cc : 0, une voiture sans chauffage ni clim) et m, date du dernier changement :
 // la plus récente l'emporte entre l'app et les widgets.
 // Catégories de la garde-robe qui changent la tenue (règles : outfit.alternatives.wardrobe) : passées aux widgets
 // pour qu'ils proposent, comme l'app, le pull qu'il a plutôt que le gilet chaud qu'il n'a pas.
@@ -275,6 +275,7 @@ export function householdToConfig(household) {
       ...(Object.keys(c.night_options ?? {}).length ? { g: c.night_options } : {}),
       ...(Object.keys(c.swaps ?? {}).length ? { w: c.swaps } : {}),
       ...((c.inventory?.chanceliere ?? []).length ? { cm: 1 } : {}),
+      ...(c.car_climate === false ? { cc: 0 } : {}),
       ...(Object.keys(wardrobeOf(c.inventory)).length ? { gr: wardrobeOf(c.inventory) } : {}),
     })),
     m: household.updated ?? 0,
@@ -290,6 +291,7 @@ export function configChildren(cfg) {
     night_options: c.g && typeof c.g === 'object' && !Array.isArray(c.g) ? { ...c.g } : {},
     swaps: c.w && typeof c.w === 'object' && !Array.isArray(c.w) ? { ...c.w } : {},
     stroller_muff: c.cm === 1,
+    car_climate: c.cc === 0 ? false : null,
     wardrobe: c.gr && typeof c.gr === 'object' && !Array.isArray(c.gr) ? wardrobeOf(c.gr) : {},
   }));
 }
@@ -327,6 +329,7 @@ export function configToProfile(cfg, ref = '') {
     night_options: child.night_options,
     swaps: child.swaps,
     stroller_muff: child.stroller_muff,
+    car_climate: child.car_climate,
     outfit_view: cfg.i === 0 ? 'texte' : 'dessins',
     room_temp_c: null,
     day_room_temp_c: null,

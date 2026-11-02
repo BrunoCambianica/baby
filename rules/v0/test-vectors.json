@@ -1202,11 +1202,71 @@
     },
     {
       "id": "journee-voiture",
-      "description": "En voiture à 5 °C : couverture par-dessus le harnais, la combinaison dans le sac pour la sortie de la voiture",
+      "description": "En voiture chauffée à 5 °C : couverture par-dessus le harnais au départ, la tenue du dehors (combinaison, pull, bonnet, moufles, chaussons) dans le sac pour la sortie de la voiture",
       "input": { "profile": { "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
       "expect": {
         "journee.morning.include": ["couverture_harnais"],
-        "journee.bag": [{ "item": "combi_pilote", "reason": "voiture" }]
+        "journee.bag.*.item": ["combi_pilote", "pull", "bonnet", "moufles", "chaussons"],
+        "journee.bag.*.reason": ["voiture", "voiture", "voiture", "voiture", "voiture"]
+      }
+    },
+    {
+      "id": "voiture-chauffee-9",
+      "description": "En voiture chauffée à 9 °C : dans le siège la tenue de la maison (habitacle à 21 °C), sans bonnet ni gilet chaud ; la couverture au départ ; combinaison légère, gilet chaud et bonnet fin pour la sortie",
+      "input": { "profile": { "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 9 } } } },
+      "expect": {
+        "journee.morning": ["body_ml", "haut_ml", "pantalon", "chaussettes", "couverture_harnais"],
+        "journee.changes": [],
+        "journee.car.seat": ["body_ml", "haut_ml", "pantalon", "chaussettes"],
+        "journee.car.cover": "couverture_harnais",
+        "journee.bag.*.item": ["combi_legere", "gilet_chaud", "bonnet_fin"],
+        "journee.notes.include": ["practical.car.cabin", "relay.indoor.hat_off"],
+        "outfit.items.exclude": ["bonnet_fin", "gilet_chaud"],
+        "outfit.car.arrival.include": ["combi_legere", "gilet_chaud", "bonnet_fin"],
+        "relays.include": ["relay.car.coat"]
+      }
+    },
+    {
+      "id": "voiture-chauffee-16",
+      "description": "En voiture chauffée à 16 °C : pas de couverture au départ, le gilet dans le sac pour la sortie",
+      "input": { "profile": { "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 16 } } } },
+      "expect": {
+        "journee.morning": ["body_ml", "haut_ml", "pantalon", "chaussettes"],
+        "journee.car.cover": null,
+        "journee.bag.*.item": ["gilet"]
+      }
+    },
+    {
+      "id": "voiture-sans-chauffage",
+      "description": "Voiture sans chauffage ni clim (réglage) à 9 °C : la tenue du dehors, la combinaison devenue une couverture par-dessus le harnais",
+      "input": { "profile": { "transport": "voiture", "car_climate": false }, "forecast": { "hourly": { "base": { "feels_c": 9 } } } },
+      "expect": {
+        "journee.morning.include": ["gilet_chaud", "couverture_harnais", "bonnet_fin"],
+        "journee.car": null,
+        "outfit.car": null,
+        "journee.bag.*.item": ["combi_legere"]
+      }
+    },
+    {
+      "id": "voiture-chauffee-ete",
+      "description": "En voiture climatisée à 30 °C : la tenue légère du dehors (plus légère que celle de la maison), le repère de la chaleur en voiture",
+      "input": {
+        "profile": { "transport": "voiture" },
+        "forecast": { "hourly": { "base": { "feels_c": 30 } } }
+      },
+      "expect": {
+        "journee.morning": ["body_leger", "tenue_ample_claire"],
+        "journee.car.cover": null,
+        "relays.include": ["relay.heat.vehicle"]
+      }
+    },
+    {
+      "id": "voiture-chauffee-enfant",
+      "description": "Enfant de 2 ans et demi en voiture chauffée à 5 °C : le pantalon chaud du dehors reste dans le siège (le manteau ne couvre pas les jambes), manteau, pull, bonnet et moufles pour la sortie",
+      "input": { "profile": { "birth": "2024-03-15", "transport": "voiture" }, "forecast": { "hourly": { "base": { "feels_c": 5 } } } },
+      "expect": {
+        "journee.car.seat": ["haut_ml", "pantalon_chaud", "chaussettes_chaudes"],
+        "journee.bag.*.item": ["manteau_chaud", "pull", "bonnet", "moufles"]
       }
     },
     {

@@ -155,6 +155,7 @@ function compute(day) {
       outing_duration_h: p.outing_duration_h,
       outfit_offset: p.outfit_offset ?? 0,
       day_style: p.day_style ?? null,
+      car_climate: p.car_climate ?? null,
       swaps: p.swaps ?? {},
       night_options: p.night_options ?? {},
       room_temp_c: tomorrow ? null : freshRoom(p, 'nuit'),
@@ -734,6 +735,13 @@ const actions = {
     const sheet = currentView() === 'enfant' ? state.draft : null;
     if (sheet) sheet.offset = Number(el.dataset.value);
     if (sheet?.child !== 'nouveau') updateChild({ outfit_offset: Number(el.dataset.value) }, sheet?.child);
+    paint();
+  },
+  // Voiture chauffée ou climatisée (par défaut), ou ni l'un ni l'autre : depuis la carte « Dehors » en voiture.
+  'car-climate'(el) {
+    const on = el.dataset.value === 'oui';
+    updateChild({ car_climate: on ? null : false });
+    toast(on ? 'Voiture chauffée ou climatisée : comme à la maison dans le siège.' : 'Sans chauffage ni clim : habillé comme dehors dans la voiture.');
     paint();
   },
   // Avec ou sans pyjama la journée (dedans comme dehors), depuis la carte « Dedans » ou la fiche de l'enfant.

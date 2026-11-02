@@ -405,6 +405,11 @@
       "text": "Avec la chancelière de votre garde-robe : dans la poussette, elle remplace la combinaison, pieds dedans. La combinaison va dans le sac, pour quand il en sort.",
       "short": "Chancelière à la place de la combinaison"
     },
+    "practical.car.cabin": {
+      "kind": "pratique",
+      "text": "Habillé pour une voiture chauffée ou climatisée : dans le siège, comme à la maison. Par temps froid, la couverture par-dessus le harnais au départ, à enlever quand la voiture est chaude. Le reste de la tenue du dehors est dans le sac, à mettre en sortant.",
+      "short": "Voiture chauffée : comme à la maison dans le siège"
+    },
     "practical.carrier.no_footed": {
       "kind": "pratique",
       "text": "Pas de pyjama à pieds en porte-bébé : il tire sur les pieds quand les jambes sont repliées.",

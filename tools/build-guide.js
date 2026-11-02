@@ -86,7 +86,7 @@ const feelsPhrase = ({ lo, hi }) => (lo === null ? `quand le ressenti descend à
 
 // ——— Journées types, passées au moteur ———
 
-function dayInput({ feels = 21, uv = 1, months = BABY, transport = 'poussette', style = null, room = null, dayRoom = null, inventory = {} } = {}) {
+function dayInput({ feels = 21, uv = 1, months = BABY, transport = 'poussette', style = null, room = null, dayRoom = null, inventory = {}, carClimate = true } = {}) {
   return {
     date: DAY,
     now: '07:30',
@@ -100,6 +100,7 @@ function dayInput({ feels = 21, uv = 1, months = BABY, transport = 'poussette', 
       day_room_temp_c: dayRoom,
       inventory,
       ...(style ? { day_style: style } : {}),
+      ...(carClimate ? {} : { car_climate: false }),
     },
     forecast: {
       daylight: { sunrise: '07:00', sunset: '21:00' },
@@ -252,7 +253,8 @@ function bandRelayIds(ctx, band) {
     runs.push(ctx.run({ feels: hot, uv: 6, months: BABY }), ctx.run({ feels: hot, uv: 6, months: NEWBORN, transport: 'porte_bebe' }));
   }
   if (band.lo === null) runs.push(ctx.run({ feels: R.outing.slot_exclusions.feels_c_at_most - 1, months: BABY }));
-  const ids = new Set(runs.flatMap((r) => [...(r.outfit?.notes ?? []).filter((id) => id.startsWith('relay.')), ...r.relays]));
+  // Le repère du bonnet en rentrant (ou en montant en voiture) a sa ligne à part, quand la tenue a un bonnet.
+  const ids = new Set(runs.flatMap((r) => [...(r.outfit?.notes ?? []).filter((id) => id.startsWith('relay.') && id !== 'relay.indoor.hat_off'), ...r.relays]));
   const ranked = [...R.relay_priority.filter((id) => ids.has(id)), ...[...ids].filter((id) => !R.relay_priority.includes(id))];
   const ok = ranked.filter((id) => publishable(ctx, id));
   return { general: ok.filter((id) => !modeRelay(id)), modes: ok.filter(modeRelay) };
@@ -411,7 +413,7 @@ function hubPage(ctx) {
         ${outdoorRows.join('\n        ')}
         </tbody>
       </table></div>
-      <p>En porte-bébé, une couche de moins (<a href="guide/porte-bebe/">détails</a>) ; en voiture, le manteau par-dessus le harnais (<a href="guide/voiture/">détails</a>) ; à partir de 2 ans, haut et pantalon, manteau plutôt que combinaison (<a href="guide/dehors/">toutes les tenues</a>).</p>
+      <p>En porte-bébé, une couche de moins (<a href="guide/porte-bebe/">détails</a>) ; en voiture chauffée, comme à la maison dans le siège, le manteau dans le sac (<a href="guide/voiture/">détails</a>) ; à partir de 2 ans, haut et pantalon, manteau plutôt que combinaison (<a href="guide/dehors/">toutes les tenues</a>).</p>
     </section>
 
     <section id="maison">
@@ -517,7 +519,7 @@ function dehorsIndex(ctx) {
       <ul class="ticks">
         <li><a href="../porte-bebe/">En porte-bébé</a> : une couche de moins qu'en poussette (votre chaleur le réchauffe), pas de pyjama à pieds, et la couverture ou le manteau de portage par-dessus vous deux.</li>
         <li>À pied, à partir de ${T.a_pied.min_age_m / 12} ans : une couche de moins qu'en poussette, à remettre s'il s'arrête ou remonte dans la poussette.</li>
-        <li><a href="../voiture/">En voiture</a> : la combinaison ou le manteau devient une couverture, par-dessus le harnais.</li>
+        <li><a href="../voiture/">En voiture</a> : chauffée ou climatisée, comme à la maison dans le siège, une couverture par-dessus le harnais au départ, la tenue du dehors dans le sac.</li>
         <li>En poussette, avec une chancelière (avant ${T.poussette_chanceliere.max_age_m / 12} ans) : elle remplace la combinaison, pieds dedans, et la combinaison va dans le sac.</li>
       </ul>
       <p class="muted">Suggestions pratiques, sans portée sanitaire : aucune source officielle ne chiffre l'habillage selon le mode de sortie.</p>
@@ -554,7 +556,7 @@ function bandPage(ctx, band, i) {
   const same = (list) => list.join() === items.join();
   const variants = [
     { label: 'En porte-bébé', opts: { months: BABY, transport: 'porte_bebe' }, link: '../../porte-bebe/' },
-    { label: 'En voiture', opts: { months: BABY, transport: 'voiture' }, link: '../../voiture/' },
+    { label: 'En voiture chauffée, dans le siège', opts: { months: BABY, transport: 'voiture' }, link: '../../voiture/' },
     { label: 'En poussette, avec une chancelière', opts: { months: BABY, inventory: { chanceliere: ['unique'] } } },
     { label: 'Avec un pyjama plutôt qu\'un haut et un pantalon', opts: { months: BABY, style: 'pyjama' } },
     { label: 'À partir de 2 ans, en poussette', opts: { months: CHILD } },
@@ -746,7 +748,7 @@ function nightPage(ctx, bin, i) {
 
 function modeTable(ctx, transport, path) {
   const rows = ctx.bands.map((band) => {
-    const r = bandRun(ctx, band, { months: BABY, transport });
+    const r = bandRun(ctx, band, transport === 'voiture_froide' ? { months: BABY, transport: 'voiture', carClimate: false } : { months: BABY, transport });
     return `<tr><th scope="row"><a href="${href(path, `guide/dehors/${rangeSlug(band)}/`)}">${esc(rangeLabel(band))}</a></th><td>${esc(sentence(ctx, r.outfit.items))}</td></tr>`;
   });
   return `<div class="table"><table>
@@ -790,25 +792,49 @@ function porteBebePage(ctx) {
   };
 }
 
+// En voiture chauffée ou climatisée : dans le siège, au départ, et en sortant de la voiture, pour chaque tranche ;
+// puis sans chauffage ni clim (réglage), la tenue du dehors, la combinaison devenue une couverture.
+function carTable(ctx, path) {
+  const rows = ctx.bands.map((band) => {
+    const { car } = bandRun(ctx, band, { months: BABY, transport: 'voiture' }).outfit;
+    const cell = (items) => (items.length ? esc(sentence(ctx, items)) : '—');
+    return `<tr><th scope="row"><a href="${href(path, `guide/dehors/${rangeSlug(band)}/`)}">${esc(rangeLabel(band))}</a></th><td>${cell(car.seat)}</td><td>${cell(car.cover ? [car.cover] : [])}</td><td>${cell(car.arrival)}</td></tr>`;
+  });
+  return `<div class="table"><table>
+        <thead><tr><th scope="col">Ressenti dehors</th><th scope="col">Dans le siège</th><th scope="col">Au départ</th><th scope="col">En sortant</th></tr></thead>
+        <tbody>
+        ${rows.join('\n        ')}
+        </tbody>
+      </table></div>`;
+}
+
 function voiturePage(ctx) {
   const path = 'guide/voiture/';
+  const C = ctx.R.outfit.transport.voiture.cabin;
   const body = `
-    <p class="lead">Dans le siège auto, <strong>pas de manteau ni de combinaison sous le harnais</strong> : on les enlève pour l'attacher, puis on les remet par-dessus.</p>
+    <p class="lead">Dans une voiture chauffée ou climatisée, <strong>habillez-le comme à la maison</strong>, sans manteau ni combinaison sous le harnais. Par temps froid, une couverture par-dessus le harnais au départ, à enlever quand la voiture est chaude. Le reste de la tenue du dehors va dans le sac, à mettre en sortant.</p>
     <section>
       <h2>Les repères officiels</h2>
       ${relays(ctx, [{ id: 'relay.car.coat', when: null }, { id: 'relay.indoor.hat_off', when: 'En montant en voiture' }, 'relay.heat.vehicle'])}
     </section>
     <section>
-      <h2>La tenue en voiture selon le ressenti</h2>
-      <p>Pour un bébé de moins de 2 ans : la combinaison devient une couverture, par-dessus le harnais.</p>
-      ${modeTable(ctx, 'voiture', path)}
+      <h2>La tenue en voiture selon le ressenti dehors</h2>
+      <p>Pour un bébé de moins de 2 ans, dans une voiture chauffée ou climatisée (habitacle vers ${deg(C.temp_c)}) : la tenue de la maison, ou celle du dehors si elle est plus légère.</p>
+      ${carTable(ctx, path)}
+      ${note(ctx, 'practical.car.cabin')}
+      <p class="muted">Aucune source officielle ne chiffre la température de l'habitacle : la tenue de la maison dans le siège est une suggestion pratique, qui suit le repère du NHS (enlever le bonnet et les vêtements en trop en montant en voiture).</p>
+    </section>
+    <section>
+      <h2>Sans chauffage ni climatisation</h2>
+      <p>La tenue du dehors, la combinaison ou le manteau devenus une couverture par-dessus le harnais (un réglage de l'app).</p>
+      ${modeTable(ctx, 'voiture_froide', path)}
     </section>
     ${cta(ctx, path)}`;
   return {
     path,
     title: 'Bébé en voiture : comment l\'habiller dans le siège auto | Superbébé',
     h1: 'Comment habiller bébé en voiture',
-    description: 'Siège auto : doudoune ou combinaison empêchent le harnais de jouer son rôle (Santé.fr). Les enlever pour l\'attacher, couvrir par-dessus : la tenue pour chaque température.',
+    description: 'Voiture chauffée : comme à la maison dans le siège auto, sans manteau sous le harnais (Santé.fr), couverture par-dessus au départ, le reste dans le sac pour sortir. La tenue pour chaque température.',
     crumbs: [HOME, crumb('En voiture', path)],
     citations: citations(ctx, ['relay.car.coat', 'relay.indoor.hat_off', 'relay.heat.vehicle']),
     body,
