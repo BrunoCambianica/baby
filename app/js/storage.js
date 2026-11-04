@@ -61,10 +61,10 @@ export const store = {
   saveFamily: (value) => write(KEYS.family, value ?? null),
   saveReminder: (value) => write(KEYS.reminder, value),
   outings: () => read(KEYS.outings, {}),
-  // L'heure de départ d'une sortie ce jour-là ; les jours passés sont oubliés.
-  saveOuting(date, start, today) {
-    const kept = Object.fromEntries(Object.entries(read(KEYS.outings, {})).filter(([day]) => day >= today));
-    write(KEYS.outings, { ...kept, [date]: start });
+  // Les sorties d'un jour (voir main.js, outingsOf) ; les jours passés sont oubliés.
+  saveOutings(date, list, today) {
+    const kept = Object.fromEntries(Object.entries(read(KEYS.outings, {})).filter(([day]) => day >= today && day !== date));
+    write(KEYS.outings, list.length ? { ...kept, [date]: list } : kept);
   },
   promoHidden: () => read(KEYS.promo, false),
   hidePromo: () => write(KEYS.promo, true),

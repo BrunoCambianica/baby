@@ -193,14 +193,42 @@ const slotWindow = (start, end) => {
   return { from: fmtMin(from), to: fmtMin(Math.min(24 * 60, Math.max(from + 60, Math.round(end / 60) * 60))) };
 };
 
-// La sortie de ce jour-là : l'heure de départ choisie (gardée sur ce téléphone), sinon maintenant (demain : le début de
-// la plage horaire) ; le créneau idéal est à un toucher, dans le ciel et dans la bande. La bande des heures va de l'heure
-// en cours (demain, de 7 h au plus tard) à LAST_START, sans que la sortie dépasse minuit. « Maintenant » part de l'heure
-// qu'il est, arrondie aux 5 minutes ; la tenue couvre alors les heures entamées.
+// Les sorties d'un jour, gardées sur ce téléphone, de la plus ancienne à la plus récente : [{ s, d, auto }], s l'heure de
+// départ, d la durée en heures, auto pour la sortie par défaut (maintenant, pour la durée réglée), notée dès qu'on la
+// voit ; sans auto, une sortie choisie. `end` : sa fin, en minutes. Les versions 0.23 et 0.24 gardaient une seule
+// heure, choisie, pour la durée réglée.
+const OUTINGS_KEEP = 4;
+function outingsOf(date) {
+  const raw = store.outings()[date];
+  const list = typeof raw === 'string' ? [{ s: raw }] : Array.isArray(raw) ? raw : [];
+  const hours = outingHours(state.household);
+  return list.filter((o) => typeof o?.s === 'string').map((o) => ({ ...o, d: o.d ?? hours, end: toMin(o.s) + (o.d ?? hours) * 60 }));
+}
+const saveOutings = (date, list) => store.saveOutings(date, list.slice(-OUTINGS_KEEP).map(({ s, d, auto }) => (auto ? { s, d, auto } : { s, d })), parisNow().date);
+
+// La sortie par défaut, maintenant pour la durée réglée, est notée dès qu'on la voit : comme une sortie choisie, elle
+// garde son heure de fin, et « C'était juste ? » portera sur elle. Pas si une sortie est en cours ou à venir, ni dans
+// les RETURN_MIN minutes après la fin d'une sortie : on ouvre alors l'app en rentrant, pas pour sortir.
+const RETURN_MIN = 30;
+function noteDefaultOuting() {
+  const now = parisNow();
+  const nowMin = toMin(now.time);
+  const list = outingsOf(now.date);
+  if (list.some((o) => o.end > nowMin - RETURN_MIN)) return false;
+  saveOutings(now.date, [...list, { s: fmtMin(Math.floor(nowMin / 5) * 5), d: outingHours(state.household), auto: true }]);
+  return true;
+}
+
+// La sortie de ce jour-là : celle qui est en cours ou à venir (choisie, ou par défaut déjà notée), sinon maintenant
+// (demain : le début de la plage horaire) ; le créneau idéal est à un toucher, dans le ciel et dans la bande. La bande
+// des heures va de l'heure en cours (demain, de 7 h au plus tard) à LAST_START, sans que la sortie dépasse minuit.
+// « Maintenant » part de l'heure qu'il est, arrondie aux 5 minutes ; la tenue couvre alors les heures entamées.
+// `kept` : la sortie affichée est une sortie gardée.
 const LAST_START = 21;
 function outingSlot(ctx) {
   const hours = outingHours(state.household);
   const now = parisNow();
+  const nowMin = toMin(now.time);
   const hourOf = (t) => Number(t.slice(0, 2));
   const first = ctx.tomorrow ? Math.min(7, hourOf(state.profile.outing_window.from)) : Math.max(6, hourOf(now.time));
   const last = Math.min(LAST_START, 24 - hours);
@@ -210,29 +238,51 @@ function outingSlot(ctx) {
     .map((h) => ({ ...h, now: !ctx.tomorrow && hourOf(h.time) === hourOf(now.time) }));
   if (!cells.length) return { cells, hours };
   const has = (t) => cells.some((c) => c.time === t);
-  const saved = store.outings()[ctx.date];
+  const cur = outingsOf(ctx.date).filter((o) => ctx.tomorrow || o.end > nowMin).at(-1);
   // Une sortie déjà commencée (partie à 9 h 40, il est 10 h 10) reste la sienne jusqu'à sa fin : « Maintenant ».
-  const going = Boolean(saved) && cells[0].now && toMin(saved) <= toMin(now.time) && toMin(saved) + hours * 60 > toMin(now.time);
+  const going = Boolean(cur) && cells[0].now && toMin(cur.s) <= nowMin;
   const fallback = ctx.tomorrow ? (cells.find((c) => c.time >= state.profile.outing_window.from) ?? cells[0]).time : cells[0].time;
-  const start = going ? cells[0].time : has(saved) ? saved : fallback;
+  const start = going ? cells[0].time : cur && has(cur.s) ? cur.s : fallback;
   const isNow = cells[0].now && start === cells[0].time;
-  const end = going ? toMin(saved) + hours * 60 : isNow ? Math.ceil(toMin(now.time) / 5) * 5 + hours * 60 : toMin(start) + hours * 60;
-  return { cells, hours, start, now: isNow, end: fmtMin(Math.min(end, 24 * 60 - 5)), window: slotWindow(start, end) };
+  const end = going ? cur.end : isNow ? Math.floor(nowMin / 5) * 5 + hours * 60 : toMin(start) + hours * 60;
+  const kept = going || (Boolean(cur) && has(cur.s));
+  return { cells, hours, start, now: isNow, kept, end: fmtMin(Math.min(end, 24 * 60 - 5)), window: slotWindow(start, end) };
 }
 
-// La sortie choisie aujourd'hui, une fois finie : sa tenue (pour « En rentrant » et « C'était juste ? »), et si elle
-// vient de finir (BACK_MIN minutes). Choisie mais pas encore finie : `pending`, rien à demander encore.
+// Après un changement de durée, la sortie en cours ou à venir (aujourd'hui, demain) la prend aussi.
+function retimeOutings(hours) {
+  const now = parisNow();
+  const nowMin = toMin(now.time);
+  for (const date of [now.date, addDays(now.date, 1)]) {
+    const live = (o) => date !== now.date || o.end > nowMin;
+    const list = outingsOf(date);
+    if (list.some(live)) saveOutings(date, list.map((o) => (live(o) ? { ...o, d: hours } : o)));
+  }
+}
+
+// La sortie sur laquelle porte « C'était juste ? » : celle de la réponse du jour s'il y en a une (une réponse par jour),
+// sinon la dernière finie aujourd'hui, choisie ou par défaut ; avec sa tenue (pour « En rentrant »). Une sortie choisie
+// et finie depuis moins de BACK_MIN minutes : son retour vient en tête (`recent`) ; une sortie par défaut n'a peut-être
+// été qu'un coup d'œil, sa question reste à sa place. Aucune finie, mais une en cours ou à venir : `pending`, rien à
+// demander encore. Aucune sortie (ou une réponse sur la journée) : null, la question porte sur la journée.
 const BACK_MIN = 120;
 function doneOuting() {
   const now = parisNow();
-  const saved = store.outings()[now.date];
-  if (!saved) return null;
-  const hours = outingHours(state.household);
-  const end = toMin(saved) + hours * 60;
-  if (toMin(now.time) < end) return { pending: true };
-  const outing = compute('aujourdhui', slotWindow(saved, end));
+  const nowMin = toMin(now.time);
+  const list = outingsOf(now.date);
+  const answer = state.profile.feedback?.[now.date];
+  let o;
+  if (answer) {
+    if (!answer.s) return null;
+    o = { s: answer.s, d: answer.d ?? 1, auto: Boolean(answer.a) };
+    o.end = toMin(o.s) + o.d * 60;
+  } else {
+    o = list.filter((x) => x.end <= nowMin).at(-1);
+    if (!o) return list.length ? { pending: true } : null;
+  }
+  const outing = compute('aujourdhui', slotWindow(o.s, o.end));
   if (!outing?.result.journee) return null;
-  return { start: saved, end: fmtMin(Math.min(end, 24 * 60 - 5)), hours, outing, recent: toMin(now.time) < end + BACK_MIN };
+  return { start: o.s, end: fmtMin(Math.min(o.end, 24 * 60 - 5)), hours: o.d, auto: Boolean(o.auto), outing, recent: !o.auto && nowMin < o.end + BACK_MIN };
 }
 
 // Dehors : la journée (créneau idéal, repères, fiche), la sortie choisie, et la tenue de cette sortie (`outing`), calculée
@@ -242,6 +292,7 @@ function dehorsCtx(day = dehorsDay()) {
   if (!ctx) return null;
   if (ctx.tomorrow) ctx.today = compute('aujourdhui');
   ctx.slot = outingSlot(ctx);
+  if (ctx.slot.now && !ctx.slot.kept && noteDefaultOuting()) ctx.slot = outingSlot(ctx);
   ctx.outing = ctx.slot.window ? compute(day, ctx.slot.window) : null;
   ctx.done = doneOuting();
   return ctx;
@@ -700,7 +751,7 @@ function feedbackReport(children) {
   return [
     `Tenues jugées : ${stats.total} réponse(s), ${stats.juste} juste(s) (${Math.round((100 * stats.juste) / stats.total)} %), ${stats.chaud} trop chaud, ${stats.froid} trop froid`,
     ...children.filter((c) => Object.keys(c.feedback ?? {}).length).map((c) => `  Enfant ${children.indexOf(c) + 1} : ${Object.entries(c.feedback).slice(-14)
-      .map(([day, e]) => `${dayShort(day)}${e.s ? ` sortie ${hourFr(e.s)} ${V.durationLabel(e.d)}` : ''} ${mode(e.t)} ${e.f?.[0]}°→${e.f?.[1]}° (${e.b}) ${word[e.v]}`).join(' ; ')}`),
+      .map(([day, e]) => `${dayShort(day)}${e.s ? ` sortie ${hourFr(e.s)} ${V.durationLabel(e.d)}${e.a ? ' (par défaut)' : ''}` : ''} ${mode(e.t)} ${e.f?.[0]}°→${e.f?.[1]}° (${e.b}) ${word[e.v]}`).join(' ; ')}`),
   ];
 }
 
@@ -813,8 +864,13 @@ const actions = {
   // L'heure en cours : on part maintenant (à 5 minutes près), et la sortie le reste jusqu'à sa fin.
   slot(el) {
     const now = parisNow();
-    const start = 'now' in el.dataset ? fmtMin(Math.floor(toMin(now.time) / 5) * 5) : el.dataset.value;
-    store.saveOuting(dehorsDay() === 'demain' ? addDays(now.date, 1) : now.date, start, now.date);
+    const nowMin = toMin(now.time);
+    const tomorrow = dehorsDay() === 'demain';
+    const date = tomorrow ? addDays(now.date, 1) : now.date;
+    const start = 'now' in el.dataset ? fmtMin(Math.floor(nowMin / 5) * 5) : el.dataset.value;
+    // La sortie choisie remplace celle qui était en cours ou à venir ; les sorties finies restent.
+    const ended = tomorrow ? [] : outingsOf(date).filter((o) => o.end <= nowMin);
+    saveOutings(date, [...ended, { s: start, d: outingHours(state.household) }]);
     if ('center' in el.dataset) state.centerStrip = true;
     paint();
   },
@@ -1047,6 +1103,7 @@ const actions = {
       return;
     }
     updateHousehold({ outing_duration_h: Math.max(1, Math.ceil(d)), outing_short: d < 1 });
+    retimeOutings(d);
     paint();
   },
   // Température du jour (pièce de vie) ou de la nuit (chambre), gardée comme une habitude. On part de la valeur
@@ -1085,7 +1142,8 @@ const actions = {
     paint();
   },
   // « C'était juste ? » : la réponse du jour, avec ce qu'il faut pour la relire (mode, tranche, ressenti, tendance) ;
-  // après une sortie choisie, sur cette sortie (son heure, sa durée, sa tenue). Toucher la réponse déjà donnée la retire.
+  // après une sortie, choisie ou par défaut, sur cette sortie (son heure, sa durée, sa tenue ; a : la sortie par défaut).
+  // Toucher la réponse déjà donnée la retire.
   feedback(el) {
     const done = doneOuting();
     const ctx = done?.outing ?? compute('aujourdhui');
@@ -1095,7 +1153,7 @@ const actions = {
     const p = state.profile;
     const entry = p.feedback?.[state.today]?.v === v ? null : {
       v, t: baseTransport(ctx.result.transport, state.bundle.rules), b: j.band, f: [j.feels.first, j.feels.extreme], o: p.outfit_offset ?? 0,
-      ...(done?.outing ? { s: done.start, d: done.hours } : {}),
+      ...(done?.outing ? { s: done.start, d: done.hours, ...(done.auto ? { a: 1 } : {}) } : {}),
     };
     updateChild({ feedback: withFeedback(p.feedback, state.today, entry) });
     paint();

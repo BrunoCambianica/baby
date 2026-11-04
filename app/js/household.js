@@ -23,8 +23,8 @@ export const newChild = ({ name = '', birth, transport = 'poussette', outfit_off
 
 // « C'était juste ? » : la réponse du parent sur la tenue de dehors du jour, { 'AAAA-MM-JJ': { v, t, b, f, o, s, d } } :
 // v « chaud », « juste » ou « froid » ; le mode de sortie, la tranche du départ, le ressenti (du départ, le plus éloigné)
-// et la tendance de ce jour-là, pour relire les retours ; après une sortie choisie, s son heure de départ et d sa durée
-// (en heures), et le reste porte sur elle seule. Une réponse par jour, les FEEDBACK_KEEP derniers jours gardés.
+// et la tendance de ce jour-là, pour relire les retours ; après une sortie, s son heure de départ, d sa durée (en
+// heures) et a si c'était la sortie par défaut (maintenant, pour la durée réglée), et le reste porte sur elle seule. Une réponse par jour, les FEEDBACK_KEEP derniers jours gardés.
 export const FEEDBACK_KEEP = 60;
 export function withFeedback(feedback, date, entry) {
   const next = { ...(feedback ?? {}) };

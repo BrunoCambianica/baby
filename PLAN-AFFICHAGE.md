@@ -35,7 +35,7 @@ Cadrage ouvert le 4 novembre 2026, avec la version 0.23.0 (onglets alors nommés
   - les conseils, puis le lien vers le guide.
 - La sortie choisie est gardée pour la journée sur ce téléphone. Une sortie commencée reste « Maintenant → 10 h 40 » jusqu'à sa fin.
 - Le soir, une fois la dernière sortie possible passée, l'onglet passe seul à demain. Aujourd'hui reste à un toucher.
-- **Retour de la sortie** (0.24.0) : une sortie choisie, une fois finie, vient en tête pendant deux heures, avec ce qu'on lui enlève et « Pendant la sortie, il avait… ». La réponse porte sur cette sortie (heure, durée, mode, ressenti). Plus tard, la question reste à sa place ; sans sortie choisie, elle porte sur la journée, comme avant.
+- **Retour de la sortie** (0.24.0) : une sortie choisie, une fois finie, vient en tête pendant deux heures, avec ce qu'on lui enlève et « Pendant la sortie, il avait… ». La réponse porte sur cette sortie (heure, durée, mode, ressenti). Plus tard, la question reste à sa place. Depuis 0.24.1, la sortie par défaut compte aussi : maintenant, pour la durée réglée, notée dès qu'on la voit (sauf dans la demi-heure après une sortie : on rentre), elle garde son heure de fin, et la question porte sur elle, à sa place (une sortie par défaut n'a peut-être été qu'un coup d'œil). Sans aucune sortie notée, la question porte sur la journée.
 - Les repères officiels et **la fiche de la journée** (pour la nounou) restent dessous.
 
 **Intérieur**
@@ -74,7 +74,7 @@ Cadrage ouvert le 4 novembre 2026, avec la version 0.23.0 (onglets alors nommés
 | **Widgets iPhone et Android** | Ils montrent toujours la journée entière (tenue du matin, changements, sac de la plage horaire), plus la même chose que l'app. Cohérent mais différent. | Décider : voir A |
 | **Températures dans les widgets** | Les widgets oublient encore une température après 16 h : 16 h dans `SbStore.kt` (Android) et `SB_ROOM_TTL_MS` (iPhone). Après 16 h, le widget Maison affiche « à noter » alors que l'app garde l'habitude. | Aligner dans le prochain APK. Le widget iPhone se met à jour par le site. |
 | Rappel du soir | Il annonce la journée de demain, pas la sortie choisie. | Voir B |
-| « C'était juste ? » | Une réponse par jour. Après une sortie choisie, elle porte sur cette sortie (C, 0.24.0) ; sans sortie choisie (on part « maintenant » sans toucher l'heure), sur la journée entière, comme avant. | Pour que C serve plus souvent : un « On part » d'un toucher ? À voir avec les testeurs |
+| « C'était juste ? » | Une réponse par jour, sur la dernière sortie finie, choisie ou par défaut (C, 0.24.0 ; la sortie par défaut depuis 0.24.1, `a` dans la réponse). Une sortie par défaut peut n'avoir été qu'un coup d'œil : sa question reste à sa place, et les retours de test disent « (par défaut) ». | Comparer, dans les retours, les réponses par défaut et choisies |
 | Deux parents | La durée est partagée (réglage du foyer), l'heure de la sortie non (propre au téléphone). | Voir D (avec l'API) |
 | Retours de test | Chaque réponse après une sortie dit son heure et sa durée ; la durée réglée y est aussi (« 30 min »). | Fait (0.24.0) |
 | **30 minutes** et widgets | Le moteur, les widgets, le lien « Envoyer les profils » et les versions plus anciennes ne connaissent que les heures : ils lisent 1 h (`outing_duration_h`), et l'app note à part `outing_short`. L'autre parent ne le reçoit que par l'API famille. | Rien à faire tant que les widgets disent la journée entière |
@@ -116,3 +116,4 @@ Recommandation retenue le 4 novembre. **C, E, G** sont faits (0.24.0, web seulem
 - 2026-11-04 : « Go », 0.23.0 commitée et déployée (sans APK). Restent à décider : noms des onglets, sortie par défaut, propositions.
 - 2026-11-04 : choix faits : Extérieur et Intérieur, maintenant par défaut, la recommandation pour le reste. 0.24.0 prête : C, E, G, « Choisir » pour le créneau idéal.
 - 2026-11-04 : « Go », 0.24.0 commitée et déployée (sans APK : à recompiler). Suite : A + B dans un même APK.
+- 2026-11-04 : demande : la sortie par défaut compte comme une sortie (maintenant, pour la durée réglée), la question porte aussi sur elle. 0.24.1 prête ; « Go », commitée et déployée (sans APK).

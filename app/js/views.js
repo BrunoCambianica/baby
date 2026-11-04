@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.24.0';
+export const VERSION = '0.24.1';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -668,10 +668,10 @@ function checkLine(state) {
     </details>`;
 }
 
-// « C'était juste ? » : sa tenue de dehors d'aujourd'hui, jugée par le parent. Après une sortie choisie (`done`), sur
-// cette sortie, une fois finie : juste après (done.recent), la carte « Retour de la sortie » vient en tête, avec ce
-// qu'on lui enlève en rentrant ; choisie mais pas finie, rien encore. Sans sortie choisie, sur la journée, une fois
-// commencée depuis une heure. Et le soir, sous la sortie de demain. Une réponse par jour, changeable ; elle reste dans
+// « C'était juste ? » : sa tenue de dehors d'aujourd'hui, jugée par le parent, sur une sortie (`done`, voir main.js,
+// doneOuting), choisie ou par défaut, une fois finie. Juste après une sortie choisie (done.recent), la carte « Retour de
+// la sortie » vient en tête, avec ce qu'on lui enlève en rentrant ; une sortie pas encore finie, rien encore. Sans
+// sortie notée, sur la journée, une fois commencée depuis une heure. Et le soir, sous la sortie de demain. Une réponse par jour, changeable ; elle reste dans
 // le foyer (et chez l'autre parent). Avant d'ajouter une couche, le geste de la nuque ; deux réponses dans le même sens
 // en 7 jours proposent la tendance. `ctx` : aujourd'hui.
 const FEEDBACK = [['chaud', 'Trop chaud'], ['juste', 'Juste'], ['froid', 'Trop froid']];
@@ -691,7 +691,7 @@ function feedbackCard(state, ctx, done = null) {
   const tendance = hint && `<div class="fb-hint"><p>${hint.n} fois « trop ${hint.v} » cette semaine.</p>
       <button class="btn small tint" data-action="feedback-tendance" data-value="${hint.offset}">${hint.v === 'chaud' ? 'Habiller plus léger désormais' : 'Habiller plus chaudement désormais'}</button></div>`;
   const who = esc(p.name || 'il');
-  const during = done && `la sortie de ${hourFr(done.start)} à ${hourFr(done.end)}`;
+  const during = done && nbsp(`la sortie de ${hourFr(done.start)} à ${hourFr(done.end)}`);
   const back = done?.recent && backWear(state, done.outing);
   const head = !done ? `${icon('check', { size: 18 })}Aujourd'hui dehors, ${who} avait…`
     : done.recent ? `${icon('home', { size: 18 })}Retour de ${during}` : `${icon('check', { size: 18 })}Pendant ${during}, ${who} avait…`;

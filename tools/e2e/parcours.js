@@ -417,6 +417,9 @@ await test('Extérieur : maintenant par défaut, le créneau idéal d\'un touche
   assert((await page.getAttribute('.strip [aria-checked="true"]', 'data-value')) === '07:00', 'sortie par défaut : maintenant');
   assert((await page.textContent('#t-dehors')).trim() === 'Maintenant → 8 h 30', await page.textContent('#t-dehors'));
   assert((await page.getAttribute('.dur [aria-checked="true"]', 'data-value')) === '1', 'une heure par défaut');
+  // La sortie par défaut est notée dès qu'on la voit : maintenant, pour la durée réglée.
+  const noted = await page.evaluate(() => JSON.parse(localStorage.getItem('sb.sorties')));
+  assert(JSON.stringify(noted) === '{"2026-10-27":[{"s":"07:30","d":1,"auto":true}]}', JSON.stringify(noted));
   await shot(page, 'l2-sortie-maintenant-defaut');
   // Le créneau idéal d'un toucher, depuis le ciel : la sortie y part, et la bande s'ouvre dessus.
   await page.click('.pick-btn');
@@ -495,7 +498,7 @@ await test('Extérieur à 14 h : maintenant, sans les heures passées ; la sorti
   await page.reload();
   await page.waitForSelector('.day');
   assert((await page.textContent('#t-dehors')).trim() === 'Maintenant → 16 h 10', `après : ${await page.textContent('#t-dehors')}`);
-  assert((await page.textContent('#t-retour')).trim() === 'Retour de la sortie de 14 h à 15 h', await page.textContent('#t-retour'));
+  assert((await page.textContent('#t-retour')).replace(/\s/g, ' ').trim() === 'Retour de la sortie de 14 h à 15 h', await page.textContent('#t-retour'));
   assert(await page.evaluate(() => Boolean(document.querySelector('.back-card').compareDocumentPosition(document.querySelector('.day')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'retour pas en tête');
   const back = await page.textContent('.back-card');
   assert(back.includes('En rentrant') && back.includes('Gilet') && back.includes('Pendant la sortie, Léo avait'), back);
@@ -503,25 +506,33 @@ await test('Extérieur à 14 h : maintenant, sans les heures passées ; la sorti
   await page.click('.back-card .fb[data-value="juste"]');
   const entry = (await stored(page)).children[0].feedback['2026-10-27'];
   assert(entry?.v === 'juste' && entry.s === '14:00' && entry.d === 1 && entry.f.length === 2, JSON.stringify(entry));
-  // Plus tard, la question reste, à sa place, sur cette sortie.
+  // Rentré depuis peu : ouvrir l'app ne note pas de nouvelle sortie.
+  assert((await page.evaluate(() => JSON.parse(localStorage.getItem('sb.sorties'))['2026-10-27'].length)) === 1, 'sortie notée en rentrant');
+  // Plus tard, la question reste, à sa place, sur cette sortie (une réponse par jour).
   await page.clock.setFixedTime(new Date('2026-10-27T17:30:00+01:00'));
   await page.reload();
   await page.waitForSelector('.feedback');
-  assert(!(await page.isVisible('.back-card')) && (await page.textContent('#t-retour')).includes('Pendant la sortie de 14 h à 15 h, Léo avait'), await page.textContent('#t-retour'));
+  assert(!(await page.isVisible('.back-card')) && (await page.textContent('#t-retour')).replace(/\s/g, ' ').includes('Pendant la sortie de 14 h à 15 h, Léo avait'), await page.textContent('#t-retour'));
   assert((await page.getAttribute('.fb[data-value="juste"]', 'aria-pressed')) === 'true', 'réponse oubliée');
 });
 
 await test('« C\'était juste ? » : une réponse par jour, la tendance proposée après deux « trop chaud », dans les retours de test', async (use) => {
   const before = { '2026-10-25': { v: 'chaud', t: 'poussette', b: 'froid', f: [4, 15], o: 0 } };
-  const page = use(await phone({ at: '2026-10-27T14:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([{ ...LEO, feedback: before }], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  const page = use(await phone({ at: '2026-10-27T13:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([{ ...LEO, feedback: before }], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
+  await page.waitForSelector('.day');
+  // Sans heure touchée, la sortie par défaut (maintenant, une heure) : rien à demander avant sa fin.
+  assert(!(await page.isVisible('.feedback')), '« C\'était juste ? » avant la fin de la sortie par défaut');
+  // Finie : la question porte sur elle, à sa place (une sortie par défaut n'a peut-être été qu'un coup d'œil).
+  await page.clock.setFixedTime(new Date('2026-10-27T14:05:00+01:00'));
+  await page.reload();
   await page.waitForSelector('.feedback');
-  assert((await page.textContent('#t-retour')).includes('Léo avait'), await page.textContent('#t-retour'));
+  assert((await page.textContent('#t-retour')).replace(/\s/g, ' ').trim() === 'Pendant la sortie de 13 h à 14 h, Léo avait…' && !(await page.isVisible('.back-card')), await page.textContent('#t-retour'));
   await page.click('.fb[data-value="chaud"]');
   assert((await page.getAttribute('.fb[data-value="chaud"]', 'aria-pressed')) === 'true', 'réponse non marquée');
   let h = await stored(page);
   const entry = h.children[0].feedback['2026-10-27'];
-  assert(entry?.v === 'chaud' && entry.t === 'poussette' && entry.o === 0 && entry.f.length === 2, JSON.stringify(entry));
+  assert(entry?.v === 'chaud' && entry.t === 'poussette' && entry.o === 0 && entry.f.length === 2 && entry.s === '13:00' && entry.d === 1 && entry.a === 1, JSON.stringify(entry));
   // Deux « trop chaud » en 7 jours : un cran plus léger, proposé puis appliqué.
   await page.click('[data-action="feedback-tendance"]');
   h = await stored(page);
@@ -537,7 +548,7 @@ await test('« C\'était juste ? » : une réponse par jour, la tendance propos�
   await page.evaluate(() => { window.copied = ''; navigator.clipboard.writeText = (t) => { window.copied = t; return Promise.resolve(); }; });
   await page.click('[data-action="copy-report"]');
   const report = await page.evaluate(() => window.copied);
-  assert(/Tenues jugées : 2 réponse\(s\), 1 juste\(s\) \(50 %\)/.test(report) && !report.includes('Léo'), report);
+  assert(/Tenues jugées : 2 réponse\(s\), 1 juste\(s\) \(50 %\)/.test(report) && /sortie 13.h 1.h \(par défaut\)/.test(report) && !report.includes('Léo'), report);
 });
 
 await test('Portage sûr : couverture jamais sur le visage, cinq repères dépliés avant 4 mois, rien en poussette', async (use) => {
