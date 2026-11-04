@@ -1,5 +1,5 @@
 // Le foyer : commune et horaires communs, puis les enfants, chacun avec ses réglages, sa garde-robe et deux relevés :
-// `room_day`, la pièce où il passe la journée, et `room`, sa chambre la nuit ({ value, at }, valables 16 heures).
+// `room_day`, la pièce où il passe la journée, et `room`, sa chambre la nuit ({ value, at }), gardés comme des habitudes.
 // Fonctions pures, testées par tools/test-foyer.js.
 import { configChildren } from '../../engine/adapter.js';
 import { addDays } from '../../engine/engine.js';

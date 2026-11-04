@@ -1,5 +1,5 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
-import { addDays, ageMonths, baseTransport, clamp, displayMoment, evaluate, homeMoment, hourFr, render, toMin } from '../../engine/engine.js';
+import { addDays, ageMonths, baseTransport, clamp, displayMoment, evaluate, fmtMin, homeMoment, hourFr, render, toMin } from '../../engine/engine.js';
 import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
@@ -12,7 +12,6 @@ import { closeSheet, openSheet } from './listes.js';
 import { store } from './storage.js';
 import * as V from './views.js';
 
-const ROOM_TTL_MS = 16 * 3600 * 1000;
 const app = document.getElementById('app');
 
 // Hôte natif éventuel : l'app Android Superbébé (pont JavaScript), ou Scriptable qui ouvre l'app depuis le widget iPhone.
@@ -68,8 +67,12 @@ const state = {
   error: null,
   updatedAt: '',
   today: parisNow().date,
-  tab: 'sortir',
-  day: 'aujourdhui',
+  // Onglet affiché : Dehors (quand sortir, la tenue de la sortie), Dedans (le jour ou la nuit), Achats.
+  tab: 'dehors',
+  // Dehors : « aujourdhui » ou « demain » choisi par le parent ; null, selon l'heure (voir dehorsDay).
+  day: null,
+  // Dedans : « jour » (la pièce où il passe la journée) ou « nuit » (sa chambre), selon l'heure à l'ouverture.
+  inside: homeMoment(parisNow().time),
   draft: null,
   results: [],
   open: new Set(),
@@ -127,18 +130,20 @@ function currentView() {
   return state.received ? 'recevoir' : 'app';
 }
 
-// Relevé encore valable (16 heures) : `nuit`, la chambre ; `jour`, la pièce où il passe la journée.
-const freshRoom = (profile, kind = 'nuit') => {
-  const reading = kind === 'jour' ? profile.room_day : profile.room;
-  return reading && Date.now() - reading.at < ROOM_TTL_MS ? reading.value : null;
-};
-// Le widget Maison ouvre la pièce du moment : le jour, la carte « Dedans » de l'onglet Journée ; le soir, l'onglet Nuit.
-const homeTab = () => (homeMoment(parisNow().time) === 'nuit' ? 'nuit' : 'sortir');
+// La température de chaque pièce, gardée d'un jour à l'autre comme une habitude (un thermostat) : `nuit`, sa chambre ;
+// `jour`, la pièce où il passe la journée. Jamais notée : null, la tenue vaut pour le repère (en le disant).
+const roomHabit = (profile, kind = 'nuit') => (kind === 'jour' ? profile.room_day : profile.room)?.value ?? null;
+// Le widget Maison ouvre l'onglet Dedans sur la pièce du moment : le jour de 6 h à 18 h, la nuit ensuite.
+function openHome() {
+  state.tab = 'dedans';
+  state.inside = homeMoment(parisNow().time);
+}
 const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
   .format(new Date(ms)).replace(':', ' h ');
 
-// Les onglets Nuit et Achats parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Journée.
-function compute(day) {
+// Les onglets Dedans et Achats parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Dehors.
+// `window` : une sortie ({ from, to }) à la place de la plage horaire, pour la tenue de cette sortie seulement.
+function compute(day, window = null) {
   if (!state.forecast || !state.bundle) return null;
   const now = parisNow();
   const tomorrow = day === 'demain';
@@ -151,15 +156,15 @@ function compute(day) {
     profile: {
       birth: p.birth,
       transport: p.transport,
-      outing_window: p.outing_window,
+      outing_window: window ?? p.outing_window,
       outing_duration_h: p.outing_duration_h,
       outfit_offset: p.outfit_offset ?? 0,
       day_style: p.day_style ?? null,
       car_climate: p.car_climate ?? null,
       swaps: p.swaps ?? {},
       night_options: p.night_options ?? {},
-      room_temp_c: tomorrow ? null : freshRoom(p, 'nuit'),
-      day_room_temp_c: tomorrow ? null : freshRoom(p, 'jour'),
+      room_temp_c: roomHabit(p, 'nuit'),
+      day_room_temp_c: roomHabit(p, 'jour'),
       inventory: p.inventory ?? {},
       wash_days: p.wash_days ?? null,
     },
@@ -171,6 +176,54 @@ function compute(day) {
   const hidden = store.hidden();
   result.purchases = result.purchases.filter((x) => !hidden.includes(`${p.id}|${x.key}`));
   return { input, result, date, moment: tomorrow ? 'jour' : displayMoment(result, time), tomorrow, forecast: state.forecast };
+}
+
+// ——— Dehors : votre sortie ———
+// Le jour affiché : celui choisi par le parent ; sinon aujourd'hui, ou demain une fois la dernière sortie possible passée
+// (le soir, on prépare demain).
+function dehorsDay() {
+  if (state.day) return state.day;
+  return compute('aujourdhui')?.moment === 'soir' ? 'demain' : 'aujourdhui';
+}
+
+// La sortie de ce jour-là : l'heure de départ choisie (gardée sur ce téléphone), sinon le créneau idéal, sinon maintenant
+// (demain : le début de la plage horaire). La bande des heures va de l'heure en cours (demain, de 7 h au plus tard) à
+// LAST_START, sans que la sortie dépasse minuit. « Maintenant » part de l'heure qu'il est, arrondie aux 5 minutes ; la
+// tenue couvre alors les heures entamées. `window` : les heures pleines de la sortie, pour le moteur.
+const LAST_START = 21;
+function outingSlot(ctx) {
+  const hours = state.household.outing_duration_h ?? 1;
+  const now = parisNow();
+  const hourOf = (t) => Number(t.slice(0, 2));
+  const first = ctx.tomorrow ? Math.min(7, hourOf(state.profile.outing_window.from)) : Math.max(6, hourOf(now.time));
+  const last = Math.min(LAST_START, 24 - hours);
+  const cells = ctx.input.forecast.hourly
+    .map((h) => ({ time: h.time.slice(11, 16), feels_c: h.feels_c, weather_code: h.weather_code, precip_prob: h.precip_prob }))
+    .filter((h) => hourOf(h.time) >= first && hourOf(h.time) <= last)
+    .map((h) => ({ ...h, now: !ctx.tomorrow && hourOf(h.time) === hourOf(now.time) }));
+  if (!cells.length) return { cells, hours };
+  const has = (t) => cells.some((c) => c.time === t);
+  const saved = store.outings()[ctx.date];
+  // Une sortie déjà commencée (partie à 9 h 40, il est 10 h 10) reste la sienne jusqu'à sa fin : « Maintenant ».
+  const going = Boolean(saved) && cells[0].now && toMin(saved) <= toMin(now.time) && toMin(saved) + hours * 60 > toMin(now.time);
+  const best = ctx.result.outing.window?.start;
+  const fallback = ctx.tomorrow ? (cells.find((c) => c.time >= state.profile.outing_window.from) ?? cells[0]).time : cells[0].time;
+  const start = going ? cells[0].time : has(saved) ? saved : best && has(best) ? best : fallback;
+  const isNow = cells[0].now && start === cells[0].time;
+  const end = going ? toMin(saved) + hours * 60 : isNow ? Math.ceil(toMin(now.time) / 5) * 5 + hours * 60 : toMin(start) + hours * 60;
+  const to = Math.min(24 * 60, Math.max(toMin(start) + 60, Math.round(end / 60) * 60));
+  return { cells, hours, start, now: isNow, end: fmtMin(Math.min(end, 24 * 60 - 5)), window: { from: start, to: fmtMin(to) } };
+}
+
+// Dehors : la journée (créneau idéal, repères, fiche), la sortie choisie, et la tenue de cette sortie (`outing`), calculée
+// par le moteur comme une journée réduite à ses heures : sa tenue, ses changements s'il y a lieu, son sac.
+function dehorsCtx(day = dehorsDay()) {
+  const ctx = compute(day);
+  if (!ctx) return null;
+  if (ctx.tomorrow) ctx.today = compute('aujourdhui');
+  ctx.slot = outingSlot(ctx);
+  ctx.outing = ctx.slot.window ? compute(day, ctx.slot.window) : null;
+  return ctx;
 }
 
 // Brouillon d'un écran de saisie : premier lancement, réglages (commune), fiche d'un enfant (#enfant/identifiant ou nouveau).
@@ -204,7 +257,7 @@ let lastKey = '';
 function paint() {
   const view = currentView();
   if (['onboarding', 'reglages', 'enfant'].includes(view) && !state.draft) state.draft = newDraft(view);
-  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.draft?.step ?? ''}`;
+  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.inside}|${state.draft?.step ?? ''}`;
   app.classList.toggle('anim', key !== lastKey);
   lastKey = key;
   let html;
@@ -228,15 +281,21 @@ function paint() {
   else {
     // Version navigateur sur Android : le widget Maison renvoie vers l'app Android (lien qui l'ouvre ou la télécharge).
     if (state.device === 'android' && !host && state.household) state.androidLink = androidLink();
-    const ctx = compute(state.tab === 'sortir' ? state.day : 'aujourdhui');
-    // La veille au soir, comme les widgets : la journée de demain, à préparer ce soir, et la nuit.
-    if (ctx && state.tab === 'sortir' && !ctx.tomorrow && ctx.moment === 'soir') ctx.evening = compute('demain');
-    html = V.viewApp(state, ctx);
+    html = V.viewApp(state, state.tab === 'dehors' ? dehorsCtx() : compute('aujourdhui'));
   }
   if (state.updateReady) {
     html += '<div class="update" role="status">Nouvelle version prête<button class="btn small" data-action="apply-update">Recharger</button></div>';
   }
+  // La bande des heures garde sa position quand on y touche ; un autre jour, elle s'ouvre sur la sortie choisie.
+  const before = app.querySelector('.strip');
+  const kept = before ? { key: before.dataset.key, left: before.scrollLeft } : null;
   app.innerHTML = html;
+  const strip = app.querySelector('.strip');
+  if (strip) {
+    const chosen = strip.querySelector('[aria-checked="true"]');
+    if (kept && kept.key === strip.dataset.key) strip.scrollLeft = kept.left;
+    else if (chosen) strip.scrollLeft = chosen.offsetLeft - (strip.clientWidth - chosen.offsetWidth) / 2;
+  }
   setThemeColor(view);
 }
 
@@ -252,8 +311,10 @@ function setThemeColor(view) {
   let color = dark ? '#0b0d11' : '#f2f3f7';
   if (view === 'onboarding') color = SKY.clair;
   if (view === 'app') {
-    const ctx = state.tab === 'sortir' ? compute(state.day) : null;
-    color = state.tab === 'nuit' ? SKY.nuit : state.tab === 'prevoir' ? SKY.prevoir : ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
+    const ctx = state.tab === 'dehors' ? compute(dehorsDay()) : null;
+    if (state.tab === 'dedans') color = state.inside === 'nuit' ? SKY.nuit : SKY.maison;
+    else if (state.tab === 'prevoir') color = SKY.prevoir;
+    else color = ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
   }
   meta.setAttribute('content', color);
   // Barres du système de l'app Android : ciel en haut, couleur de la barre d'onglets en bas.
@@ -506,8 +567,7 @@ function takeImport() {
   const wanted = params.get('enfant');
   const match = location.hash.match(/^#(import|partage)=(SB1\.[\w-]+)/);
   if (params.get('onglet') === 'maison') {
-    state.tab = homeTab();
-    state.day = 'aujourdhui';
+    openHome();
     params.delete('onglet');
     history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`);
   }
@@ -717,7 +777,21 @@ const actions = {
   },
   day(el) {
     state.day = el.dataset.value;
-    state.tab = 'sortir';
+    state.tab = 'dehors';
+    paint();
+  },
+  // Dedans : le jour (la pièce où il passe la journée) ou la nuit (sa chambre), chacun avec sa température gardée.
+  inside(el) {
+    state.inside = el.dataset.value === 'nuit' ? 'nuit' : 'jour';
+    state.tab = 'dedans';
+    paint();
+  },
+  // Votre sortie : l'heure de départ touchée dans la bande des heures, gardée pour ce jour-là sur ce téléphone.
+  // L'heure en cours : on part maintenant (à 5 minutes près), et la sortie le reste jusqu'à sa fin.
+  slot(el) {
+    const now = parisNow();
+    const start = 'now' in el.dataset ? fmtMin(Math.floor(toMin(now.time) / 5) * 5) : el.dataset.value;
+    store.saveOuting(dehorsDay() === 'demain' ? addDays(now.date, 1) : now.date, start, now.date);
     paint();
   },
   kid(el) {
@@ -756,7 +830,9 @@ const actions = {
   // Une pièce de la tenue touchée : pourquoi elle est là, et ses équivalents (pour ce jour-là, ou toujours).
   piece(el) {
     const { value, where, date } = el.dataset;
-    const ctx = compute(date === parisNow().date ? 'aujourdhui' : 'demain');
+    const day = date === parisNow().date ? 'aujourdhui' : 'demain';
+    const outing = where === 'dehors' ? dehorsCtx(day) : null;
+    const ctx = outing ? outing.outing ?? outing : compute(day);
     if (!ctx) return;
     const { title, html } = V.pieceSheet(state, ctx, value, where);
     openSheet(title, html);
@@ -949,13 +1025,12 @@ const actions = {
     updateHousehold({ outing_duration_h: d });
     paint();
   },
-  // Relevé du jour (pièce de vie) ou de la nuit (chambre). Sans relevé récent, on part de la valeur affichée :
-  // le dernier relevé, sinon 21 °C le jour et 19 °C la nuit.
+  // Température du jour (pièce de vie) ou de la nuit (chambre), gardée comme une habitude. On part de la valeur
+  // affichée : celle déjà notée, sinon 21 °C le jour et 19 °C la nuit ; « 0 » la confirme telle quelle.
   room(el) {
     const p = state.profile;
     const kind = el.dataset.kind === 'jour' ? 'jour' : 'nuit';
-    const last = kind === 'jour' ? p.room_day : p.room;
-    const base = freshRoom(p, kind) ?? last?.value ?? Number(el.dataset.base || (kind === 'jour' ? 21 : 19));
+    const base = roomHabit(p, kind) ?? Number(el.dataset.base || (kind === 'jour' ? 21 : 19));
     const value = clamp(Math.round((base + Number(el.dataset.value)) * 2) / 2, 10, 35);
     updateChild({ [kind === 'jour' ? 'room_day' : 'room']: { value, at: Date.now() } });
     paint();
@@ -1025,11 +1100,10 @@ const actions = {
     toast('Suggestion masquée.');
     paint();
   },
-  // Fiche du jour pour la nounou, la crèche ou les grands-parents : image et lien (les données sont après le #).
-  // Le soir, celle de demain.
+  // Fiche de la journée pour la nounou, la crèche ou les grands-parents : image et lien (les données sont après le #).
+  // Celle du jour affiché dans Dehors (le soir, demain).
   async 'share-fiche'() {
-    const today = compute(state.day);
-    const ctx = today && !today.tomorrow && today.moment === 'soir' ? compute('demain') : today;
+    const ctx = compute(dehorsDay());
     if (!ctx?.result.journee) return;
     const M = state.bundle.messages;
     const data = ficheData(ctx, state.profile.name);
@@ -1360,8 +1434,17 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Revenu dans l'app après plus d'une demi-heure : le jour de Dehors et le moment de Dedans suivent de nouveau l'heure.
+let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') return;
+  if (document.visibilityState !== 'visible') {
+    hiddenAt = Date.now();
+    return;
+  }
+  if (hiddenAt && Date.now() - hiddenAt > 30 * 60 * 1000) {
+    state.day = null;
+    state.inside = homeMoment(parisNow().time);
+  }
   if (state.updateReady) {
     location.reload();
     return;
@@ -1381,7 +1464,7 @@ document.addEventListener('visibilitychange', () => {
   const today = parisNow().date;
   if (today !== state.today) {
     state.today = today;
-    state.day = 'aujourdhui';
+    state.day = null;
   }
   store.markDay(today);
   loadData();
@@ -1400,8 +1483,7 @@ window.sbChoisirEnfant = (id) => {
 };
 window.sbOnglet = (tab) => {
   if (tab !== 'maison') return;
-  state.tab = homeTab();
-  state.day = 'aujourdhui';
+  openHome();
   if (route()) location.hash = '';
   paint();
 };

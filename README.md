@@ -1,10 +1,11 @@
 # Superbébé
 
-Comment habiller bébé selon la température, dehors, à la maison et la nuit, de la naissance à 6 ans : app web gratuite, sans compte ni publicité, avec widgets iPhone et Android. Elle prend la météo de la commune heure par heure et dit la tenue du matin, ce qu'on enlève ou remet dans la journée, le sac, le meilleur moment pour sortir, la tenue de nuit (gigoteuse et TOG) et ce qu'il lui faudra bientôt. Toute information de santé relaie une source officielle citée (Assurance Maladie, Santé.fr, Santé publique France…) ; l'app ne donne pas d'avis médical.
+Comment habiller bébé selon la température, dehors, à la maison et la nuit, de la naissance à 6 ans : app web gratuite, sans compte ni publicité, avec widgets iPhone et Android. Elle prend la météo de la commune heure par heure et dit le meilleur moment pour sortir, la tenue et le sac de votre sortie (heure, durée et mode choisis d'un toucher), sa tenue à la maison le jour, sa tenue de nuit (gigoteuse et TOG) et ce qu'il lui faudra bientôt ; les widgets et la fiche pour la nounou disent la journée entière (tenue du matin, changements, sac). Toute information de santé relaie une source officielle citée (Assurance Maladie, Santé.fr, Santé publique France…) ; l'app ne donne pas d'avis médical.
 
 - Guide des tenues par température (pages publiques, sans JavaScript) : <https://brunocambianica.github.io/baby/>
 - App : <https://brunocambianica.github.io/baby/app/>
 - Guide pour les parents qui testent : [TESTER.md](TESTER.md)
+- Refonte Dehors / Dedans, impacts et suites possibles : [PLAN-AFFICHAGE.md](PLAN-AFFICHAGE.md)
 - Règles et charte des sources : [rules/README.md](rules/README.md)
 
 ## Structure

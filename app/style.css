@@ -120,6 +120,23 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .kids button[aria-selected="true"] { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; border-color: transparent; }
 .days button { padding: 7px 16px; border-radius: 999px; color: #fff; font-weight: 600; font-size: 0.92rem; }
 .days button[aria-selected="true"] { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; }
+/* « Pourquoi ? » et sa réponse, dans le ciel : l'explication n'apparaît que si on la demande. */
+.why-btn { color: #fff; font-weight: 650; font-size: 0.95rem; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; min-height: 32px; flex: none; }
+.why-btn[aria-expanded="true"] { text-decoration: none; opacity: 0.8; }
+.hero-why { margin-top: 10px; padding: 10px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.18); font-size: 0.98rem; line-height: 1.4; position: relative; }
+.hero-note { margin-top: 10px; font-size: 0.92rem; opacity: 0.95; position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+/* Votre sortie : la durée, puis la bande des heures où l'on touche l'heure de départ ; la sortie surlignée en blanc. */
+.outing-pick { position: relative; margin-top: 12px; }
+.hero-label:has(+ .hero-big.when) { margin-top: 16px; }
+.hero-big.when { font-size: clamp(2.6rem, 12.5vw, 3.1rem); }
+
+.pick-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pick-head .hero-label { margin-top: 0; }
+.dur { display: inline-flex; padding: 3px; border-radius: 999px; }
+.dur button { min-width: 44px; padding: 5px 10px; border-radius: 999px; color: #fff; font-weight: 650; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.dur button[aria-checked="true"] { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; }
+.less { display: grid; gap: 6px; }
+.fiche-card { gap: 10px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
 .dot.ok { background: #5fe39a; }
 .dot.warn { background: #ffc35a; }
@@ -187,7 +204,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 /* Choix du mode de sortie */
 .modes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 4px; background: var(--fill); border-radius: 14px; }
-.modes button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-radius: 11px; font-size: 0.8rem; font-weight: 600; color: var(--ink-2); }
+.modes button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 4px; border-radius: 11px; font-size: 0.8rem; font-weight: 600; color: var(--ink-2); }
 .modes button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 
 /* Tenue en couches */
@@ -310,6 +327,18 @@ p.check { display: block; }
 .h-cell.best .h-flag, .h-cell.best .ico { color: var(--blue); }
 .h-cell.off { opacity: 0.45; }
 .h-cell[aria-pressed="true"] { border-color: var(--blue); }
+/* La bande des heures de « Votre sortie », dans le ciel */
+.strip { position: relative; display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: 10px calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter); }
+.strip::-webkit-scrollbar { display: none; }
+.strip .h-cell { background: rgba(255, 255, 255, 0.14); color: #fff; gap: 4px; padding: 7px 0 6px; }
+.strip .h-time, .strip .h-cell .ico, .strip .h-flag { color: inherit; }
+.strip .h-time { opacity: 0.9; }
+.strip .h-flag { opacity: 0.85; text-transform: lowercase; white-space: nowrap; letter-spacing: -0.01em; }
+.strip .h-cell.best { background: rgba(255, 255, 255, 0.26); }
+.strip .h-cell.best .h-flag, .strip .h-cell.best .ico { color: inherit; opacity: 1; }
+.strip .h-cell.off { opacity: 0.6; }
+.strip .h-cell.sel { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; border-color: transparent; }
+.strip .h-cell.sel .h-flag { color: var(--blue); }
 
 /* Repère officiel */
 .official summary { list-style: none; display: flex; gap: 12px; align-items: center; cursor: pointer; }

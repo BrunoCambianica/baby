@@ -13,6 +13,8 @@ const KEYS = {
   reminder: 'sb.rappel',
   // Famille partagée avec l'autre parent : { secret, version, dirty, synced_at } (voir famille.js).
   family: 'sb.famille',
+  // Sorties choisies dans Dehors, propres à ce téléphone : { 'AAAA-MM-JJ': 'HH:MM' } (heure de départ).
+  outings: 'sb.sorties',
 };
 
 function read(key, fallback) {
@@ -58,6 +60,12 @@ export const store = {
   family: () => read(KEYS.family, null),
   saveFamily: (value) => write(KEYS.family, value ?? null),
   saveReminder: (value) => write(KEYS.reminder, value),
+  outings: () => read(KEYS.outings, {}),
+  // L'heure de départ d'une sortie ce jour-là ; les jours passés sont oubliés.
+  saveOuting(date, start, today) {
+    const kept = Object.fromEntries(Object.entries(read(KEYS.outings, {})).filter(([day]) => day >= today));
+    write(KEYS.outings, { ...kept, [date]: start });
+  },
   promoHidden: () => read(KEYS.promo, false),
   hidePromo: () => write(KEYS.promo, true),
   clear() {
