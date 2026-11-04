@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.25.0';
+export const VERSION = '0.25.1';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -670,7 +670,8 @@ function checkLine(state) {
 
 // « C'était juste ? » : sa tenue de dehors d'aujourd'hui, jugée par le parent, sur une sortie (`done`, voir main.js,
 // doneOuting), choisie ou par défaut, une fois finie. Juste après une sortie choisie (done.recent), la carte « Retour de
-// la sortie » vient en tête, avec ce qu'on lui enlève en rentrant ; une sortie pas encore finie, rien encore. Sans
+// la sortie » vient en tête, avec ce qu'on lui enlève en rentrant, et « Pas sorti ? Masquer » (une heure touchée pour
+// regarder) ; une sortie pas encore finie, rien encore. Sans
 // sortie notée, sur la journée, une fois commencée depuis une heure. Et le soir, sous la sortie de demain. Une réponse par jour, changeable ; elle reste dans
 // le foyer (et chez l'autre parent). Avant d'ajouter une couche, le geste de la nuque ; deux réponses dans le même sens
 // en 7 jours proposent la tendance. `ctx` : aujourd'hui.
@@ -704,6 +705,7 @@ function feedbackCard(state, ctx, done = null) {
         `<button class="fb" data-action="feedback" data-value="${v}" aria-pressed="${entry?.v === v}">${l}</button>`).join('')}</div>
       <p class="hint">${entry ? esc(hint ? 'Noté.' : after[entry.v]) : 'Une réponse par jour : elle aide à ajuster ses tenues.'}</p>
       ${tendance || ''}
+      ${done?.recent ? '<button class="link back-hide" data-action="not-out">Pas sorti ? Masquer</button>' : ''}
     </section>`;
 }
 

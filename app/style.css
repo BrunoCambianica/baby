@@ -642,6 +642,7 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
 /* Retour d'une sortie : ce qu'on lui enlève, puis la question. */
 .fb-q { font-weight: 650; }
 .back-card .less .hint { margin-top: 0; }
+.back-hide { justify-self: start; min-height: 40px; font-size: 0.92rem; }
 .fb-hint { display: grid; gap: 8px; justify-items: start; background: var(--blue-soft); border-radius: 14px; padding: 10px 12px; font-size: 0.92rem; }
 .piece-head { display: flex; align-items: center; gap: 12px; }
 .piece-role { font-weight: 650; }

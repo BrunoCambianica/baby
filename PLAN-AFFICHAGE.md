@@ -119,3 +119,5 @@ Recommandation retenue le 4 novembre. **C, E, G** sont faits (0.24.0, web seulem
 - 2026-11-04 : « Go », 0.24.0 commitée et déployée (sans APK : à recompiler). Suite : A + B dans un même APK.
 - 2026-11-04 : demande : la sortie par défaut compte comme une sortie (maintenant, pour la durée réglée), la question porte aussi sur elle. 0.24.1 prête ; « Go », commitée et déployée (sans APK).
 - 2026-11-04 : « Ok go » pour A + B : 0.25.0 prête (APK 28), widgets sur la sortie, rappel avant une sortie choisie, températures sans expiration dans les widgets.
+- 2026-11-04 : « Go », 0.25.0 commitée et déployée (APK 28).
+- 2026-11-04 : retour : « Retour de la sortie de 16 h à 16 h 30 » sans être sorti (une heure touchée pour regarder vaut un départ). Demande : un bouton pour masquer. 0.25.1 prête (sans APK) : « Pas sorti ? Masquer » sur la carte du retour oublie la sortie et la réponse donnée dessus.

@@ -1196,6 +1196,18 @@ const actions = {
     updateChild({ feedback: withFeedback(p.feedback, state.today, entry) });
     paint();
   },
+  // « Pas sorti ? Masquer », sur le retour d'une sortie choisie : l'heure avait été touchée pour regarder. La sortie est
+  // oubliée, avec la réponse donnée sur elle ; la question revient sur la sortie d'avant, ou sur la journée.
+  'not-out'() {
+    const done = doneOuting();
+    if (!done?.start || done.auto) return;
+    const date = parisNow().date;
+    saveOutings(date, outingsOf(date).filter((o) => o.auto || o.s !== done.start));
+    const p = state.profile;
+    if (p.feedback?.[state.today]?.s === done.start) updateChild({ feedback: withFeedback(p.feedback, state.today, null) });
+    toast('Sortie oubliée.');
+    paint();
+  },
   // La tendance proposée après deux réponses dans le même sens : un cran plus léger ou plus chaud, comme dans les réglages.
   'feedback-tendance'(el) {
     const value = Number(el.dataset.value);

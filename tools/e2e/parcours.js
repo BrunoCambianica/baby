@@ -519,6 +519,29 @@ await test('Extérieur à 14 h : maintenant, sans les heures passées ; la sorti
   assert((await page.getAttribute('.fb[data-value="juste"]', 'aria-pressed')) === 'true', 'réponse oubliée');
 });
 
+await test('Retour d\'une sortie qui n\'a pas eu lieu (heure touchée pour regarder) : « Pas sorti ? Masquer » l\'oublie, avec sa réponse', async (use) => {
+  const page = use(await phone({ at: '2026-10-27T11:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  await page.click('.strip .h-cell:nth-child(3)');
+  assert((await page.textContent('#t-dehors')).replace(/\s/g, ' ').includes('13 h'), await page.textContent('#t-dehors'));
+  await page.clock.setFixedTime(new Date('2026-10-27T14:10:00+01:00'));
+  await page.reload();
+  await page.waitForSelector('.back-card');
+  assert((await page.textContent('#t-retour')).replace(/\s/g, ' ').trim() === 'Retour de la sortie de 13 h à 14 h', await page.textContent('#t-retour'));
+  await page.click('.back-card .fb[data-value="juste"]');
+  await shot(page, 'l2-retour-masquer');
+  await page.click('[data-action="not-out"]');
+  assert(!(await page.isVisible('.back-card')), 'retour toujours affiché');
+  assert(!(await stored(page)).children[0].feedback?.['2026-10-27'], 'réponse gardée');
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('sb.sorties'))['2026-10-27'] ?? []);
+  assert(!kept.some((o) => o.s === '13:00'), JSON.stringify(kept));
+  // Plus de sortie finie : la sortie par défaut, maintenant, et rien à demander avant sa fin.
+  assert((await page.textContent('#t-dehors')).replace(/\s/g, ' ').trim() === 'Maintenant → 15 h 10', await page.textContent('#t-dehors'));
+  assert(!(await page.isVisible('.feedback')), '« C\'était juste ? » après « Masquer »');
+  assert(kept.length === 1 && kept[0].s === '14:10' && kept[0].auto, JSON.stringify(kept));
+});
+
 await test('« C\'était juste ? » : une réponse par jour, la tendance proposée après deux « trop chaud », dans les retours de test', async (use) => {
   const before = { '2026-10-25': { v: 'chaud', t: 'poussette', b: 'froid', f: [4, 15], o: 0 } };
   const page = use(await phone({ at: '2026-10-27T13:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([{ ...LEO, feedback: before }], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
