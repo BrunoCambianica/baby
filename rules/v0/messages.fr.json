@@ -372,8 +372,8 @@
     },
     "swap.locked.base": {
       "kind": "pratique",
-      "text": "Le dessous (body, pyjama, ou haut, pantalon et chaussettes) suit le ressenti. Avant 2 ans, « Tenue de la journée », dans la carte Dedans, le choisit avec ou sans pyjama.",
-      "short": "Le dessous se choisit dans Dedans"
+      "text": "Le dessous (body, pyjama, ou haut, pantalon et chaussettes) suit le ressenti. Avant 2 ans, « Sa tenue de la journée », dans l'onglet Intérieur, le choisit avec ou sans pyjama.",
+      "short": "Le dessous se choisit dans l'onglet Intérieur"
     },
     "swap.locked.extremity": {
       "kind": "pratique",

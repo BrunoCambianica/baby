@@ -63,6 +63,7 @@ export function sharedPart(h) {
     commune: h.commune,
     outing_window: h.outing_window,
     outing_duration_h: h.outing_duration_h,
+    outing_short: h.outing_short === true,
     wash_days: h.wash_days ?? null,
     settings_at: h.settings_at ?? 0,
     children: h.children.map(({ id, name, birth, transport, outfit_offset, day_style, car_climate, night_options, swaps, inventory, room, room_day, feedback, updated }) => ({
@@ -94,6 +95,7 @@ export function mergeHousehold(local, remote) {
     commune: settings.commune,
     outing_window: settings.outing_window,
     outing_duration_h: settings.outing_duration_h,
+    outing_short: settings.outing_short === true,
     wash_days: settings.wash_days ?? null,
     settings_at: settings.settings_at ?? 0,
     children: children.length ? children : local.children,

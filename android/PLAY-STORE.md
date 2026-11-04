@@ -25,10 +25,10 @@ Prêt à copier dans la Play Console dès que le compte est validé. Voir aussi 
 ```
 Comment habiller bébé aujourd'hui ? Superbébé répond en un coup d'œil, avec la météo de votre commune.
 
-• Dehors : la tenue du matin selon la température ressentie, ce qu'on enlève ou remet dans la journée, et ce qui va dans le sac.
+• Extérieur : choisissez l'heure et la durée de votre sortie ; la tenue selon la température ressentie, ce qui va dans le sac, et ce qu'on lui enlève en rentrant.
 • Le meilleur moment pour sortir, et pourquoi (« au sec avant la pluie de 12 h »).
-• À la maison : la tenue selon la température de la pièce.
-• La nuit : quelle gigoteuse (TOG) et quoi mettre dessous, selon la température de la chambre.
+• Intérieur, le jour : la tenue selon la température de la pièce.
+• Intérieur, la nuit : quelle gigoteuse (TOG) et quoi mettre dessous, selon la température de la chambre.
 • En poussette, en porte-bébé, en voiture ou à pied : la tenue s'adapte, avec les repères de sécurité du portage et du siège auto.
 • De la naissance à 6 ans, pour un ou plusieurs enfants, avec ce que vous avez déjà dans la garde-robe.
 • Des widgets pour l'écran d'accueil, un rappel le soir pour préparer la tenue du lendemain, et la fiche du jour à envoyer à la nounou ou à la crèche.

@@ -3,13 +3,15 @@ import { addDays, ageMonths, baseTransport, homeStatus, hourFr, needMet, ownedCo
 import { configChildren, parisNow } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, guideBandPath, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
-import { ageLabel, feedbackHint } from './household.js';
+import { ageLabel, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.23.0';
-// Durées de sortie proposées, en heures (une sortie de 4 h peut avoir un changement en route).
-export const OUTING_HOURS = [1, 2, 3, 4];
+export const VERSION = '0.24.0';
+// Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
+// un changement en route).
+export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
+export const durationLabel = (d) => (d < 1 ? '30\u00a0min' : `${d}\u00a0h`);
 export const TRANSPORTS = [
   ['poussette', 'Poussette', 'stroller'],
   ['porte_bebe', 'Porte-bébé', 'carrier'],
@@ -188,10 +190,11 @@ const switcher = (label, action, choices, current) => `<div class="days glass" r
 // Ce qui fait le meilleur créneau, en clair : « Au sec avant la pluie de 12 h et plus doux qu'à 9 h ».
 const whyText = (M, w) => capitalize(w.why.map((x) => render(M, x.id, 'short', { hour: x.hour ? hourFr(x.hour) : '' })).join(' et '));
 
-// ——— Dehors ———
-// Le ciel répond à « quand sortir ? » : le créneau idéal, et pourquoi seulement si on touche « Pourquoi ? » ; puis la
-// bande des heures, où l'on choisit sa sortie (l'heure de départ d'un toucher, la durée à côté). Les cartes disent la
-// tenue de cette sortie-là. Sans créneau idéal, la raison en quelques mots, et le détail sous « Pourquoi ? ».
+// ——— Extérieur ———
+// Le ciel répond à « quand sortir ? » : le créneau idéal, « Choisir » pour y faire partir la sortie, et pourquoi
+// seulement si on touche « Pourquoi ? » ; puis la bande des heures, où l'on choisit sa sortie (maintenant par défaut,
+// l'heure de départ d'un toucher, la durée à côté). Les cartes disent la tenue de cette sortie-là. Sans créneau idéal,
+// la raison en quelques mots, et le détail sous « Pourquoi ? ».
 function heroDehors(state, ctx) {
   const M = state.bundle.messages;
   const { result, tomorrow } = ctx;
@@ -204,8 +207,11 @@ function heroDehors(state, ctx) {
   if (w) {
     const slots = windowSlots(result);
     const night = slots[0].time >= ctx.input.forecast.daylight.sunset;
+    const s = ctx.slot;
+    const pick = s?.cells.some((c) => c.time === w.start) && s.start !== w.start
+      ? `<button class="glass glass-pill pick-btn" data-action="slot" data-value="${w.start}" data-center aria-label="Choisir ce créneau pour la sortie">Choisir</button>` : '';
     main = `<p class="hero-label">${who}Idéal pour sortir</p>
-      <p class="hero-big when">${span(w)}</p>
+      <div class="when-row"><p class="hero-big when">${span(w)}</p>${pick}</div>
       <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}<span>${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots))}</span>${w.why ? whyBtn : ''}</p>
       ${open && w.why ? `<p class="hero-why">${esc(nbsp(whyText(M, w)))}</p>` : ''}`;
   } else {
@@ -222,7 +228,7 @@ function heroDehors(state, ctx) {
 
 // Votre sortie : une bande d'heures (aujourd'hui de l'heure en cours, « Maintenant », jusqu'au soir ; demain dès le
 // matin), chacune avec son ciel et son ressenti, le créneau idéal et les autres bons créneaux marqués. Toucher une heure
-// y fait partir la sortie ; les heures qu'elle couvre sont surlignées. La durée (1 à 4 h) se choisit à côté.
+// y fait partir la sortie ; les heures qu'elle couvre sont surlignées. La durée (30 minutes à 4 h) se choisit à côté.
 function outingPicker(state, ctx) {
   const s = ctx.slot;
   if (!s?.cells.length) return '';
@@ -248,7 +254,7 @@ function outingPicker(state, ctx) {
       ${icon(weatherIcon(h.weather_code, { night, precipProb: h.precip_prob }), { size: 22 })}
       <span class="h-temp">${Math.round(h.feels_c)}°</span></button>`;
   }).join('');
-  const durations = OUTING_HOURS.map((d) => `<button role="radio" aria-checked="${s.hours === d}" data-action="duration" data-value="${d}">${d} h</button>`).join('');
+  const durations = OUTING_HOURS.map((d) => `<button role="radio" aria-checked="${s.hours === d}" data-action="duration" data-value="${d}">${durationLabel(d)}</button>`).join('');
   return `<div class="outing-pick">
       <div class="pick-head"><p class="hero-label">Votre sortie</p>
         <div class="dur glass" role="radiogroup" aria-label="Durée de la sortie">${durations}</div></div>
@@ -537,6 +543,32 @@ const carClimateLine = (on) => `<p class="hint">${on
 // change aussi (body, pyjama ou pantalon, chaussettes), la tenue complète sans signe. Une sortie de quatre heures peut
 // avoir un changement en route (« Vers 14 h · plus doux »). Puis le sac de cette sortie seulement : la pluie, le soleil,
 // une couche s'il fraîchit, de quoi le couvrir s'il s'arrête. Les conseils ensuite, et le guide pour qui veut savoir pourquoi.
+// En rentrant : ce qu'on lui enlève à la maison, de la tenue de la fin de la sortie à celle de la maison (repère du NHS :
+// le bonnet et les vêtements en trop, même s'il faut le réveiller). Si le dessous change aussi, on le dit. En voiture,
+// le siège a déjà la tenue de la maison : rien à ajouter.
+function backWear(state, o) {
+  const j = o?.result.journee;
+  if (!j || j.car) return null;
+  const J = state.bundle.rules.journee;
+  const fixed = (item) => J.fixed_slots.some((sl) => J.slots[sl].includes(item));
+  let wear = [...j.morning];
+  for (const ch of j.changes) wear = [...wear.filter((i) => !ch.remove.includes(i)), ...ch.add.filter((i) => !wear.includes(i))];
+  const inside = o.result.indoor.wear;
+  const under = (items) => items.filter(fixed).sort().join();
+  const off = wear.filter((i) => !inside.includes(i) && !fixed(i));
+  return off.length ? { off, same: under(wear) === under(inside) } : null;
+}
+
+function backBlock(state, back, piece, text) {
+  const labels = state.bundle.messages.labels;
+  const head = 'En rentrant, à lui enlever, même s\'il faut le réveiller (NHS)';
+  const rest = back.same ? '' : 'Puis sa tenue de la maison : le dessous change aussi.';
+  if (text) return `<p class="layer-items">${head} : ${esc(back.off.map((i) => labels.items[i]).join(', '))}.${rest ? ` ${rest}` : ''}</p>`;
+  return `<div class="less homecoming"><p class="hint">${head}</p>
+      <ul class="dress small">${back.off.map((i) => changeItem(state, i, '−', 28, piece)).join('')}</ul>
+      ${rest ? `<p class="hint">${rest}</p>` : ''}</div>`;
+}
+
 function outingCard(state, ctx) {
   const o = ctx.outing;
   const j = o?.result.journee;
@@ -606,11 +638,13 @@ function outingCard(state, ctx) {
   // En voiture, la page de la voiture (dans le siège, au départ, en sortant).
   const guide = j.car || o.result.transport === 'voiture' ? 'guide/voiture/' : guideBandPath(R.outfit.bands, j.hours[0]?.feels_c);
   const title = s.now ? `Maintenant → ${hourFr(s.end)}` : `${o.tomorrow ? 'Demain, de' : 'De'} ${hourFr(s.start)} à ${hourFr(s.end)}`;
+  const back = backWear(state, o);
   return `<section class="card day" aria-labelledby="t-dehors">
     <h2 class="card-title main" id="t-dehors">${icon('clock', { size: 20 })}${esc(title)}</h2>
     <p class="card-sub">${esc(nbsp(stepWeather(state, j, toMin(j.from), toMin(j.to))))}</p>
     ${modes(state, baseTransport(o.result.transport, R), state.profile.birth)}
     ${body}
+    ${back ? backBlock(state, back, piece, text) : ''}
     ${swapNote(state, j)}
     ${bag}
     ${o.result.transport === 'voiture' ? carClimateLine(Boolean(j.car)) : ''}
@@ -634,14 +668,17 @@ function checkLine(state) {
     </details>`;
 }
 
-// « C'était juste ? » : sa tenue de dehors d'aujourd'hui, jugée par le parent, une fois la journée commencée depuis
-// une heure, et le soir (sous la sortie de demain). Une réponse par jour, changeable ; elle reste dans le foyer (et chez
-// l'autre parent). Avant d'ajouter une couche, le geste de la nuque ; deux réponses dans le même sens en 7 jours
-// proposent la tendance. `ctx` : aujourd'hui.
+// « C'était juste ? » : sa tenue de dehors d'aujourd'hui, jugée par le parent. Après une sortie choisie (`done`), sur
+// cette sortie, une fois finie : juste après (done.recent), la carte « Retour de la sortie » vient en tête, avec ce
+// qu'on lui enlève en rentrant ; choisie mais pas finie, rien encore. Sans sortie choisie, sur la journée, une fois
+// commencée depuis une heure. Et le soir, sous la sortie de demain. Une réponse par jour, changeable ; elle reste dans
+// le foyer (et chez l'autre parent). Avant d'ajouter une couche, le geste de la nuque ; deux réponses dans le même sens
+// en 7 jours proposent la tendance. `ctx` : aujourd'hui.
 const FEEDBACK = [['chaud', 'Trop chaud'], ['juste', 'Juste'], ['froid', 'Trop froid']];
-function feedbackCard(state, ctx) {
+function feedbackCard(state, ctx, done = null) {
   const j = ctx?.result.journee;
-  if (!j || ctx.tomorrow || (ctx.moment !== 'soir' && toMin(ctx.input.now) < toMin(j.from) + 60)) return '';
+  if (!j || ctx.tomorrow || done?.pending) return '';
+  if (!done && ctx.moment !== 'soir' && toMin(ctx.input.now) < toMin(j.from) + 60) return '';
   const M = state.bundle.messages;
   const p = state.profile;
   const entry = p.feedback?.[state.today];
@@ -653,9 +690,17 @@ function feedbackCard(state, ctx) {
   };
   const tendance = hint && `<div class="fb-hint"><p>${hint.n} fois « trop ${hint.v} » cette semaine.</p>
       <button class="btn small tint" data-action="feedback-tendance" data-value="${hint.offset}">${hint.v === 'chaud' ? 'Habiller plus léger désormais' : 'Habiller plus chaudement désormais'}</button></div>`;
-  return `<section class="card feedback" aria-labelledby="t-retour">
-      <h2 class="card-title" id="t-retour">${icon('check', { size: 18 })}Aujourd'hui dehors, ${esc(p.name || 'il')} avait…</h2>
-      <div class="fb-btns" role="group" aria-labelledby="t-retour">${FEEDBACK.map(([v, l]) =>
+  const who = esc(p.name || 'il');
+  const during = done && `la sortie de ${hourFr(done.start)} à ${hourFr(done.end)}`;
+  const back = done?.recent && backWear(state, done.outing);
+  const head = !done ? `${icon('check', { size: 18 })}Aujourd'hui dehors, ${who} avait…`
+    : done.recent ? `${icon('home', { size: 18 })}Retour de ${during}` : `${icon('check', { size: 18 })}Pendant ${during}, ${who} avait…`;
+  const question = done?.recent ? `<p class="fb-q" id="t-retour-q">Pendant la sortie, ${who} avait…</p>` : '';
+  return `<section class="card feedback${done?.recent ? ' back-card' : ''}" aria-labelledby="t-retour">
+      <h2 class="card-title" id="t-retour">${head}</h2>
+      ${back ? backBlock(state, back, { where: 'dehors', date: done.outing.date, swapped: done.outing.result.journee.swapped }, !drawingsOn(state)) : ''}
+      ${question}
+      <div class="fb-btns" role="group" aria-labelledby="${question ? 't-retour-q' : 't-retour'}">${FEEDBACK.map(([v, l]) =>
         `<button class="fb" data-action="feedback" data-value="${v}" aria-pressed="${entry?.v === v}">${l}</button>`).join('')}</div>
       <p class="hint">${entry ? esc(hint ? 'Noté.' : after[entry.v]) : 'Une réponse par jour : elle aide à ajuster ses tenues.'}</p>
       ${tendance || ''}
@@ -716,21 +761,25 @@ function outingRelays(state, ctx) {
   return { ids, params: { ...(ctx.outing?.result.params ?? {}), ...ctx.result.params } };
 }
 
-// Onglet Dehors : la tenue de la sortie choisie, le geste de la nuque, le portage, « C'était juste ? », les repères
-// officiels, puis la fiche de la journée. Aujourd'hui, une fois la dernière heure passée, plus de sortie à choisir :
+// Onglet Extérieur : la tenue de la sortie choisie, le geste de la nuque, le portage, « C'était juste ? » (en tête juste
+// après une sortie), les repères officiels, puis la fiche de la journée. Aujourd'hui, une fois la dernière heure passée, plus de sortie à choisir :
 // demain, à préparer.
 function dehorsContent(state, ctx) {
   if (!ctx.slot?.cells.length) {
     return `<section class="card"><p class="hint">Plus d'heure de sortie à choisir aujourd'hui.</p>
       <button class="btn soft" data-action="day" data-value="demain">Préparer demain</button></section>
-      ${feedbackCard(state, ctx)}${foot()}`;
+      ${feedbackCard(state, ctx, ctx.done)}${foot()}`;
   }
   const relays = outingRelays(state, ctx);
+  // Juste après une sortie, son retour en tête : ce qu'on lui enlève, et « C'était juste ? ».
+  const feedback = feedbackCard(state, ctx.tomorrow ? (ctx.today?.moment === 'soir' ? ctx.today : null) : ctx, ctx.done);
+  const back = !ctx.tomorrow && ctx.done?.recent;
   return [
+    back ? feedback : '',
     outingCard(state, ctx),
     checkLine(state),
     carrierCard(state, ctx.outing ?? ctx),
-    feedbackCard(state, ctx.tomorrow ? (ctx.today?.moment === 'soir' ? ctx.today : null) : ctx),
+    back ? '' : feedback,
     officialCard(state, relays.ids, relays.params),
     ctx.result.journee ? ficheCard() : '',
     ctx.tomorrow ? '' : promoCard(state),
@@ -981,10 +1030,11 @@ function prevoirContent(state, ctx) {
     ${foot()}`;
 }
 
-// Trois onglets : Dehors (quand sortir, et la tenue de la sortie), Dedans (le jour, la nuit), Achats.
+// Trois onglets : Extérieur (quand sortir, et la tenue de la sortie), Intérieur (le jour, la nuit), Achats. Dans le
+// code, `dehors` et `dedans`.
 function tabbar(state, ctx) {
   const count = ctx?.result.purchases.length ?? 0;
-  const tabs = [['dehors', 'Dehors', 'sun'], ['dedans', 'Dedans', 'home'], ['prevoir', 'Achats', 'bag']];
+  const tabs = [['dehors', 'Extérieur', 'sun'], ['dedans', 'Intérieur', 'home'], ['prevoir', 'Achats', 'bag']];
   return `<nav class="tabbar" role="tablist" aria-label="Sections">${tabs.map(([v, l, i]) =>
     `<button role="tab" aria-selected="${state.tab === v}" data-action="tab" data-value="${v}">${icon(i)}<span>${l}</span>${v === 'prevoir' && count ? `<span class="badge">${count}</span>` : ''}</button>`).join('')}</nav>`;
 }
@@ -1043,7 +1093,7 @@ export function viewSettings(state) {
         </div>
         <div class="row column"><span>Durée d'une sortie</span>
           <div class="seg" role="radiogroup" aria-label="Durée">${OUTING_HOURS.map((d) =>
-            `<button role="radio" aria-checked="${profile.outing_duration_h === d}" data-action="duration" data-value="${d}">${d} h</button>`).join('')}</div>
+            `<button role="radio" aria-checked="${outingHours(profile) === d}" data-action="duration" data-value="${d}">${durationLabel(d)}</button>`).join('')}</div>
         </div>
       </div>
       <p class="group-note">Les mêmes pour tous les enfants.</p>
@@ -1288,7 +1338,7 @@ function iosKidsHint(state) {
 function iosHomeHint(state) {
   const first = state.household.children[0];
   const example = state.household.children.length > 1 ? ` (ou <strong>${esc(first.name || '1')} maison</strong>)` : '';
-  return `<p class="fine">Widget Maison (la température chez vous le jour, de sa chambre la nuit, et la tenue) : un autre widget Scriptable, Parameter : <strong>maison</strong>${example}. Le toucher ouvre l'app pour noter la température : le jour, carte « Dedans » ; le soir, onglet Nuit.</p>`;
+  return `<p class="fine">Widget Maison (la température chez vous le jour, de sa chambre la nuit, et la tenue) : un autre widget Scriptable, Parameter : <strong>maison</strong>${example}. Le toucher ouvre l'app sur l'onglet Intérieur pour noter la température : le jour, la pièce où il passe la journée ; le soir, sa chambre.</p>`;
 }
 
 // Pose du widget sur iPhone en trois vignettes : les écrans tels qu'on les voit, l'endroit à toucher en bleu.

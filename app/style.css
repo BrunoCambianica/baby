@@ -127,8 +127,11 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .hero-note { margin-top: 10px; font-size: 0.92rem; opacity: 0.95; position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 /* Votre sortie : la durée, puis la bande des heures où l'on touche l'heure de départ ; la sortie surlignée en blanc. */
 .outing-pick { position: relative; margin-top: 12px; }
-.hero-label:has(+ .hero-big.when) { margin-top: 16px; }
-.hero-big.when { font-size: clamp(2.6rem, 12.5vw, 3.1rem); }
+.hero-label:has(+ .when-row) { margin-top: 16px; }
+.hero-big.when { font-size: clamp(2.6rem, 12.5vw, 3.1rem); min-width: 0; }
+/* Le créneau idéal et « Choisir », qui y fait partir la sortie. */
+.when-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: relative; }
+.pick-btn { flex: none; margin-top: 4px; }
 
 .pick-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .pick-head .hero-label { margin-top: 0; }
@@ -636,6 +639,9 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
 .fb { min-height: 44px; padding: 8px 2px; border-radius: 14px; background: var(--fill); color: var(--ink); font-weight: 650; font-size: 0.88rem; white-space: nowrap; }
 .fb[aria-pressed="true"] { background: var(--blue); color: #fff; }
 .feedback .hint { margin-top: -4px; }
+/* Retour d'une sortie : ce qu'on lui enlève, puis la question. */
+.fb-q { font-weight: 650; }
+.back-card .less .hint { margin-top: 0; }
 .fb-hint { display: grid; gap: 8px; justify-items: start; background: var(--blue-soft); border-radius: 14px; padding: 10px 12px; font-size: 0.92rem; }
 .piece-head { display: flex; align-items: center; gap: 12px; }
 .piece-role { font-weight: 650; }

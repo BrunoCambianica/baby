@@ -5,7 +5,7 @@ Comment habiller bébé selon la température, dehors, à la maison et la nuit, 
 - Guide des tenues par température (pages publiques, sans JavaScript) : <https://brunocambianica.github.io/baby/>
 - App : <https://brunocambianica.github.io/baby/app/>
 - Guide pour les parents qui testent : [TESTER.md](TESTER.md)
-- Refonte Dehors / Dedans, impacts et suites possibles : [PLAN-AFFICHAGE.md](PLAN-AFFICHAGE.md)
+- Refonte Extérieur / Intérieur, impacts et suites possibles : [PLAN-AFFICHAGE.md](PLAN-AFFICHAGE.md)
 - Règles et charte des sources : [rules/README.md](rules/README.md)
 
 ## Structure

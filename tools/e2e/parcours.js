@@ -400,7 +400,7 @@ await test('Assistant du widget iPhone : un widget par enfant, choisi par son pr
   assert((await page.textContent('.w-head')).startsWith('Léo · Lyon'), await page.textContent('.w-head'));
 });
 
-await test('Dehors : le créneau idéal, pourquoi sur demande, la sortie choisie dans la bande des heures, sa tenue et son sac', async (use) => {
+await test('Extérieur : maintenant par défaut, le créneau idéal d\'un toucher, pourquoi sur demande, la sortie choisie dans la bande des heures, sa tenue, son sac, en rentrant, 30 minutes', async (use) => {
   const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
   await page.waitForSelector('.day');
@@ -411,18 +411,33 @@ await test('Dehors : le créneau idéal, pourquoi sur demande, la sortie choisie
   await page.click('.why-btn');
   const why = await page.textContent('.hero-why');
   assert(/^[A-ZÀ-Ý]/.test(why.trim()) && !why.includes('ressentis'), why);
-  // Votre sortie : le créneau idéal, d'une heure, tant qu'on n'en a pas choisi ; la bande part de l'heure en cours.
+  // Votre sortie : maintenant, d'une heure, tant qu'on n'en a pas choisi ; la bande part de l'heure en cours.
   const cells = await page.locator('.strip .h-time').allTextContents();
   assert(cells[0] === '7 h' && (await page.textContent('.strip .h-cell:first-child .h-flag')) === 'en cours', cells.join());
-  assert((await page.getAttribute('.strip [aria-checked="true"]', 'data-value')) === '17:00', 'sortie par défaut : le créneau idéal');
-  assert((await page.textContent('#t-dehors')).trim() === 'De 17 h à 18 h', await page.textContent('#t-dehors'));
+  assert((await page.getAttribute('.strip [aria-checked="true"]', 'data-value')) === '07:00', 'sortie par défaut : maintenant');
+  assert((await page.textContent('#t-dehors')).trim() === 'Maintenant → 8 h 30', await page.textContent('#t-dehors'));
   assert((await page.getAttribute('.dur [aria-checked="true"]', 'data-value')) === '1', 'une heure par défaut');
+  await shot(page, 'l2-sortie-maintenant-defaut');
+  // Le créneau idéal d'un toucher, depuis le ciel : la sortie y part, et la bande s'ouvre dessus.
+  await page.click('.pick-btn');
+  assert((await page.textContent('#t-dehors')).trim() === 'De 17 h à 18 h', await page.textContent('#t-dehors'));
+  assert(!(await page.isVisible('.pick-btn')), '« Choisir » encore proposé');
+  const inView = await page.evaluate(() => {
+    const strip = document.querySelector('.strip');
+    const a = strip.getBoundingClientRect();
+    const b = strip.querySelector('[aria-checked="true"]').getBoundingClientRect();
+    return b.left >= a.left && b.right <= a.right;
+  });
+  assert(inView, 'créneau idéal hors de la bande visible');
   // Une sortie à 8 h : la tenue de 8 h, complète (le dessous change aussi), au premier écran.
   await page.click('.strip [data-value="08:00"]');
   assert((await page.textContent('#t-dehors')).trim() === 'De 8 h à 9 h', await page.textContent('#t-dehors'));
   const names = await page.locator('.day > .dress .dress-name').allTextContents();
   assert(names.includes('Combi pilote') && names.includes('Bonnet') && !(await page.locator('.day > .dress .plus').count()), names.join());
   assert((await page.textContent('.day')).includes('Sa tenue complète pour sortir'), 'tenue complète non dite');
+  // En rentrant : la combinaison et le bonnet, même s'il dort ; le dessous de la maison aussi.
+  const back = await page.textContent('.day .homecoming');
+  assert(back.includes('En rentrant') && back.includes('Combi pilote') && back.includes('Bonnet') && back.includes('le dessous change aussi'), back);
   const tabbar = (await page.locator('.tabbar').boundingBox()).y;
   assert((await page.locator('.day > .dress .dress-ico').first().boundingBox()).y + 58 <= tabbar, 'tenue de la sortie sous la barre d\'onglets');
   assert(!(await page.isVisible('.bag')), 'sac pour une heure sèche sans changement');
@@ -446,28 +461,54 @@ await test('Dehors : le créneau idéal, pourquoi sur demande, la sortie choisie
   await page.reload();
   await page.waitForSelector('.day');
   assert((await page.textContent('#t-dehors')).trim() === 'De 10 h à 14 h', 'sortie choisie oubliée');
+  // 30 minutes : le moteur prend l'heure entamée ; les widgets et les versions plus anciennes gardent 1 h.
+  await page.click('.dur [data-value="0.5"]');
+  const h = await stored(page);
+  assert(h.outing_short === true && h.outing_duration_h === 1, JSON.stringify([h.outing_short, h.outing_duration_h]));
+  assert((await page.textContent('#t-dehors')).trim() === 'De 10 h à 10 h 30' && (await page.locator('.strip .h-cell.sel').count()) === 1, await page.textContent('#t-dehors'));
+  await page.click('.dur [data-value="2"]');
+  assert((await stored(page)).outing_short === false && (await page.textContent('#t-dehors')).trim() === 'De 10 h à 12 h', await page.textContent('#t-dehors'));
 });
 
-await test('Dehors à 14 h : maintenant, sans les heures passées', async (use) => {
+await test('Extérieur à 14 h : maintenant, sans les heures passées ; la sortie finie, son retour en tête et « C\'était juste ? » sur elle', async (use) => {
   const page = use(await phone({ at: '2026-10-27T14:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
   await page.waitForSelector('.day');
   const cells = await page.locator('.strip .h-time').allTextContents();
   assert(cells[0] === '14 h' && !cells.includes('8 h'), cells.join());
+  assert((await page.textContent('#t-dehors')).trim() === 'Maintenant → 15 h', await page.textContent('#t-dehors'));
+  // Toucher l'heure en cours : on part maintenant, la sortie est notée.
   await page.click('.strip .h-cell:first-child');
   assert((await page.textContent('#t-dehors')).trim() === 'Maintenant → 15 h', await page.textContent('#t-dehors'));
+  assert(!(await page.isVisible('.feedback')), '« C\'était juste ? » avant la fin de la sortie');
   const names = await page.locator('.day > .dress .dress-name').allTextContents();
   assert(names.includes('Gilet') && !names.includes('Combi pilote'), names.join());
   await shot(page, 'l2-sortie-maintenant');
-  // Sortie commencée : elle reste « Maintenant » jusqu'à sa fin, puis le créneau idéal revient.
+  // Sortie commencée : elle reste « Maintenant » jusqu'à sa fin.
   await page.clock.setFixedTime(new Date('2026-10-27T14:40:00+01:00'));
   await page.reload();
   await page.waitForSelector('.day');
   assert((await page.textContent('#t-dehors')).trim() === 'Maintenant → 15 h', `en cours : ${await page.textContent('#t-dehors')}`);
+  assert(!(await page.isVisible('.feedback')), '« C\'était juste ? » pendant la sortie');
+  // Finie : son retour en tête, ce qu'on lui enlève en rentrant, puis « C'était juste ? » sur cette sortie.
   await page.clock.setFixedTime(new Date('2026-10-27T15:10:00+01:00'));
   await page.reload();
   await page.waitForSelector('.day');
-  assert((await page.textContent('#t-dehors')).trim() === 'De 17 h à 18 h', `après : ${await page.textContent('#t-dehors')}`);
+  assert((await page.textContent('#t-dehors')).trim() === 'Maintenant → 16 h 10', `après : ${await page.textContent('#t-dehors')}`);
+  assert((await page.textContent('#t-retour')).trim() === 'Retour de la sortie de 14 h à 15 h', await page.textContent('#t-retour'));
+  assert(await page.evaluate(() => Boolean(document.querySelector('.back-card').compareDocumentPosition(document.querySelector('.day')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'retour pas en tête');
+  const back = await page.textContent('.back-card');
+  assert(back.includes('En rentrant') && back.includes('Gilet') && back.includes('Pendant la sortie, Léo avait'), back);
+  await shot(page, 'l2-retour');
+  await page.click('.back-card .fb[data-value="juste"]');
+  const entry = (await stored(page)).children[0].feedback['2026-10-27'];
+  assert(entry?.v === 'juste' && entry.s === '14:00' && entry.d === 1 && entry.f.length === 2, JSON.stringify(entry));
+  // Plus tard, la question reste, à sa place, sur cette sortie.
+  await page.clock.setFixedTime(new Date('2026-10-27T17:30:00+01:00'));
+  await page.reload();
+  await page.waitForSelector('.feedback');
+  assert(!(await page.isVisible('.back-card')) && (await page.textContent('#t-retour')).includes('Pendant la sortie de 14 h à 15 h, Léo avait'), await page.textContent('#t-retour'));
+  assert((await page.getAttribute('.fb[data-value="juste"]', 'aria-pressed')) === 'true', 'réponse oubliée');
 });
 
 await test('« C\'était juste ? » : une réponse par jour, la tendance proposée après deux « trop chaud », dans les retours de test', async (use) => {
@@ -593,7 +634,7 @@ await test('Fiche du jour dans l\'app Android 0.7 : l\'image part par le pont, a
   assert(calls.length === 1 && calls[0][0] > 20000 && calls[0][1].includes('#f=F1.'), JSON.stringify(calls.map(([n, t]) => [n, t.slice(0, 40)])));
 });
 
-await test('La veille au soir : Dehors passe à demain, à préparer ; Dedans s\'ouvre sur la nuit', async (use) => {
+await test('La veille au soir : Extérieur passe à demain, à préparer ; Intérieur s\'ouvre sur la nuit', async (use) => {
   const page = use(await phone({ at: '2026-10-26T20:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
   await page.waitForSelector('.day');
@@ -646,10 +687,10 @@ await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app An
   assert((await iphone.getAttribute('#sb-sync', 'data-sync')).endsWith('&rappel=0'), 'rappel non coupé');
 });
 
-await test('Dedans : le jour et la nuit, chacun sa température, gardée comme une habitude ; le widget Maison ouvre le moment', async (use) => {
+await test('Intérieur : le jour et la nuit, chacun sa température, gardée comme une habitude ; le widget Maison ouvre le moment', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await page.goto(APP);
-  assert((await page.textContent('.tabbar')).replace(/[\s\d]+/g, '') === 'DehorsDedansAchats', await page.textContent('.tabbar'));
+  assert((await page.textContent('.tabbar')).replace(/[\s\d]+/g, '') === 'ExtérieurIntérieurAchats', await page.textContent('.tabbar'));
   await page.click('.tabbar [data-value="dedans"]');
   // Le jour : 21 °C proposé tant que rien n'est noté, la tenue pour 20 à 22 °C, en le disant.
   assert((await page.getAttribute('.days [data-value="jour"]', 'aria-selected')) === 'true', 'le jour attendu à 10 h');

@@ -7,7 +7,7 @@ import {
   api, apiBase, familyKeys, fromB64url, mergeHousehold, newSecret, seal, sharedPart, shortFicheLink, unseal,
 } from './famille.js';
 import { dayLong, dayShort } from './format.js';
-import { ageLabel, feedbackStats, fromConfig, fromShared, isNewer, liveSwaps, migrate, newChild, profileOf, withFeedback } from './household.js';
+import { ageLabel, feedbackStats, fromConfig, fromShared, isNewer, liveSwaps, migrate, newChild, outingHours, profileOf, withFeedback } from './household.js';
 import { closeSheet, openSheet } from './listes.js';
 import { store } from './storage.js';
 import * as V from './views.js';
@@ -186,13 +186,20 @@ function dehorsDay() {
   return compute('aujourdhui')?.moment === 'soir' ? 'demain' : 'aujourdhui';
 }
 
-// La sortie de ce jour-là : l'heure de départ choisie (gardée sur ce téléphone), sinon le créneau idéal, sinon maintenant
-// (demain : le début de la plage horaire). La bande des heures va de l'heure en cours (demain, de 7 h au plus tard) à
-// LAST_START, sans que la sortie dépasse minuit. « Maintenant » part de l'heure qu'il est, arrondie aux 5 minutes ; la
-// tenue couvre alors les heures entamées. `window` : les heures pleines de la sortie, pour le moteur.
+// Les heures pleines d'une sortie, pour le moteur : de l'heure de son départ à l'heure la plus proche de sa fin, une
+// heure au moins (le moteur compte par heure : une sortie de 30 minutes prend l'heure entamée).
+const slotWindow = (start, end) => {
+  const from = Math.floor(toMin(start) / 60) * 60;
+  return { from: fmtMin(from), to: fmtMin(Math.min(24 * 60, Math.max(from + 60, Math.round(end / 60) * 60))) };
+};
+
+// La sortie de ce jour-là : l'heure de départ choisie (gardée sur ce téléphone), sinon maintenant (demain : le début de
+// la plage horaire) ; le créneau idéal est à un toucher, dans le ciel et dans la bande. La bande des heures va de l'heure
+// en cours (demain, de 7 h au plus tard) à LAST_START, sans que la sortie dépasse minuit. « Maintenant » part de l'heure
+// qu'il est, arrondie aux 5 minutes ; la tenue couvre alors les heures entamées.
 const LAST_START = 21;
 function outingSlot(ctx) {
-  const hours = state.household.outing_duration_h ?? 1;
+  const hours = outingHours(state.household);
   const now = parisNow();
   const hourOf = (t) => Number(t.slice(0, 2));
   const first = ctx.tomorrow ? Math.min(7, hourOf(state.profile.outing_window.from)) : Math.max(6, hourOf(now.time));
@@ -206,13 +213,26 @@ function outingSlot(ctx) {
   const saved = store.outings()[ctx.date];
   // Une sortie déjà commencée (partie à 9 h 40, il est 10 h 10) reste la sienne jusqu'à sa fin : « Maintenant ».
   const going = Boolean(saved) && cells[0].now && toMin(saved) <= toMin(now.time) && toMin(saved) + hours * 60 > toMin(now.time);
-  const best = ctx.result.outing.window?.start;
   const fallback = ctx.tomorrow ? (cells.find((c) => c.time >= state.profile.outing_window.from) ?? cells[0]).time : cells[0].time;
-  const start = going ? cells[0].time : has(saved) ? saved : best && has(best) ? best : fallback;
+  const start = going ? cells[0].time : has(saved) ? saved : fallback;
   const isNow = cells[0].now && start === cells[0].time;
   const end = going ? toMin(saved) + hours * 60 : isNow ? Math.ceil(toMin(now.time) / 5) * 5 + hours * 60 : toMin(start) + hours * 60;
-  const to = Math.min(24 * 60, Math.max(toMin(start) + 60, Math.round(end / 60) * 60));
-  return { cells, hours, start, now: isNow, end: fmtMin(Math.min(end, 24 * 60 - 5)), window: { from: start, to: fmtMin(to) } };
+  return { cells, hours, start, now: isNow, end: fmtMin(Math.min(end, 24 * 60 - 5)), window: slotWindow(start, end) };
+}
+
+// La sortie choisie aujourd'hui, une fois finie : sa tenue (pour « En rentrant » et « C'était juste ? »), et si elle
+// vient de finir (BACK_MIN minutes). Choisie mais pas encore finie : `pending`, rien à demander encore.
+const BACK_MIN = 120;
+function doneOuting() {
+  const now = parisNow();
+  const saved = store.outings()[now.date];
+  if (!saved) return null;
+  const hours = outingHours(state.household);
+  const end = toMin(saved) + hours * 60;
+  if (toMin(now.time) < end) return { pending: true };
+  const outing = compute('aujourdhui', slotWindow(saved, end));
+  if (!outing?.result.journee) return null;
+  return { start: saved, end: fmtMin(Math.min(end, 24 * 60 - 5)), hours, outing, recent: toMin(now.time) < end + BACK_MIN };
 }
 
 // Dehors : la journée (créneau idéal, repères, fiche), la sortie choisie, et la tenue de cette sortie (`outing`), calculée
@@ -223,6 +243,7 @@ function dehorsCtx(day = dehorsDay()) {
   if (ctx.tomorrow) ctx.today = compute('aujourdhui');
   ctx.slot = outingSlot(ctx);
   ctx.outing = ctx.slot.window ? compute(day, ctx.slot.window) : null;
+  ctx.done = doneOuting();
   return ctx;
 }
 
@@ -286,16 +307,18 @@ function paint() {
   if (state.updateReady) {
     html += '<div class="update" role="status">Nouvelle version prête<button class="btn small" data-action="apply-update">Recharger</button></div>';
   }
-  // La bande des heures garde sa position quand on y touche ; un autre jour, elle s'ouvre sur la sortie choisie.
+  // La bande des heures garde sa position quand on y touche ; un autre jour, ou le créneau idéal choisi depuis le ciel,
+  // elle s'ouvre sur la sortie choisie.
   const before = app.querySelector('.strip');
   const kept = before ? { key: before.dataset.key, left: before.scrollLeft } : null;
   app.innerHTML = html;
   const strip = app.querySelector('.strip');
   if (strip) {
     const chosen = strip.querySelector('[aria-checked="true"]');
-    if (kept && kept.key === strip.dataset.key) strip.scrollLeft = kept.left;
+    if (kept && kept.key === strip.dataset.key && !state.centerStrip) strip.scrollLeft = kept.left;
     else if (chosen) strip.scrollLeft = chosen.offsetLeft - (strip.clientWidth - chosen.offsetWidth) / 2;
   }
+  state.centerStrip = false;
   setThemeColor(view);
 }
 
@@ -464,7 +487,7 @@ function writeSwData() {
 // Réglages du foyer : commune, horaires, affichage. Les dates de changement servent à fusionner avec l'autre parent.
 function updateHousehold(patch) {
   const now = Date.now();
-  const shared = ['commune', 'outing_window', 'outing_duration_h', 'wash_days'].some((k) => k in patch);
+  const shared = ['commune', 'outing_window', 'outing_duration_h', 'outing_short', 'wash_days'].some((k) => k in patch);
   state.household = { ...state.household, ...patch, updated: now, ...(shared ? { settings_at: now } : {}) };
   saveHousehold();
 }
@@ -677,7 +700,7 @@ function feedbackReport(children) {
   return [
     `Tenues jugées : ${stats.total} réponse(s), ${stats.juste} juste(s) (${Math.round((100 * stats.juste) / stats.total)} %), ${stats.chaud} trop chaud, ${stats.froid} trop froid`,
     ...children.filter((c) => Object.keys(c.feedback ?? {}).length).map((c) => `  Enfant ${children.indexOf(c) + 1} : ${Object.entries(c.feedback).slice(-14)
-      .map(([day, e]) => `${dayShort(day)} ${mode(e.t)} ${e.f?.[0]}°→${e.f?.[1]}° (${e.b}) ${word[e.v]}`).join(' ; ')}`),
+      .map(([day, e]) => `${dayShort(day)}${e.s ? ` sortie ${hourFr(e.s)} ${V.durationLabel(e.d)}` : ''} ${mode(e.t)} ${e.f?.[0]}°→${e.f?.[1]}° (${e.b}) ${word[e.v]}`).join(' ; ')}`),
   ];
 }
 
@@ -695,7 +718,7 @@ function reportText() {
     `Superbébé ${V.VERSION} · mes retours de test`,
     `Jours d'utilisation : ${days.length}${days.length ? ` (du ${dayShort(days[0])} au ${dayShort(days.at(-1))})` : ''}`,
     `Enfants : ${kids.join(' ; ')}`,
-    `Sorties : de ${hourFr(h.outing_window.from)} à ${hourFr(h.outing_window.to)}, ${h.outing_duration_h} h`,
+    `Sorties : de ${hourFr(h.outing_window.from)} à ${hourFr(h.outing_window.to)}, ${V.durationLabel(outingHours(h))}`,
     `Garde-robe : ${owned} article(s) ; ${store.hidden().length} suggestion(s) masquée(s)`,
     ...feedbackReport(h.children),
     `Widget : ${(host === 'android' ? state.widgets > 0 : state.widgetReady) ? 'posé' : 'pas encore'}`,
@@ -792,6 +815,7 @@ const actions = {
     const now = parisNow();
     const start = 'now' in el.dataset ? fmtMin(Math.floor(toMin(now.time) / 5) * 5) : el.dataset.value;
     store.saveOuting(dehorsDay() === 'demain' ? addDays(now.date, 1) : now.date, start, now.date);
+    if ('center' in el.dataset) state.centerStrip = true;
     paint();
   },
   kid(el) {
@@ -1022,7 +1046,7 @@ const actions = {
       toast('La plage horaire est plus courte que cette durée.');
       return;
     }
-    updateHousehold({ outing_duration_h: d });
+    updateHousehold({ outing_duration_h: Math.max(1, Math.ceil(d)), outing_short: d < 1 });
     paint();
   },
   // Température du jour (pièce de vie) ou de la nuit (chambre), gardée comme une habitude. On part de la valeur
@@ -1061,15 +1085,17 @@ const actions = {
     paint();
   },
   // « C'était juste ? » : la réponse du jour, avec ce qu'il faut pour la relire (mode, tranche, ressenti, tendance) ;
-  // toucher la réponse déjà donnée la retire.
+  // après une sortie choisie, sur cette sortie (son heure, sa durée, sa tenue). Toucher la réponse déjà donnée la retire.
   feedback(el) {
-    const ctx = compute('aujourdhui');
+    const done = doneOuting();
+    const ctx = done?.outing ?? compute('aujourdhui');
     const j = ctx?.result.journee;
     if (!j) return;
     const v = el.dataset.value;
     const p = state.profile;
     const entry = p.feedback?.[state.today]?.v === v ? null : {
       v, t: baseTransport(ctx.result.transport, state.bundle.rules), b: j.band, f: [j.feels.first, j.feels.extreme], o: p.outfit_offset ?? 0,
+      ...(done?.outing ? { s: done.start, d: done.hours } : {}),
     };
     updateChild({ feedback: withFeedback(p.feedback, state.today, entry) });
     paint();

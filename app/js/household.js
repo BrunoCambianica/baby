@@ -21,9 +21,10 @@ export const newChild = ({ name = '', birth, transport = 'poussette', outfit_off
   id: newId(), name, birth, transport, outfit_offset, day_style: null, night_options: {}, swaps: {}, inventory: {}, room: null, room_day: null, feedback: {},
 });
 
-// « C'était juste ? » : la réponse du parent sur la tenue de dehors du jour, { 'AAAA-MM-JJ': { v, t, b, f, o } } :
-// v « chaud », « juste » ou « froid » ; le mode de sortie, la tranche du matin, le ressenti (du matin, le plus éloigné)
-// et la tendance de ce jour-là, pour relire les retours. Une réponse par jour, les FEEDBACK_KEEP derniers jours gardés.
+// « C'était juste ? » : la réponse du parent sur la tenue de dehors du jour, { 'AAAA-MM-JJ': { v, t, b, f, o, s, d } } :
+// v « chaud », « juste » ou « froid » ; le mode de sortie, la tranche du départ, le ressenti (du départ, le plus éloigné)
+// et la tendance de ce jour-là, pour relire les retours ; après une sortie choisie, s son heure de départ et d sa durée
+// (en heures), et le reste porte sur elle seule. Une réponse par jour, les FEEDBACK_KEEP derniers jours gardés.
 export const FEEDBACK_KEEP = 60;
 export function withFeedback(feedback, date, entry) {
   const next = { ...(feedback ?? {}) };
@@ -51,6 +52,10 @@ export function feedbackStats(feedback) {
   const n = (v) => values.filter((x) => x === v).length;
   return { total: values.length, juste: n('juste'), chaud: n('chaud'), froid: n('froid') };
 }
+
+// Durée d'une sortie, en heures. Une sortie de 30 minutes est notée `outing_short` : `outing_duration_h` vaut alors 1,
+// ce que lisent le moteur, les widgets et l'autre parent sur une version plus ancienne (ils comptent par heure).
+export const outingHours = (h) => (h?.outing_short ? 0.5 : h?.outing_duration_h ?? 1);
 
 // Pièces au choix encore utiles : celles de toujours, et celles d'aujourd'hui ou d'un jour à venir.
 export const liveSwaps = (swaps, today) => Object.fromEntries(Object.entries(swaps ?? {}).filter(([, s]) => s?.to && (!s.day || s.day >= today)));
@@ -97,6 +102,7 @@ export function fromShared(shared, local) {
     commune: shared.commune,
     outing_window: shared.outing_window,
     outing_duration_h: shared.outing_duration_h,
+    outing_short: shared.outing_short === true,
     wash_days: shared.wash_days ?? null,
     settings_at: shared.settings_at ?? 0,
     children: shared.children,
@@ -127,6 +133,8 @@ export function fromConfig(cfg, local, { keepView = false } = {}) {
     commune: same ? local.commune : { nom: cfg.n ?? '', code: cfg.c || `${cfg.la},${cfg.lo}`, dep: cfg.dp ?? '', cp: '', lat: cfg.la, lon: cfg.lo },
     outing_window: { from: cfg.f ?? DEFAULT_WINDOW.from, to: cfg.u ?? DEFAULT_WINDOW.to },
     outing_duration_h: cfg.d ?? 1,
+    // Les widgets ne connaissent que les heures : une sortie de 30 minutes gardée sur ce téléphone le reste.
+    outing_short: Boolean(local?.outing_short) && (cfg.d ?? 1) === 1,
     // Le rythme de lessive n'est pas dans la configuration des widgets : celui du téléphone est gardé.
     wash_days: local?.wash_days ?? null,
     outfit_view: keepView && local ? local.outfit_view : cfg.i === 0 ? 'texte' : 'dessins',
