@@ -439,6 +439,33 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun reminderState(): String = SbReminder.state(this@MainActivity)
 
+        // Sorties d'aujourd'hui et de demain (0.25) : {"AAAA-MM-JJ": [{"s":"10:00","d":1,"auto":true}]}. Le widget
+        // montre la même sortie que l'app, et le rappel avant une sortie choisie s'y cale.
+        @JavascriptInterface
+        fun syncOutings(json: String) {
+            if (!onApp) return
+            val context = this@MainActivity
+            val outings = runCatching { JSONObject(json) }.getOrNull() ?: return
+            if (SbStore.saveOutings(context, outings.toString())) {
+                SbWorker.refreshNow(context, replace = true)
+                SbOutingReminder.schedule(context)
+            }
+        }
+
+        // Rappel avant une sortie choisie, activé ou coupé dans l'app ; comme reminder(), l'autorisation d'abord.
+        @JavascriptInterface
+        fun outingReminder(on: Boolean): String {
+            if (!onApp) return SbOutingReminder.state(this@MainActivity)
+            val context = this@MainActivity
+            SbStore.saveOutingRemind(context, on)
+            SbOutingReminder.schedule(context)
+            if (on && !SbReminder.allowed(context)) {
+                runOnUiThread { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS) }
+                return "demande"
+            }
+            return SbOutingReminder.state(context)
+        }
+
         @JavascriptInterface
         fun version(): String = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
     }

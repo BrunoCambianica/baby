@@ -283,12 +283,15 @@ await test('Widget iPhone : l\'app s\'ouvre sur l\'enfant du widget ; une config
   await dedans(page, 'nuit');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   const src = await page.getAttribute('#sb-sync', 'data-sync');
-  assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+&rappel=0$/.test(src), src);
+  assert(/^superbebe-sync:\?config=SB1\.[\w-]+&rooms=zoe222:19\.5@\d+&rappel=0&avant=0&sorties=[^&]+$/.test(src), src);
+  // La sortie par défaut, notée en ouvrant l'app sur Extérieur, part aussi : le widget montre la même.
+  const sorties = JSON.parse(decodeURIComponent(src.split('&sorties=')[1]));
+  assert(JSON.stringify(sorties) === '{"2026-10-21":[{"s":"07:30","d":1,"auto":true}]}', JSON.stringify(sorties));
   // La température du jour (Dedans, Jour ; widget Maison) part aussi.
   await page.click('.days [data-value="jour"]');
   await page.click('[aria-label="Monter d\'un demi-degré"]');
   const both = await page.getAttribute('#sb-sync', 'data-sync');
-  assert(/&rooms=zoe222:19\.5@\d+&dayrooms=zoe222:21\.5@\d+&rappel=0$/.test(both), both);
+  assert(/&rooms=zoe222:19\.5@\d+&dayrooms=zoe222:21\.5@\d+&rappel=0&avant=0&sorties=/.test(both), both);
   const newer = encodeConfig(householdToConfig({ ...local, outing_duration_h: 2, updated: Date.now() + 60_000 }), toB64);
   await page.goto(`${APP}?hote=scriptable#import=${newer}`);
   await page.waitForSelector('.hero-big');
@@ -664,14 +667,14 @@ await test('La veille au soir : Extérieur passe à demain, à préparer ; Inté
   assert((await page.getAttribute('.days [data-value="nuit"]', 'aria-selected')) === 'true' && await page.isVisible('text=Gigoteuse 2 TOG'), 'la nuit attendue le soir');
   await page.goto(`${APP}#widget`);
   await page.waitForSelector('.widget-demo');
-  assert((await page.textContent('.widget-demo')).includes('Demain 5° → 19°'), await page.textContent('.widget-demo'));
+  assert((await page.textContent('.widget-demo')).includes('Demain, sortie de 8 h à 9 h · 5°'), await page.textContent('.widget-demo'));
 });
 
-await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app Android, transmis au widget iPhone', async (use) => {
+await test('Rappels : expliqués dans le navigateur, demandés à l\'app Android, transmis au widget iPhone ; avant une sortie, avec l\'app 0.25', async (use) => {
   const page = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await page.goto(`${APP}#reglages`);
-  await page.waitForSelector('text=Rappel du soir');
-  assert(await page.isVisible('text=Avec le widget'), 'rappel non expliqué dans le navigateur');
+  await page.waitForSelector('h2:has-text("Rappels")');
+  assert(await page.isVisible('text=Avec le widget') && await page.isVisible('text=15 minutes avant une sortie'), 'rappels non expliqués dans le navigateur');
   await page.context().close();
 
   const bridge = `window.calls = []; window.reminder = 'off'; window.SuperbebeAndroid = { sync() {}, colors() {}, widgets: () => 1, version: () => '0.8.0',
@@ -684,18 +687,35 @@ await test('Rappel du soir : expliqué dans le navigateur, demandé à l\'app An
   await android.selectOption('#reminder-at', '21:00');
   const calls = await android.evaluate(() => window.calls);
   assert(JSON.stringify(calls) === '[[true,"20:00"],[true,"21:00"]]', JSON.stringify(calls));
+  // App 0.8 : pas de rappel avant une sortie (il vient avec l'app 0.25).
+  assert(!(await android.isVisible('[data-action="reminder-before"]')), 'rappel avant une sortie proposé à une app trop ancienne');
   await android.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await android.waitForSelector('text=Notifications refusées');
   await shot(android, 'l3-rappel-android');
   await android.context().close();
 
+  // App 0.25 : les sorties partent vers le widget, le rappel avant une sortie se règle à part.
+  const bridge25 = bridge.replace("version: () => '0.8.0',", "version: () => '0.25.0', outings: [], before: [], syncOutings: (j) => window.SuperbebeAndroid.outings.push(j), outingReminder: (on) => { window.SuperbebeAndroid.before.push(on); return on ? 'on' : 'off'; },");
+  const android25 = use(await phone({ init: bridge25 }));
+  await android25.goto(APP);
+  await android25.waitForSelector('.day');
+  await android25.goto(`${APP}#reglages`);
+  await android25.click('[data-action="reminder-before"][data-value="on"]');
+  const sent = await android25.evaluate(() => ({ outings: window.SuperbebeAndroid.outings, before: window.SuperbebeAndroid.before }));
+  assert(JSON.stringify(sent.before) === '[true]', JSON.stringify(sent.before));
+  assert(sent.outings.some((j) => JSON.parse(j)['2026-10-21']?.[0]?.s === '07:30'), JSON.stringify(sent.outings));
+  assert((await android25.getAttribute('[data-action="reminder-before"][data-value="on"]', 'aria-checked')) === 'true', 'rappel avant une sortie non coché');
+  await shot(android25, 'l3-rappels-android');
+  await android25.context().close();
+
   const iphone = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await iphone.goto(`${APP}?hote=scriptable#reglages`);
   await iphone.click('[data-action="reminder"][data-value="on"]');
   const src = await iphone.getAttribute('#sb-sync', 'data-sync');
-  assert(src.endsWith('&rappel=20:00'), src);
+  assert(src.includes('&rappel=20:00&avant=0'), src);
   await iphone.click('[data-action="reminder"][data-value="off"]');
-  assert((await iphone.getAttribute('#sb-sync', 'data-sync')).endsWith('&rappel=0'), 'rappel non coupé');
+  await iphone.click('[data-action="reminder-before"][data-value="on"]');
+  assert((await iphone.getAttribute('#sb-sync', 'data-sync')).includes('&rappel=0&avant=1'), 'rappels non transmis');
 });
 
 await test('Intérieur : le jour et la nuit, chacun sa température, gardée comme une habitude ; le widget Maison ouvre le moment', async (use) => {

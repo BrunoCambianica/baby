@@ -894,6 +894,33 @@ export const eveningNight = (night, M) => render(M, 'evening.night', 'short', {
   room: night.room_temp_c === null ? '' : ` ${frNumber(night.room_temp_c)}°`,
 });
 
+// La sortie d'un widget en titre (`outing` : voir widgetOuting dans adapter.js) : « Sortir maintenant (1 h) · 9° »,
+// « Sortie jusqu'à 11 h 10 · 9° → 12° », « Sortie de 15 h à 16 h · 12° » ; la veille au soir, « Demain, sortie de
+// 8 h à 9 h · 5° ». Le ressenti : celui des heures de la sortie, depuis maintenant si elle est en cours.
+export const durationText = (hours) => (hours < 1 ? '30 min' : `${hours} h`);
+export function outingTitle(outing, journee, M, { tomorrow = false, now = null } = {}) {
+  const range = journeeRange(journee, outing.kind === 'next' || !now ? journee.from : now);
+  return render(M, tomorrow ? 'widget.outing.tomorrow' : `widget.outing.${outing.kind}`, 'short', {
+    start: hourFr(outing.start),
+    end: hourFr(fmtMin(outing.end)),
+    duration: durationText(outing.d),
+    feels: range.stable ? `${range.first}°` : `${range.first}° → ${range.extreme}°`,
+  });
+}
+
+// Rappel avant une sortie choisie : sa tenue au départ et son sac (`result` : la sortie, calculée pour ses heures).
+export function outingReminderText(result, outing, M) {
+  const j = result.journee;
+  const labels = M.labels;
+  return {
+    title: render(M, 'outing.reminder', 'short', { start: hourFr(outing.start) }),
+    text: render(M, 'outing.reminder', 'text', {
+      outfit: capitalize(j.morning.map((i) => labels.items_short[i] ?? i).join(', ')),
+      bag: j.bag.length ? ` · ${render(M, 'journee.bag', 'short', { items: shortList(j.bag.map((b) => b.item), labels) })}` : '',
+    }),
+  };
+}
+
 // Le rappel du soir : la tenue de demain matin, le sac, la nuit.
 export function reminderText(today, tomorrow, M) {
   const j = tomorrow.journee;
@@ -907,15 +934,17 @@ export function reminderText(today, tomorrow, M) {
 
 // Les trois lignes du widget pour le moment voulu : « jour » (la journée en couches) ou « soir » : avec `tomorrow`
 // (résultat du lendemain), la tenue et le sac de demain à préparer, et la nuit ; sinon la nuit et les achats.
-// Avec `drawings`, la tenue (le jour) et la gigoteuse (le soir) deviennent des dessins :
+// Avec `outing` (le jour) ou `tomorrowOuting` (le soir), `result` et `tomorrow` sont calculés pour les heures de cette
+// sortie : son heure en titre, sa tenue, son sac, ses changements ; sinon, `ideal` (le créneau idéal du jour) s'il est
+// ailleurs. Avec `drawings`, la tenue (le jour) et la gigoteuse (le soir) deviennent des dessins :
 // { drawings: [identifiants de engine/drawings.js], text, label }, `label` gardant le texte pour les petits formats.
-export function widgetLines(result, moment, M, { drawings = false, tomorrow = null } = {}) {
+export function widgetLines(result, moment, M, { drawings = false, tomorrow = null, outing = null, tomorrowOuting = null, ideal = null } = {}) {
   const labels = M.labels;
   const lines = [];
   const j = result.journee;
   if (moment === 'soir' && tomorrow?.journee) {
     const next = tomorrow.journee;
-    lines.push(eveningTitle(tomorrow, M));
+    lines.push(tomorrowOuting ? outingTitle(tomorrowOuting, next, M, { tomorrow: true }) : eveningTitle(tomorrow, M));
     const label = capitalize(next.morning.map((i) => labels.items_short[i] ?? i).join(' · '));
     lines.push(drawings ? { drawings: next.morning.map((i) => ITEM_DRAWINGS[i]).filter(Boolean), text: '', label } : label);
     const bag = next.bag.length ? render(M, 'journee.bag', 'short', { items: shortList(next.bag.map((b) => b.item), labels) }) : '';
@@ -924,11 +953,14 @@ export function widgetLines(result, moment, M, { drawings = false, tomorrow = nu
     // Le jour : le ressenti, la tenue du moment, puis le prochain changement et le sac (une alerte officielle passe avant).
     const now = result.now ?? '08:00';
     const vigilance = result.outing.reason === 'vigilance';
-    lines.push(vigilance ? render(M, 'outing.none.vigilance', 'short') : journeeFeels(j, now, M));
-    const { items } = journeeAt(j, now);
+    lines.push(vigilance ? render(M, 'outing.none.vigilance', 'short') : outing ? outingTitle(outing, j, M, { now }) : journeeFeels(j, now, M));
+    const { items } = journeeAt(j, outing?.kind === 'next' ? j.from : now);
     const label = capitalize(items.map((i) => labels.items_short[i] ?? i).join(' · '));
     lines.push(drawings ? { drawings: items.map((i) => ITEM_DRAWINGS[i]).filter(Boolean), text: '', label } : label);
-    lines.push(j.alert ? render(M, j.alert, 'short', result.params) : journeePlanLine(j, now, M) ?? render(M, result.relays[0] ?? j.check, 'short', result.params));
+    const elsewhere = outing && ideal && ideal.start !== outing.start
+      ? render(M, 'outing.window', 'short', { start: hourFr(ideal.start), end: hourFr(ideal.end), feels: Math.round(ideal.feels_c) }) : null;
+    lines.push(j.alert ? render(M, j.alert, 'short', result.params)
+      : journeePlanLine(j, now, M) ?? elsewhere ?? render(M, result.relays[0] ?? j.check, 'short', result.params));
   } else if (moment === 'jour') {
     const w = result.outing.window;
     lines.push(

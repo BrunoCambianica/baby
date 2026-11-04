@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { evaluate, lint, pieceChoices } from '../engine/engine.js';
 import {
   buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
-  householdToConfig, hourlyForDate, parisNow, pickChild, profileToConfig, WARDROBE_CATEGORIES, weeklyOutlook, widgetView,
+  householdToConfig, hourlyForDate, outingReminder, parisNow, pickChild, profileToConfig, WARDROBE_CATEGORIES, weeklyOutlook, widgetView,
 } from '../engine/adapter.js';
 import { loadRules, readJSON, ROOT } from './load-rules.js';
 
@@ -96,23 +96,72 @@ test('De bout en bout : une vraie journée donne un créneau, une tenue et trois
   assert(result.night.tog === '2', `TOG ${result.night.tog}`);
 });
 
-test('Widget le soir : la tenue et le sac de demain, à préparer, et la nuit ; le rappel du soir', () => {
+test('Widget le soir : la sortie de demain (choisie, sinon au début de la plage horaire), sa tenue et son sac, à préparer, et la nuit ; le rappel du soir', () => {
   const profile = {
     commune: { nom: 'Lyon', lat: 45.758, lon: 4.8351 }, birth: '2026-05', transport: 'poussette',
     outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_offset: 0, room_temp_c: 19, inventory: {},
   };
   const evening = widgetView({ forecast, profile, date: '2026-10-26', time: '20:30', lat: 45.758 }, bundle, { drawings: true });
   assert(evening.moment === 'soir' && evening.theme === 'nuit' && evening.tomorrow?.date === '2026-10-27', `${evening.moment} ${evening.tomorrow?.date}`);
-  assert(evening.lines[0] === 'Demain 5° → 19°', evening.lines[0]);
+  // Sans sortie choisie pour demain : la première, au début de la plage horaire, pour la durée réglée.
+  assert(evening.lines[0] === 'Demain, sortie de 8 h à 9 h · 5°', evening.lines[0]);
   assert(evening.lines[1].drawings.includes('combi_chaude'), JSON.stringify(evening.lines[1]));
-  assert(evening.lines[2] === 'Sac : gilet · nuit 19° : body ML + pyjama + 2 TOG', evening.lines[2]);
+  assert(evening.lines[2] === 'Nuit 19° : body ML + pyjama + 2 TOG', evening.lines[2]);
+  assert(evening.reminder.startsWith('Body ML, haut ML, pantalon chaud') && evening.reminder.endsWith('nuit 19° : body ML + pyjama + 2 TOG'), evening.reminder);
   const rainy = widgetView({ forecast, profile, date: '2026-10-24', time: '20:30', lat: 45.758 }, bundle);
-  assert(rainy.lines[0] === 'Demain 8° → 14° · pluie vers 8 h' && rainy.lines[2].startsWith('Sac : habillage pluie'), JSON.stringify(rainy.lines));
-  assert(evening.reminder.startsWith('Body ML, haut ML, pantalon, chaussettes, pull, combi pilote') && evening.reminder.endsWith('nuit 19° : body ML + pyjama + 2 TOG'), evening.reminder);
-  const morning = widgetView({ forecast, profile, date: '2026-10-27', time: '07:30', lat: 45.758 }, bundle);
-  assert(morning.moment === 'jour' && morning.tomorrow === null && morning.reminder === null && morning.lines[0] === 'Ce matin 5° → 19°', JSON.stringify(morning.lines));
+  assert(rainy.lines[0] === 'Demain, sortie de 8 h à 9 h · 8°' && rainy.lines[2].startsWith('Sac : habillage pluie'), JSON.stringify(rainy.lines));
+  // Choisie dans l'app : sa tenue et son sac (le gilet pour 12 h), pas ceux de toute la journée.
+  const chosen = widgetView({ forecast, profile, date: '2026-10-26', time: '20:30', lat: 45.758, outings: { '2026-10-27': [{ s: '10:00', d: 4 }] } }, bundle);
+  assert(chosen.lines[0] === 'Demain, sortie de 10 h à 14 h · 8° → 15°' && chosen.lines[2].startsWith('Sac : gilet · nuit'), JSON.stringify(chosen.lines));
+  assert(chosen.reminder.includes('combi pilote') && chosen.reminder.includes(' · sac : gilet · nuit 19°'), chosen.reminder);
   const early = widgetView({ forecast, profile, date: '2026-10-27', time: '16:00', lat: 45.758 }, bundle, { reminder: true });
-  assert(early.moment === 'jour' && early.reminder?.startsWith('Body MC, t-shirt, pantalon léger') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
+  assert(early.moment === 'jour' && early.reminder?.startsWith('Body ML, haut ML, pantalon') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
+});
+
+test('Widget le jour : la sortie de l\'app (en cours ou choisie), sinon maintenant pour la durée réglée ; sa tenue, ses changements, son sac', () => {
+  const profile = {
+    commune: { nom: 'Lyon', lat: 45.758, lon: 4.8351 }, birth: '2026-05', transport: 'poussette',
+    outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_offset: 0, room_temp_c: 19, inventory: {},
+  };
+  const at = (time, outings = null, extra = {}) => widgetView({ forecast, profile: { ...profile, ...extra }, date: '2026-10-27', time, lat: 45.758, outings }, bundle);
+  // Sans sortie : maintenant, une heure ; le créneau idéal, ailleurs, en dernière ligne.
+  const now = at('07:30');
+  assert(now.moment === 'jour' && now.tomorrow === null && now.reminder === null && now.outing.kind === 'now', JSON.stringify(now.outing));
+  assert(now.lines[0] === 'Sortir maintenant (1 h) · 4°' && now.lines[2] === 'Sortie idéale 17 h – 18 h · 19°', JSON.stringify(now.lines));
+  assert(now.today.journee.from === '08:00', 'la journée reste calculée pour la fiche');
+  // Choisie à 10 h pour 4 h : son titre, sa tenue au départ, le changement de 12 h et le gilet dans le sac.
+  const chosen = at('07:30', { '2026-10-27': [{ s: '10:00', d: 4 }] });
+  assert(chosen.lines[0] === 'Sortie de 10 h à 14 h · 8° → 15°' && chosen.lines[2] === '12 h : − combi pilote… + gilet · sac : gilet', JSON.stringify(chosen.lines));
+  assert(chosen.lines[1].label.includes('combi pilote'), JSON.stringify(chosen.lines[1]));
+  // En cours : jusqu'à sa fin, la tenue de maintenant.
+  const going = at('11:00', { '2026-10-27': [{ s: '10:00', d: 4 }] });
+  assert(going.outing.kind === 'going' && going.lines[0] === 'Sortie jusqu\'à 14 h · 10° → 15°', JSON.stringify(going.lines));
+  // Finie : de nouveau maintenant ; la sortie par défaut notée par l'app vaut comme une autre.
+  assert(at('14:30', { '2026-10-27': [{ s: '10:00', d: 4 }] }).outing.kind === 'now', 'sortie finie encore affichée');
+  const auto = at('10:20', { '2026-10-27': [{ s: '10:00', d: 1, auto: true }] });
+  assert(auto.outing.kind === 'going' && !auto.outing.chosen && auto.lines[0].startsWith('Sortie jusqu\'à 11 h'), JSON.stringify(auto.outing));
+  // 30 minutes : dite telle quelle ; le moteur prend l'heure entamée.
+  const short = widgetView({ forecast, profile: { ...profile, outing_short: true }, date: '2026-10-21', time: '12:00', lat: 45.758 }, bundle);
+  assert(short.lines[0] === 'Sortir maintenant (30 min) · 10°' && short.lines[2] === 'Sac : habillage pluie', JSON.stringify(short.lines));
+});
+
+test('Rappel avant une sortie choisie : sa tenue au départ et son sac ; 30 minutes passées aux widgets (ds)', () => {
+  const profile = {
+    commune: { nom: 'Lyon', lat: 45.758, lon: 4.8351 }, birth: '2026-05', transport: 'poussette',
+    outing_window: { from: '08:00', to: '18:00' }, outing_duration_h: 1, outfit_offset: 0, room_temp_c: 19, inventory: {},
+  };
+  const r = outingReminder({ forecast, profile, date: '2026-10-21', time: '11:45', lat: 45.758, outing: { s: '12:00', d: 1 } }, bundle);
+  assert(r.title === 'Sortie à 12 h' && r.text.startsWith('Body ML, haut ML') && r.text.endsWith(' · sac : habillage pluie'), JSON.stringify(r));
+  const long = outingReminder({ forecast, profile, date: '2026-10-27', time: '09:45', lat: 45.758, outing: { s: '10:00', d: 4 } }, bundle);
+  assert(long.title === 'Sortie à 10 h' && long.text.includes('combi pilote') && long.text.endsWith(' · sac : gilet'), JSON.stringify(long));
+  const household = {
+    commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 }, outing_window: { from: '08:00', to: '18:00' },
+    outing_duration_h: 1, outing_short: true, outfit_view: 'dessins', updated: 5,
+    children: [{ id: 'leo', name: 'Léo', birth: '2026-05', transport: 'poussette', outfit_offset: 0 }],
+  };
+  const cfg = decodeConfig(encodeConfig(householdToConfig(household), toB64), fromB64);
+  assert(cfg.d === 1 && cfg.ds === 1 && configToProfile(cfg, 'leo').outing_short === true, JSON.stringify(cfg));
+  assert(configToProfile(decodeConfig(encodeConfig(householdToConfig({ ...household, outing_short: false }), toB64), fromB64), 'leo').outing_short === false, 'ds sans 30 minutes');
 });
 
 test('Configuration du widget : aller-retour avec accents', () => {

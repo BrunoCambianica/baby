@@ -250,11 +250,11 @@ function assert(cond, message) {
   if (!cond) throw new Error(message);
 }
 
-await test('Widget moyen : en-tête, ressenti de la journée, tenue du matin en dessins, geste de la nuque en pied', async () => {
+await test('Widget moyen : en-tête, la sortie (maintenant, pour la durée réglée) et son ressenti, sa tenue en dessins, geste de la nuque en pied', async () => {
   const out = await run();
   assert(out.completed, 'Script.complete() non appelé');
   assert(out.texts[0] === 'SUPERBÉBÉ · LYON', out.texts[0]);
-  assert(/^Ce matin -?\d+°( → -?\d+°)?$/.test(out.texts[1]), out.texts[1]);
+  assert(/^Sortir maintenant \(1 h\) · -?\d+°( → -?\d+°)?$/.test(out.texts[1]), out.texts[1]);
   const row = out.widget.rows[0];
   assert(row && row.images.length >= 3 && row.images.every((i) => i.imageSize?.width === 24), `rangée de dessins : ${JSON.stringify(row?.images.length)}`);
   assert(out.texts.at(-1) === 'Touchez sa nuque, pas ses mains · 7 h 30', out.texts.at(-1));
@@ -301,10 +301,11 @@ await test('Écran verrouillé en ligne et rond', async () => {
   assert(circular.texts.length === 1 && /( h|°)$/.test(circular.texts[0]), JSON.stringify(circular.texts));
 });
 
-await test('Le soir : demain à préparer (tenue en dessins, sac), et la nuit selon le relevé de la chambre', async () => {
-  const files = new Map([['/doc/superbebe/etat.json', JSON.stringify({ room: { value: 21.5, at: Date.parse('2026-10-21T19:00:00+02:00') } })]]);
+await test('Le soir : la sortie de demain à préparer (tenue en dessins, sac), et la nuit selon sa chambre, notée il y a trois jours', async () => {
+  // La température de sa chambre est gardée comme une habitude (avant la 0.25 : 16 heures).
+  const files = new Map([['/doc/superbebe/etat.json', JSON.stringify({ room: { value: 21.5, at: Date.parse('2026-10-18T19:00:00+02:00') } })]]);
   const out = await run({ files, at: '2026-10-21T20:30:00+02:00' });
-  assert(/^Demain -?\d+°/.test(out.texts[1]), out.texts[1]);
+  assert(/^Demain, sortie de 9 h à 10 h · -?\d+°/.test(out.texts[1]), out.texts[1]);
   assert(out.widget.rows[0].images.length >= 3, `tenue de demain : ${out.widget.rows[0].images.length} dessins`);
   // Chambre à 21,5 °C : un pyjama léger sous une gigoteuse de 1 TOG.
   assert(/nuit 21,5° : pyjama léger \+ 1 TOG/i.test(out.texts[2]), out.texts[2]);
@@ -549,19 +550,65 @@ await test('Rappel du soir : programmé à l\'heure choisie avec la tenue de dem
   assert(scheduled.length === count, 'rappel programmé alors qu\'il est coupé');
 });
 
+await test('Sorties de l\'app : le widget montre la sortie choisie ; le rappel 15 minutes avant, avec la tenue et le sac de chaque enfant', async () => {
+  const files = new Map();
+  const scheduled = [];
+  const removed = [];
+  const Notification = class {
+    setTriggerDate(date) {
+      this.date = date;
+    }
+    async schedule() {
+      scheduled.push({ id: this.identifier, title: this.title, body: this.body, date: this.date });
+    }
+    static removePending(ids) {
+      removed.push(...ids);
+    }
+  };
+  // L'app (lien superbebe-sync:?…&avant=1&sorties=…) : la sortie par défaut de 7 h 30, notée en l'ouvrant.
+  const auto = JSON.stringify({ '2026-10-21': [{ s: '07:30', d: 1, auto: true }] });
+  await run({ files, loaderConfig: FAMILLE, param: '', inWidget: false, query: { config: FAMILLE, avant: '1', sorties: auto }, extra: { Notification } });
+  const out = await run({ files, loaderConfig: FAMILLE, param: '', at: '2026-10-21T07:40:00+02:00', extra: { Notification } });
+  // En cours : jusqu'à sa fin. Pas de rappel pour une sortie par défaut.
+  assert(/^Sortie jusqu'à 8 h 30 · /.test(out.texts[1]), out.texts[1]);
+  assert(!scheduled.some((n) => n.id === 'superbebe-sortie'), 'rappel pour la sortie par défaut');
+  // Puis une sortie choisie à 12 h (elle remplace celle en cours) : le rappel à 11 h 45.
+  const chosen = JSON.stringify({ '2026-10-21': [{ s: '12:00', d: 1 }] });
+  await run({ files, loaderConfig: FAMILLE, param: '', inWidget: false, at: '2026-10-21T07:45:00+02:00', query: { sorties: chosen }, extra: { Notification } });
+  const last = scheduled.filter((n) => n.id === 'superbebe-sortie').at(-1);
+  assert(last?.title === 'Sortie à 12 h' && last.date.getHours() === 11 && last.date.getMinutes() === 45, JSON.stringify(last));
+  assert(last.body.startsWith('Léo : ') && last.body.includes('\nZoé : ') && last.body.includes('sac : habillage pluie'), last.body);
+  // Plus tard, la sortie choisie est la prochaine.
+  const later = await run({ files, loaderConfig: FAMILLE, param: '', at: '2026-10-21T09:00:00+02:00', extra: { Notification } });
+  assert(later.texts[1].startsWith('Sortie de 12 h à 13 h · '), later.texts[1]);
+  // Coupé dans l'app : retiré.
+  await run({ files, loaderConfig: FAMILLE, param: '', inWidget: false, query: { avant: '0' }, extra: { Notification } });
+  assert(removed.includes('superbebe-sortie'), 'rappel avant la sortie non retiré');
+});
+
 await test('Android : le moteur embarqué renvoie le lieu et trois lignes, le jour comme le soir', async () => {
   const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
   const call = `${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {"offset": 0, "room": 19}, "2026-10-21", "20:30");`;
   const out = JSON.parse(vm.runInContext(call, vm.createContext({})));
   assert(out.place === 'Lyon' && out.moment === 'soir' && out.theme === 'nuit' && out.check === 'Touchez sa nuque, pas ses mains', JSON.stringify(out));
-  assert(out.lines.length === 3 && /^Demain /.test(out.lines[0]) && /nuit 19° : body ML \+ pyjama \+ 2 TOG/i.test(out.lines[2]), JSON.stringify(out.lines));
+  assert(out.lines.length === 3 && /^Demain, sortie de /.test(out.lines[0]) && /nuit 19° : body ML \+ pyjama \+ 2 TOG/i.test(out.lines[2]), JSON.stringify(out.lines));
   assert(out.lines[1].drawings?.length >= 3 && out.lines[1].label.startsWith('Body ML'), JSON.stringify(out.lines[1]));
   const day = JSON.parse(vm.runInContext(`${android}\nsbAndroid(${JSON.stringify(forecast)}, ${JSON.stringify(CONFIG)}, {}, "2026-10-21", "07:30");`, vm.createContext({})));
-  assert(/^Ce matin /.test(day.lines[0]) && day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines));
+  assert(/^Sortir maintenant /.test(day.lines[0]) && day.lines[1].drawings.length >= 3 && day.lines[1].drawings.every((id) => /^[a-z_]+$/.test(id)), JSON.stringify(day.lines));
   const texte = JSON.parse(vm.runInContext(call.replace(JSON.stringify(CONFIG), JSON.stringify(TEXTE)), vm.createContext({})));
   assert(/^Body ML · /.test(texte.lines[1]) && texte.lines[2].includes('2 TOG'), JSON.stringify(texte.lines));
   const bad = JSON.parse(vm.runInContext(`${android}\nsbAndroid({}, "SB1.@@", {}, "2026-10-21", "08:00");`, vm.createContext({})));
   assert(bad.error === 'configuration', JSON.stringify(bad));
+});
+
+await test('Android : les sorties de l\'app dans le widget, et le rappel avant une sortie choisie', async () => {
+  const android = readFileSync(join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'superbebe-android.js'), 'utf8');
+  const state = { outings: { '2026-10-21': [{ s: '12:00', d: 2 }] }, outing: { date: '2026-10-21', s: '12:00', d: 2 } };
+  const out = JSON.parse(vm.runInContext(`${android}\nsbAndroidAll(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, ${JSON.stringify(state)}, "2026-10-21", "11:45");`, vm.createContext({})));
+  assert(out.children.every((c) => c.lines[0].startsWith('Sortie de 12 h à 14 h · ') && !('before' in c)), JSON.stringify(out.children.map((c) => c.lines[0])));
+  assert(out.outingReminder.title === 'Sortie à 12 h' && out.outingReminder.lines.length === 2 && out.outingReminder.lines[1].startsWith('Zoé : '), JSON.stringify(out.outingReminder));
+  const none = JSON.parse(vm.runInContext(`${android}\nsbAndroidAll(${JSON.stringify(forecast)}, ${JSON.stringify(FAMILLE)}, {}, "2026-10-21", "11:45");`, vm.createContext({})));
+  assert(none.outingReminder === null && none.children[0].lines[0].startsWith('Sortir maintenant'), JSON.stringify(none.children[0].lines));
 });
 
 await test('Android : un rendu par enfant, avec la chambre de chacun', async () => {

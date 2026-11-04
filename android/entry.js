@@ -21,7 +21,9 @@ function sbBase64ToAscii(b64) {
 
 // Rendu d'un enfant. `state.rooms` : relevé de la chambre par enfant ({ identifiant: degrés }) ;
 // `state.room` : relevé unique des versions à un seul enfant, pour le premier ;
-// `state.reminder` : le rappel du soir est dû, calculer aussi la tenue de demain.
+// `state.reminder` : le rappel du soir est dû, calculer aussi la tenue de demain ;
+// `state.outings` : les sorties d'aujourd'hui et de demain, transmises par l'app (le widget montre la même) ;
+// `state.outing` : { date, s, d }, la sortie choisie dont le rappel est dû.
 function sbRenderChild(forecast, cfg, child, state, date, time) {
   const profile = configToProfile(cfg, child.id);
   profile.outfit_offset = clamp(profile.outfit_offset ?? 0, -2, 2);
@@ -29,7 +31,8 @@ function sbRenderChild(forecast, cfg, child, state, date, time) {
   const room = typeof rooms[child.id] === 'number' ? rooms[child.id] : child.id === configChildren(cfg)[0].id ? state.room : null;
   profile.room_temp_c = typeof room === 'number' ? room : null;
   // Le jour, la journée en couches ; le soir, la tenue et le sac de demain, à préparer, et la nuit.
-  const view = widgetView({ forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0, reminder: Boolean(state.reminder) });
+  const view = widgetView({ forecast, profile, date, time, lat: cfg.la, outings: state.outings ?? null }, SB_RULES, { drawings: cfg.i !== 0, reminder: Boolean(state.reminder) });
+  const before = state.outing ? outingReminder({ forecast, profile, date: state.outing.date, time: state.outing.date === date ? time : '07:00', lat: cfg.la, outing: state.outing }, SB_RULES) : null;
   return {
     id: child.id,
     name: child.name,
@@ -41,6 +44,7 @@ function sbRenderChild(forecast, cfg, child, state, date, time) {
     moment: view.moment,
     theme: view.theme,
     reminder: state.reminder ? view.reminder : null,
+    before,
     // Widget Maison : la tenue et l'état pour chaque relevé possible, le jour et la nuit (voir homeTable).
     maison: homeWidgetTable({ profile, date }, SB_RULES, { drawings: cfg.i !== 0 }),
   };
@@ -64,5 +68,11 @@ function sbAndroidAll(forecast, configText, state, date, time) {
   const reminder = state.reminder
     ? children.filter((c) => c.reminder).map((c, k) => `${children.length > 1 ? `${c.name || `Enfant ${k + 1}`} : ` : ''}${c.reminder}`)
     : [];
-  return JSON.stringify({ children, reminder: { title: render(SB_RULES.messages, 'evening.reminder', 'short'), lines: reminder } });
+  // Rappel avant une sortie choisie : la tenue et le sac de chaque enfant.
+  const before = children.filter((c) => c.before);
+  const outingReminderOut = before.length
+    ? { title: before[0].before.title, lines: before.map((c, k) => `${children.length > 1 ? `${c.name || `Enfant ${k + 1}`} : ` : ''}${c.before.text}`) }
+    : null;
+  for (const c of children) delete c.before;
+  return JSON.stringify({ children, reminder: { title: render(SB_RULES.messages, 'evening.reminder', 'short'), lines: reminder }, outingReminder: outingReminderOut });
 }

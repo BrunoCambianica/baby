@@ -2,9 +2,9 @@
 // tools/build-widget.js la concatène après engine/engine.js et engine/adapter.js, avec les règles embarquées.
 /* global ListWidget, Color, Font, LinearGradient, Point, Request, FileManager, Data, Script, Safari, WebView, DrawContext, Alert,
    Path, Rect, Size, Notification, config, args, SB_BASE_URL, SB_CONFIG_LOADER, SB_RULES */
+// Du moteur et de l'adaptateur, concaténés avant : nextOutingReminder, outingReminder, widgetView…
 
 const SB_APP_URL = `${SB_BASE_URL}app/`;
-const SB_ROOM_TTL_MS = 16 * 3600 * 1000;
 // Même ciel que l'app : la couleur dit le temps qu'il fait au moment conseillé.
 const SB_SKY = {
   clair: ['#3b8cf6', '#9dcdff'],
@@ -37,11 +37,11 @@ function sbFiles() {
 
 const sbDecode = (b64) => Data.fromBase64String(b64).toRawString();
 const sbValid = (text) => Boolean(text) && Boolean(decodeConfig(text, sbDecode));
-// Relevé de l'enfant, valable 16 heures : sa chambre (`room` vient des versions à un seul enfant) ou, avec `day`,
-// la pièce où il passe la journée (widget Maison).
+// Relevé de l'enfant, gardé comme une habitude (comme dans l'app) : sa chambre (`room` vient des versions à un seul
+// enfant) ou, avec `day`, la pièce où il passe la journée (widget Maison).
 function sbFreshRoom(state, childId, first, day = false) {
   const room = day ? state.dayRooms?.[childId] : state.rooms?.[childId] ?? (first ? state.room : null);
-  return room && Date.now() - room.at < SB_ROOM_TTL_MS ? room.value : null;
+  return room ? room.value : null;
 }
 
 // Champ Parameter du widget : le prénom ou le numéro de l'enfant, et « maison » pour le widget Maison (« Léo maison »).
@@ -73,13 +73,23 @@ function sbRoom(state, childId, text, key = 'rooms') {
 
 // Réglages et relevés envoyés par l'app : config=SB1.… et rooms=enfant:valeur@horodatage,… pour les chambres
 // (room=valeur@horodatage pour le premier enfant, dans les versions à un seul enfant), dayrooms=… pour les pièces de jour ;
-// rappel=HH:MM (rappel du soir activé dans l'app) ou rappel=0.
+// rappel=HH:MM (rappel du soir activé dans l'app) ou rappel=0 ; avant=1 ou 0 (rappel avant une sortie choisie) ;
+// sorties= : les sorties d'aujourd'hui et de demain, en JSON ({ 'AAAA-MM-JJ': [{ s, d, auto }] }).
 function sbApply(state, params) {
   const config = String(params.config ?? '');
   if (sbValid(config)) state.config = config;
   if (params.rappel !== undefined) {
     const at = String(params.rappel);
     state.reminder = /^\d{2}:\d{2}$/.test(at) ? { on: true, at } : { on: false };
+  }
+  if (params.avant !== undefined) state.outingRemind = String(params.avant) === '1';
+  if (params.sorties !== undefined) {
+    try {
+      const outings = JSON.parse(String(params.sorties));
+      if (outings && typeof outings === 'object' && !Array.isArray(outings)) state.outings = outings;
+    } catch (e) {
+      // Sorties illisibles : les précédentes restent.
+    }
   }
   const cfg = decodeConfig(state.config ?? '', sbDecode);
   if (params.room && cfg) sbRoom(state, configChildren(cfg)[0].id, params.room);
@@ -307,7 +317,7 @@ async function sbScheduleReminder(state, cfg, forecast, date, time) {
     const lines = children.map((child, k) => {
       const profile = configToProfile(cfg, child.id);
       profile.room_temp_c = sbFreshRoom(state, child.id, k === 0);
-      const view = widgetView({ forecast, profile, date: day, time: at, lat: cfg.la }, SB_RULES, { reminder: true });
+      const view = widgetView({ forecast, profile, date: day, time: at, lat: cfg.la, outings: state.outings ?? null }, SB_RULES, { reminder: true });
       return view.reminder && `${children.length > 1 ? `${child.name || `Enfant ${k + 1}`} : ` : ''}${view.reminder}`;
     }).filter(Boolean);
     if (!lines.length) return;
@@ -321,6 +331,43 @@ async function sbScheduleReminder(state, cfg, forecast, date, time) {
     notification.setTriggerDate(new Date(y, m - 1, d, Number(at.slice(0, 2)), Number(at.slice(3, 5))));
     await notification.schedule();
     state.reminderScheduled = true;
+  } catch (e) {
+    // Notifications indisponibles (widget, autorisation refusée) : le widget reste à jour sans rappel.
+  }
+}
+
+// Rappel avant une sortie choisie dans l'app (avant=1) : OUTING_REMINDER_LEAD_MIN minutes avant son départ, sa tenue
+// et son sac, pour chaque enfant. Reprogrammé à chaque lancement du widget et au retour de l'app ; la prochaine
+// sortie seulement.
+const SB_OUTING_ID = 'superbebe-sortie';
+async function sbScheduleOutingReminder(state, cfg, forecast, date, time) {
+  if (typeof Notification === 'undefined') return;
+  try {
+    const next = state.outingRemind ? nextOutingReminder(state.outings, date, time) : null;
+    const key = next && `${next.day} ${next.s}`;
+    if (!next) {
+      if (state.outingScheduled) Notification.removePending([SB_OUTING_ID]);
+      state.outingScheduled = null;
+      return;
+    }
+    const children = configChildren(cfg);
+    const texts = children.map((child, k) => {
+      const profile = configToProfile(cfg, child.id);
+      profile.room_temp_c = sbFreshRoom(state, child.id, k === 0);
+      const r = outingReminder({ forecast, profile, date: next.day, time: next.day === date ? time : '07:00', lat: cfg.la, outing: next }, SB_RULES);
+      return r && { title: r.title, line: `${children.length > 1 ? `${child.name || `Enfant ${k + 1}`} : ` : ''}${r.text}` };
+    }).filter(Boolean);
+    if (!texts.length) return;
+    const notification = new Notification();
+    notification.identifier = SB_OUTING_ID;
+    notification.threadIdentifier = 'superbebe';
+    notification.title = texts[0].title;
+    notification.body = texts.map((t) => t.line).join('\n');
+    notification.openURL = `scriptable:///run/${encodeURIComponent(Script.name())}?ouvrir=app`;
+    const [y, m, d] = next.day.split('-').map(Number);
+    notification.setTriggerDate(new Date(y, m - 1, d, Math.floor(next.lead / 60), next.lead % 60));
+    await notification.schedule();
+    state.outingScheduled = key;
   } catch (e) {
     // Notifications indisponibles (widget, autorisation refusée) : le widget reste à jour sans rappel.
   }
@@ -353,6 +400,14 @@ async function runSuperbebe() {
   const child = pickChild(cfg, query.enfant ?? wanted.ref);
   if (!inWidget && query.ouvrir === 'app') {
     await sbOpenApp(state, state.config, child.id, query.onglet === 'maison');
+    // Au retour de l'app : les rappels suivent la sortie choisie et les réglages, avec la dernière météo.
+    const after = decodeConfig(state.config ?? '', sbDecode);
+    const cached = files.read('meteo.json');
+    if (after && cached?.forecast && cached.la === after.la && cached.lo === after.lo) {
+      const { date, time } = parisNow();
+      await sbScheduleReminder(state, after, cached.forecast, date, time);
+      await sbScheduleOutingReminder(state, after, cached.forecast, date, time);
+    }
     files.write('etat.json', state);
     return Script.complete();
   }
@@ -386,8 +441,9 @@ async function runSuperbebe() {
   // Widget Maison : la journée chez vous ou la nuit dans sa chambre, le relevé et la tenue.
   const view = wanted.home
     ? homeWidgetView({ forecast: cache.forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0 })
-    : widgetView({ forecast: cache.forecast, profile, date, time, lat: cfg.la }, SB_RULES, { drawings: cfg.i !== 0 });
+    : widgetView({ forecast: cache.forecast, profile, date, time, lat: cfg.la, outings: state.outings ?? null }, SB_RULES, { drawings: cfg.i !== 0 });
   await sbScheduleReminder(state, cfg, cache.forecast, date, time);
+  await sbScheduleOutingReminder(state, cfg, cache.forecast, date, time);
   files.write('etat.json', state);
   // Pied du widget : le geste pour vérifier qu'il n'a pas trop chaud, et l'heure de la météo.
   const updated = hourFr(parisNow(new Date(cache.at)).time);

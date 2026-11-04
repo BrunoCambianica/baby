@@ -87,13 +87,45 @@ class SbWidgetsTest {
     }
 
     @Test
-    fun maisonLaNuitSansReleveRecent() {
+    fun maisonLaNuitSansReleve() {
         at(21)
-        SbStore.saveRooms(context, mapOf("leo1" to (22.5 to now() - 20 * 3600 * 1000L)))
         val shown = texts(render(SbHomeWidget()))
-        // Relevé de plus de 16 heures : la dernière valeur, la tenue du repère, et comment noter.
-        assertTrue(shown.toString(), "LÉO · SA CHAMBRE" in shown && "22,5°" in shown && "≈ 2 TOG" in shown)
+        // Rien de noté : le repère (19 °C), sa tenue, et comment noter.
+        assertTrue(shown.toString(), "LÉO · SA CHAMBRE" in shown && "19,0°" in shown && "≈ 2 TOG" in shown)
         assertTrue(shown.toString(), "Touchez la température pour la noter" in shown)
+    }
+
+    @Test
+    fun maisonLaNuitReleveGardeCommeUneHabitude() {
+        at(21)
+        // Noté il y a trois jours : gardé, comme dans l'app (avant la 0.25, oublié après 16 heures).
+        SbStore.saveRooms(context, mapOf("leo1" to (22.5 to now() - 3 * 24 * 3600 * 1000L)))
+        val shown = texts(render(SbHomeWidget()))
+        assertTrue(shown.toString(), "22,5°" in shown && "≈ 1 TOG" in shown && "Un peu chaud pour dormir : au-dessus de 20 °C" in shown)
+        assertEquals(22.5, SbStore.rooms(context).getDouble("leo1"), 0.0)
+    }
+
+    @Test
+    fun rappelAvantUneSortieChoisie() {
+        val outings = JSONObject()
+            .put("2026-10-21", JSONArray().put(JSONObject().put("s", "09:00").put("d", 1).put("auto", true)).put(JSONObject().put("s", "11:00").put("d", 2)))
+            .put("2026-10-22", JSONArray().put(JSONObject().put("s", "08:00").put("d", 1)))
+        SbStore.saveOutings(context, outings.toString())
+        val ten = ZonedDateTime.of(2026, 10, 21, 10, 0, 0, 0, paris)
+        // Coupé dans l'app : rien.
+        assertEquals(null, SbOutingReminder.next(context, ten))
+        SbStore.saveOutingRemind(context, true)
+        // La sortie par défaut (auto) ne se rappelle pas ; la sortie choisie de 11 h, à 10 h 45.
+        val next = SbOutingReminder.next(context, ten)!!
+        assertEquals("2026-10-21 11:00", next.key)
+        assertEquals(ZonedDateTime.of(2026, 10, 21, 10, 45, 0, 0, paris), next.at)
+        assertEquals(2.0, next.hours, 0.0)
+        assertEquals(null, SbOutingReminder.due(context, ten))
+        assertEquals("2026-10-21 11:00", SbOutingReminder.due(context, ten.plusMinutes(50))?.key)
+        // Rappelée une fois : la suivante, demain à 7 h 45 ; partie, elle ne se rappelle plus.
+        SbStore.markOutingSent(context, next.key)
+        assertEquals("2026-10-22 08:00", SbOutingReminder.next(context, ten.plusMinutes(50))?.key)
+        assertEquals("2026-10-22 08:00", SbOutingReminder.next(context, ten.plusHours(2))?.key)
     }
 
     @Test
@@ -134,7 +166,7 @@ class SbWidgetsTest {
         SbStore.saveDayRooms(context, mapOf("zoe2" to (19.0 to 1L)))
         SbRoomStep().onAction(context, id, actionParametersOf(SbRoomStep.CHILD to "zoe2", SbRoomStep.KIND to "jour", SbRoomStep.DELTA to "0"))
         val zoe = SbStore.reading(context, "zoe2", "jour")!!
-        assertTrue("$zoe", zoe.value == 19.0 && zoe.fresh())
+        assertTrue("$zoe", zoe.value == 19.0 && zoe.at > 1L)
         // Les relevés notés sur le widget reviennent à l'app.
         val all = JSONObject(SbStore.allReadings(context))
         assertEquals(20.5, all.getJSONObject("jour").getJSONObject("leo1").getDouble("value"), 0.0)
@@ -146,7 +178,7 @@ class SbWidgetsTest {
         val maison = texts(RemoteViews(context.packageName, R.layout.preview_maison).apply(context, FrameLayout(context)))
         assertTrue(maison.toString(), "21,0°" in maison && "Bien pour la journée (20 à 22 °C)" in maison && "−" in maison)
         val principal = texts(RemoteViews(context.packageName, R.layout.preview_widget).apply(context, FrameLayout(context)))
-        assertTrue(principal.toString(), "Ce matin 6° → 14°" in principal)
+        assertTrue(principal.toString(), "Sortie de 10 h à 14 h · 6° → 14°" in principal)
         for ((xml, layout) in listOf(R.xml.superbebe_maison to R.layout.preview_maison, R.xml.superbebe_widget to R.layout.preview_widget)) {
             val parser = context.resources.getXml(xml)
             while (parser.name != "appwidget-provider") parser.next()

@@ -6,12 +6,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * État local des widgets : configuration, dernière météo, relevés (chambres la nuit, pièce de jour), enfant de chaque widget,
- * derniers rendus et tenues de la maison pour le widget Maison.
+ * État local des widgets : configuration, dernière météo, relevés (chambres la nuit, pièce de jour, gardés comme des
+ * habitudes, comme dans l'app), sorties transmises par l'app, enfant de chaque widget, derniers rendus et tenues de la
+ * maison pour le widget Maison.
  */
 object SbStore {
     const val DEFAULT_BASE_URL = "https://brunocambianica.github.io/baby/"
-    private const val ROOM_TTL_MS = 16 * 3600 * 1000L
 
     /** Ligne du widget : un texte, ou une rangée de dessins (identifiants de engine/drawings.js) suivie d'un texte. */
     data class Line(val text: String, val drawings: List<String> = emptyList(), val label: String = text)
@@ -46,7 +46,7 @@ object SbStore {
     fun clearConfig(context: Context): Boolean {
         if (config(context) == null) return false
         prefs(context).edit().remove("config").remove("room").remove("room_at").remove("rooms").remove("dayrooms").remove("home")
-            .remove("reminder_on").apply()
+            .remove("reminder_on").remove("outings").remove("outing_remind").remove("outing_sent").apply()
         return true
     }
 
@@ -82,11 +82,10 @@ object SbStore {
             .apply()
     }
 
-    /** Relevé unique des versions à un seul enfant (valable 16 heures), repris pour le premier enfant. */
+    /** Relevé unique des versions à un seul enfant, repris pour le premier enfant. */
     fun room(context: Context): Double? {
         val p = prefs(context)
-        val fresh = System.currentTimeMillis() - p.getLong("room_at", 0) < ROOM_TTL_MS
-        return if (fresh) p.getFloat("room", 19f).toDouble() else null
+        return if (p.getLong("room_at", 0) > 0) p.getFloat("room", 19f).toDouble() else null
     }
 
     private fun readings(context: Context, key: String): JSONObject =
@@ -94,16 +93,15 @@ object SbStore {
 
     private fun roomReadings(context: Context): JSONObject = readings(context, "rooms")
 
-    /** Relevés des chambres encore valables (16 heures : une soirée et une nuit), par enfant : { identifiant: degrés }. */
+    /** Relevés des chambres, gardés comme des habitudes (0.25 ; avant : 16 heures), par enfant : { identifiant: degrés }. */
     fun rooms(context: Context): JSONObject {
         val all = roomReadings(context)
-        val fresh = JSONObject()
-        val now = System.currentTimeMillis()
+        val values = JSONObject()
         for (id in all.keys()) {
-            val reading = all.optJSONObject(id) ?: continue
-            if (now - reading.optLong("at") < ROOM_TTL_MS) fresh.put(id, reading.optDouble("value"))
+            val value = all.optJSONObject(id)?.optDouble("value", Double.NaN) ?: continue
+            if (!value.isNaN()) values.put(id, value)
         }
-        return fresh
+        return values
     }
 
     /** Garde, pour chaque enfant, le relevé de la chambre le plus récent ; true si l'un d'eux a changé. */
@@ -125,10 +123,8 @@ object SbStore {
         return changed
     }
 
-    /** Dernier relevé d'un enfant, même ancien : « nuit » (sa chambre) ou « jour » (la pièce de jour). */
-    data class Reading(val value: Double, val at: Long) {
-        fun fresh(now: Long = System.currentTimeMillis()) = now - at < ROOM_TTL_MS
-    }
+    /** Dernier relevé d'un enfant, gardé comme une habitude : « nuit » (sa chambre) ou « jour » (la pièce de jour). */
+    data class Reading(val value: Double, val at: Long)
 
     fun reading(context: Context, childId: String, kind: String): Reading? {
         val r = readings(context, if (kind == "jour") "dayrooms" else "rooms").optJSONObject(childId) ?: return null
@@ -169,6 +165,29 @@ object SbStore {
         Line(item.optString("text"), (0 until ids.length()).map { ids.getString(it) }, item.optString("label"))
     } else {
         Line(item?.toString() ?: "")
+    }
+
+    /** Sorties d'aujourd'hui et de demain transmises par l'app : {"AAAA-MM-JJ": [{"s":"10:00","d":1,"auto":true}]}. */
+    fun outings(context: Context): String = prefs(context).getString("outings", null) ?: "{}"
+
+    /** Garde les sorties ; true si elles ont changé. */
+    fun saveOutings(context: Context, json: String): Boolean {
+        if (json == outings(context)) return false
+        prefs(context).edit().putString("outings", json).apply()
+        return true
+    }
+
+    /** Rappel avant une sortie choisie, activé dans l'app ; la dernière sortie rappelée (« AAAA-MM-JJ HH:MM »). */
+    fun outingRemind(context: Context): Boolean = prefs(context).getBoolean("outing_remind", false)
+
+    fun saveOutingRemind(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean("outing_remind", on).apply()
+    }
+
+    fun outingSent(context: Context): String? = prefs(context).getString("outing_sent", null)
+
+    fun markOutingSent(context: Context, key: String) {
+        prefs(context).edit().putString("outing_sent", key).apply()
     }
 
     /** Rappel du soir : activé dans l'app, à l'heure choisie (« 20:00 »), au plus une fois par jour. */

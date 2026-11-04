@@ -1,7 +1,8 @@
 // Adaptateur Open-Meteo → entrée du moteur. Fonctions pures, partagées par l'app web et le widget iPhone.
 // N'utilise que du JavaScript standard (pas d'API du navigateur), pour tourner aussi dans Scriptable.
 import {
-  addDays, displayMoment, evaluate, frNumber, homeLines, homeMoment, homeTable, mean, reminderText, round1, skyTheme, widgetLines, widgetShort,
+  addDays, displayMoment, evaluate, fmtMin, frNumber, homeLines, homeMoment, homeTable, mean, outingReminderText, reminderText, round1, skyTheme,
+  toMin, widgetLines, widgetShort,
 } from './engine.js';
 
 export const PARIS_TZ = 'Europe/Paris';
@@ -160,25 +161,96 @@ export function buildInput({ forecast, climate = [], profile, date, now, lat }) 
   };
 }
 
-// Ce qu'affiche un widget pour un enfant, à une heure donnée. Le jour : la journée en couches. Le soir : la tenue
-// et le sac de demain, à préparer, avec la nuit. `reminder` : calcule aussi le rappel du soir (tenue de demain).
-export function widgetView({ forecast, profile, date, time, lat }, bundle, { drawings = true, reminder = false } = {}) {
+// Durée d'une sortie, en heures : 30 minutes (`outing_short`, ds dans la configuration) ou outing_duration_h, la seule
+// que lit le moteur (il compte par heure).
+export const outingHours = (p) => (p?.outing_short ? 0.5 : p?.outing_duration_h ?? 1);
+
+// Les heures pleines d'une sortie, pour le moteur : de l'heure de son départ (`start`, HH:MM) à l'heure la plus proche de
+// sa fin (`end`, en minutes), une heure au moins (une sortie de 30 minutes prend l'heure entamée).
+export function outingWindow(start, end) {
+  const from = Math.floor(toMin(start) / 60) * 60;
+  return { from: fmtMin(from), to: fmtMin(Math.min(24 * 60, Math.max(from + 60, Math.round(end / 60) * 60))) };
+}
+
+// La sortie que montre un widget, comme l'app : `outings`, les sorties transmises par l'app ({ 'AAAA-MM-JJ': [{ s, d,
+// auto }] }, la plus récente en dernier). Aujourd'hui, celle qui est en cours (`going`) ou à venir (`next`), sinon
+// maintenant pour la durée réglée (`now`) ; demain, celle qui est choisie, sinon le début de la plage horaire.
+// `chosen` : choisie dans l'app (pas la sortie par défaut) ; `end` en minutes ; `window` : ses heures, pour le moteur.
+export function widgetOuting({ date, time, outings = null, hours = 1, window }, tomorrow = false) {
+  const list = (Array.isArray(outings?.[date]) ? outings[date] : []).filter((o) => /^\d{2}:\d{2}$/.test(o?.s ?? ''));
+  const nowMin = tomorrow ? -1 : toMin(time);
+  const live = list.map((o) => ({ s: o.s, d: Number(o.d) > 0 ? Number(o.d) : hours, auto: Boolean(o.auto) }))
+    .map((o) => ({ ...o, end: toMin(o.s) + o.d * 60 }))
+    .filter((o) => o.end > nowMin)
+    .at(-1);
+  let o;
+  if (live) o = { start: live.s, end: live.end, d: live.d, kind: !tomorrow && toMin(live.s) <= nowMin ? 'going' : 'next', chosen: !live.auto };
+  else if (tomorrow) o = { start: window.from, end: toMin(window.from) + hours * 60, d: hours, kind: 'next', chosen: false };
+  else {
+    const start = fmtMin(Math.floor(nowMin / 5) * 5);
+    o = { start, end: toMin(start) + hours * 60, d: hours, kind: 'now', chosen: false };
+  }
+  o.end = Math.min(o.end, 24 * 60 - 5);
+  return { ...o, window: outingWindow(o.kind === 'going' ? time : o.start, o.end) };
+}
+
+// Ce qu'affiche un widget pour un enfant, à une heure donnée. Le jour : la sortie (voir widgetOuting), sa tenue, son
+// sac et ses changements. Le soir : la sortie de demain, sa tenue et son sac, à préparer, avec la nuit. `outings` :
+// les sorties transmises par l'app. `reminder` : calcule aussi le rappel du soir (la sortie de demain).
+export function widgetView({ forecast, profile, date, time, lat, outings = null }, bundle, { drawings = true, reminder = false } = {}) {
   const today = evaluate(buildInput({ forecast, profile, date, now: time, lat }), bundle);
   const moment = displayMoment(today, time);
-  const tomorrow = moment === 'soir' || reminder
-    ? evaluate(buildInput({ forecast, profile: { ...profile, room_temp_c: null }, date: addDays(date, 1), now: '07:00', lat }), bundle)
-    : null;
+  const hours = outingHours(profile);
+  const run = (day, now, o, extra = {}) => evaluate(buildInput({ forecast, profile: { ...profile, ...extra, outing_window: o.window }, date: day, now, lat }), bundle);
+  const outing = moment === 'jour' ? widgetOuting({ date, time, outings, hours, window: profile.outing_window }) : null;
+  const outingResult = outing ? run(date, time, outing) : null;
+  const shown = outingResult?.journee ? outingResult : today;
+  const next = addDays(date, 1);
+  const tomorrowOuting = moment === 'soir' || reminder ? widgetOuting({ date: next, time: '07:00', outings, hours, window: profile.outing_window }, true) : null;
+  const tomorrow = tomorrowOuting ? run(next, '07:00', tomorrowOuting, { room_temp_c: null }) : null;
   return {
     today,
     tomorrow,
     moment,
-    lines: widgetLines(today, moment, bundle.messages, { drawings, tomorrow: moment === 'soir' ? tomorrow : null }),
+    outing: shown === outingResult ? outing : null,
+    lines: widgetLines(shown, moment, bundle.messages, {
+      drawings,
+      tomorrow: moment === 'soir' ? tomorrow : null,
+      outing: shown === outingResult ? outing : null,
+      tomorrowOuting: tomorrow?.journee ? tomorrowOuting : null,
+      ideal: today.outing.window,
+    }),
     theme: skyTheme(today, moment),
-    short: widgetShort(today, moment),
+    short: widgetShort(shown, moment),
     check: today.widget.check,
     check_tiny: today.widget.check_tiny,
     reminder: tomorrow?.journee ? reminderText(today, tomorrow, bundle.messages) : null,
   };
+}
+
+// La prochaine sortie à rappeler : choisie dans l'app (pas la sortie par défaut), dont le rappel, `lead` minutes avant
+// son départ, est encore à venir. { day, s, d, lead } (lead : l'heure du rappel, en minutes ce jour-là), ou null.
+// Même règle que SbOutingReminder.next (app Android).
+export const OUTING_REMINDER_LEAD_MIN = 15;
+export function nextOutingReminder(outings, date, time, lead = OUTING_REMINDER_LEAD_MIN) {
+  const found = [];
+  for (const [day, list] of Object.entries(outings ?? {})) {
+    if (day < date || !Array.isArray(list)) continue;
+    for (const o of list) {
+      if (o?.auto || !/^\d{2}:\d{2}$/.test(o?.s ?? '')) continue;
+      const at = toMin(o.s) - lead;
+      if (at >= 0 && (day > date || at > toMin(time))) found.push({ day, s: o.s, d: Number(o.d) > 0 ? Number(o.d) : null, lead: at });
+    }
+  }
+  return found.sort((a, b) => a.day.localeCompare(b.day) || a.lead - b.lead)[0] ?? null;
+}
+
+// Rappel avant une sortie choisie (`outing` : { s, d } de l'app), pour un enfant : { title, text }, ou null.
+export function outingReminder({ forecast, profile, date, time, lat, outing }, bundle) {
+  const hours = Number(outing.d) > 0 ? Number(outing.d) : outingHours(profile);
+  const end = toMin(outing.s) + hours * 60;
+  const result = evaluate(buildInput({ forecast, profile: { ...profile, outing_window: outingWindow(outing.s, end) }, date, now: time, lat }), bundle);
+  return result.journee ? outingReminderText(result, { start: outing.s }, bundle.messages) : null;
 }
 
 // Ce qu'affiche le widget Maison pour un enfant : de 6 h à 18 h la journée chez vous, ensuite la nuit dans sa chambre.
@@ -268,6 +340,7 @@ export function householdToConfig(household) {
     f: household.outing_window.from,
     u: household.outing_window.to,
     d: household.outing_duration_h,
+    ...(household.outing_short ? { ds: 1 } : {}),
     i: household.outfit_view === 'texte' ? 0 : 1,
     k: household.children.map((c) => ({
       id: c.id, p: c.name ?? '', b: c.birth, t: c.transport, o: c.outfit_offset ?? 0,
@@ -324,6 +397,7 @@ export function configToProfile(cfg, ref = '') {
     transport: child.transport,
     outing_window: { from: cfg.f ?? '09:00', to: cfg.u ?? '18:00' },
     outing_duration_h: cfg.d ?? 1,
+    outing_short: cfg.ds === 1,
     outfit_offset: child.outfit_offset,
     day_style: child.day_style,
     night_options: child.night_options,

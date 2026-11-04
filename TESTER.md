@@ -24,7 +24,13 @@ L'app a trois onglets :
   - La nuit : quoi mettre sous la gigoteuse et quel TOG, et les repères pour dormir. **Tenues au choix** : selon la gigoteuse que vous avez, une autre tenue publiée par un fabricant, gardée pour cette température : une gigoteuse plus légère va toujours avec une couche de plus dessous (à 19 °C : 2 TOG avec body ML et pyjama plutôt que 2,5 TOG avec body ML), une plus chaude avec une de moins ;
 - **Achats** : ce qu'il faudra bientôt (taille suivante, saison qui change), avec la quantité conseillée et ce qui manque (« Il en manque 4 · conseillé : 7 »). Dans « Ma garde-robe », − et + notent combien vous en avez par taille, pour les vêtements de tous les jours (bodies, hauts, pantalons, pyjamas, chaussettes) comme pour ceux de saison. **Gilets et pulls** (fins, normaux, chauds, pulls) : notez ceux qu'il a dans sa taille, et ses tenues proposent ceux-là quand la pièce conseillée manque, à chaleur égale (« Gilet chaud plutôt que pull : c'est ce qu'il a ») ; sans équivalent, l'app dit ce qui manque (« Pas de gilet dans sa taille dans la garde-robe »). Ils ne sont jamais suggérés à l'achat. Les quantités sont de quoi tenir entre deux lessives, plus une pièce de rechange (le rythme de lessive se règle en tête de la garde-robe) ; pour les gigoteuses, deux par saison (une portée, une au lavage), notées par TOG : l'hiver de 2 à 3,5 TOG, la mi-saison de 1 à 2 TOG, l'été de 0,2 à 1 TOG (une 2 TOG sert l'hiver et la mi-saison). Une suggestion de gigoteuse demande laquelle vous avez achetée : « J'en ai une de 2 TOG ». Une **chancelière** notée dans la garde-robe change la tenue en poussette (avant 2 ans) : elle remplace la combinaison, pieds dedans, sans chaussons, et la combinaison va dans le sac pour quand il sort de la poussette ; le widget suit.
 
-**La veille au soir**, après la dernière sortie possible de la journée, l'onglet Extérieur passe à demain (sa sortie, à préparer) et l'onglet Intérieur s'ouvre sur la nuit ; le widget montre les tenues et le sac de demain, « à préparer ce soir », puis la nuit (TOG et tenue sous la gigoteuse). Si vous le voulez, un **rappel du soir** l'envoie en notification (Réglages, Rappel du soir) : une seule par jour au plus, à l'heure choisie, calculée sur le téléphone. Il passe par l'app Android ou par le widget iPhone (Scriptable demande l'autorisation la première fois).
+**Le widget** montre la même sortie que l'app : en cours (« Sortie jusqu'à 11 h 10 · 9° »), choisie (« Sortie de 15 h à 16 h · 12° »), sinon maintenant pour la durée réglée (« Sortir maintenant (1 h) · 9° ») ; puis sa tenue, et son sac ou son changement en route (sinon le créneau idéal, s'il est ailleurs).
+
+**La veille au soir**, après la dernière sortie possible de la journée, l'onglet Extérieur passe à demain (sa sortie, à préparer) et l'onglet Intérieur s'ouvre sur la nuit ; le widget montre la sortie de demain (celle choisie, sinon au début de la plage horaire), sa tenue et son sac, « à préparer ce soir », puis la nuit (TOG et tenue sous la gigoteuse).
+
+**Rappels** (Réglages, Rappels), si vous les voulez, calculés sur le téléphone, par l'app Android ou le widget iPhone (Scriptable demande l'autorisation la première fois) :
+- **le soir**, à l'heure choisie, la sortie de demain et la nuit : une notification par jour au plus ;
+- **15 minutes avant une sortie dont vous avez choisi l'heure**, sa tenue et son sac (« Sortie à 11 h : body ML, haut ML, pantalon, combi légère · sac : habillage pluie »). Sur Android, avec l'app 0.25 ; sur iPhone, après avoir ouvert l'app depuis le widget.
 
 ## 2. Ajouter le widget sur iPhone (5 minutes)
 
@@ -37,7 +43,7 @@ Dans Superbébé : **Réglages**, puis **Ajouter le widget**. L'app vous guide e
 3. **Ouvrir Scriptable** : un script vide s'ouvre ; appui long dedans, **Coller**, puis ▶ en bas à droite. Scriptable affiche la dernière étape.
 4. **Poser le widget** : appui long sur l'écran d'accueil, **Modifier**, **Ajouter un widget**, Scriptable, taille moyenne ; puis appui long sur le widget, **Modifier le widget**, Script : Superbébé. Des vignettes montrent chaque écran.
 
-Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chambre du soir, réglages) part dans le widget. Après un changement fait dans l'app de l'écran d'accueil : Réglages, **Envoyer mes réglages au widget**.
+Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chambre du soir, réglages, votre sortie) part dans le widget. Après un changement fait dans l'app de l'écran d'accueil : Réglages, **Envoyer mes réglages au widget**.
 
 **Un widget par enfant** : posez un deuxième widget Scriptable, puis appui long dessus, **Modifier le widget**, et dans **Parameter**, écrivez le prénom de l'enfant (ou son numéro : 1, 2…). Sans rien dans Parameter, le widget montre le premier enfant.
 
@@ -50,7 +56,7 @@ Toucher le widget ouvre Superbébé en plein écran ; ce que vous y notez (chamb
 3. **Ouvrir l'app Superbébé** : l'app installée s'ouvre en plein écran avec vos réglages.
 4. Dans l'app, carte « Ajoutez le widget », **Ajouter** : Android propose de le poser sur l'écran d'accueil.
 
-Ensuite, utilisez l'icône de l'app Superbébé ; celle installée depuis Chrome peut être retirée. Toucher le widget ouvre l'app ; vos réglages et le relevé de la chambre passent au widget tout seuls.
+Ensuite, utilisez l'icône de l'app Superbébé ; celle installée depuis Chrome peut être retirée. Toucher le widget ouvre l'app ; vos réglages, les températures notées et votre sortie passent au widget tout seuls.
 
 **Widget Maison** (app 0.13) : Réglages, **Le widget Maison**. Le jour la pièce où il vit, le soir sa chambre : **−** et **+** notent la température directement sur le widget, et la tenue suit tout de suite ; toucher la température la confirme telle quelle. L'app reprend ces relevés à son ouverture.
 
@@ -70,7 +76,7 @@ Réglages, **Envoyer les profils** : un lien part par la messagerie de votre cho
 - À la fin du test, ouvrez Réglages, touchez **Copier mes retours de test**, collez-les dans notre conversation et répondez à cinq questions :
   1. Si l'app disparaissait demain, ce serait : très embêtant, un peu embêtant, ou pas grave ?
   2. Les tenues proposées étaient-elles justes : presque toujours, souvent, ou rarement ? Et les changements de la journée (− et +) ?
-  3. Le matin, le widget suffisait-il à savoir quoi mettre, quoi enlever plus tard et quoi prendre dans le sac ? Et le soir, à savoir quoi préparer sans ouvrir l'app ?
+  3. Avant de sortir, le widget (ou le rappel 15 minutes avant) suffisait-il à savoir quoi mettre et quoi prendre dans le sac ? Et le soir, à savoir quoi préparer sans ouvrir l'app ?
   4. Qu'est-ce qui vous a été le plus utile ?
   5. Qu'est-ce qui manque, ou vous a agacé ?
 

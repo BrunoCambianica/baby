@@ -1,6 +1,6 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
 import { addDays, ageMonths, baseTransport, clamp, displayMoment, evaluate, fmtMin, homeMoment, hourFr, render, toMin } from '../../engine/engine.js';
-import { buildInput, decodeConfig, encodeConfig, householdToConfig, parisNow, profileToConfig } from '../../engine/adapter.js';
+import { buildInput, decodeConfig, encodeConfig, householdToConfig, outingWindow, parisNow, profileToConfig, widgetView } from '../../engine/adapter.js';
 import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
 import {
@@ -34,6 +34,9 @@ const androidMulti = host === 'android' && androidAtLeast(0, 6);
 // Rappel du soir : app Android 0.8 et plus, ou widget iPhone (Scriptable) qui programme la notification ;
 // sinon, avec l'API, par notification Web Push (sur iPhone, seulement pour l'app de l'écran d'accueil).
 const reminderHost = host === 'scriptable' || (host === 'android' && androidAtLeast(0, 8));
+// Rappel avant une sortie choisie, et sorties transmises aux widgets : app Android 0.25 et plus, ou widget iPhone.
+const androidOutings = host === 'android' && ask(() => typeof android.syncOutings === 'function' && typeof android.outingReminder === 'function', false);
+const outingReminderHost = host === 'scriptable' || androidOutings;
 const webPush = !reminderHost && !host && 'PushManager' in window && 'serviceWorker' in navigator && Boolean(apiBase())
   && (standalone || !/iPhone|iPad|iPod/i.test(navigator.userAgent));
 const widgetKids = () => (androidMulti ? ask(() => JSON.parse(android.widgetChildren()), {}) : {});
@@ -98,6 +101,7 @@ const state = {
   reminder: store.reminder(),
   reminderHost,
   reminderState: reminderHost && host === 'android' ? ask(() => android.reminderState(), 'off') : null,
+  outingReminderHost,
   webPush,
   // API Superbébé (VPS) : clé des notifications, famille partagée avec l'autre parent, famille à rejoindre (#famille=…).
   api: Boolean(apiBase()),
@@ -143,6 +147,24 @@ const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute
 
 // Les onglets Dedans et Achats parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Dehors.
 // `window` : une sortie ({ from, to }) à la place de la plage horaire, pour la tenue de cette sortie seulement.
+// Le profil du moteur pour l'enfant affiché.
+const engineProfile = (p, window = null) => ({
+  birth: p.birth,
+  transport: p.transport,
+  outing_window: window ?? p.outing_window,
+  outing_duration_h: p.outing_duration_h,
+  outing_short: p.outing_short === true,
+  outfit_offset: p.outfit_offset ?? 0,
+  day_style: p.day_style ?? null,
+  car_climate: p.car_climate ?? null,
+  swaps: p.swaps ?? {},
+  night_options: p.night_options ?? {},
+  room_temp_c: roomHabit(p, 'nuit'),
+  day_room_temp_c: roomHabit(p, 'jour'),
+  inventory: p.inventory ?? {},
+  wash_days: p.wash_days ?? null,
+});
+
 function compute(day, window = null) {
   if (!state.forecast || !state.bundle) return null;
   const now = parisNow();
@@ -153,21 +175,7 @@ function compute(day, window = null) {
   const input = buildInput({
     forecast: state.forecast.data,
     climate: state.climate,
-    profile: {
-      birth: p.birth,
-      transport: p.transport,
-      outing_window: window ?? p.outing_window,
-      outing_duration_h: p.outing_duration_h,
-      outfit_offset: p.outfit_offset ?? 0,
-      day_style: p.day_style ?? null,
-      car_climate: p.car_climate ?? null,
-      swaps: p.swaps ?? {},
-      night_options: p.night_options ?? {},
-      room_temp_c: roomHabit(p, 'nuit'),
-      day_room_temp_c: roomHabit(p, 'jour'),
-      inventory: p.inventory ?? {},
-      wash_days: p.wash_days ?? null,
-    },
+    profile: engineProfile(p, window),
     date,
     now: time,
     lat: p.commune.lat,
@@ -186,12 +194,8 @@ function dehorsDay() {
   return compute('aujourdhui')?.moment === 'soir' ? 'demain' : 'aujourdhui';
 }
 
-// Les heures pleines d'une sortie, pour le moteur : de l'heure de son départ à l'heure la plus proche de sa fin, une
-// heure au moins (le moteur compte par heure : une sortie de 30 minutes prend l'heure entamée).
-const slotWindow = (start, end) => {
-  const from = Math.floor(toMin(start) / 60) * 60;
-  return { from: fmtMin(from), to: fmtMin(Math.min(24 * 60, Math.max(from + 60, Math.round(end / 60) * 60))) };
-};
+// Les heures pleines d'une sortie, pour le moteur (engine/adapter.js, outingWindow).
+const slotWindow = outingWindow;
 
 // Les sorties d'un jour, gardées sur ce téléphone, de la plus ancienne à la plus récente : [{ s, d, auto }], s l'heure de
 // départ, d la durée en heures, auto pour la sortie par défaut (maintenant, pour la durée réglée), notée dès qu'on la
@@ -204,7 +208,24 @@ function outingsOf(date) {
   const hours = outingHours(state.household);
   return list.filter((o) => typeof o?.s === 'string').map((o) => ({ ...o, d: o.d ?? hours, end: toMin(o.s) + (o.d ?? hours) * 60 }));
 }
-const saveOutings = (date, list) => store.saveOutings(date, list.slice(-OUTINGS_KEEP).map(({ s, d, auto }) => (auto ? { s, d, auto } : { s, d })), parisNow().date);
+function saveOutings(date, list) {
+  store.saveOutings(date, list.slice(-OUTINGS_KEEP).map(({ s, d, auto }) => (auto ? { s, d, auto } : { s, d })), parisNow().date);
+  // Après le rendu en cours (une sortie par défaut se note pendant le calcul de l'écran).
+  clearTimeout(outingSyncTimer);
+  outingSyncTimer = setTimeout(() => {
+    syncHost();
+    writeSwData();
+  }, 300);
+}
+let outingSyncTimer = null;
+
+// Les sorties d'aujourd'hui et de demain, pour les widgets et les rappels : { 'AAAA-MM-JJ': [{ s, d, auto }] }.
+function widgetOutings() {
+  const today = parisNow().date;
+  return Object.fromEntries([today, addDays(today, 1)]
+    .map((date) => [date, outingsOf(date).map(({ s, d, auto }) => (auto ? { s, d, auto: true } : { s, d }))])
+    .filter(([, list]) => list.length));
+}
 
 // La sortie par défaut, maintenant pour la durée réglée, est notée dès qu'on la voit : comme une sortie choisie, elle
 // garde son heure de fin, et « C'était juste ? » portera sur elle. Pas si une sortie est en cours ou à venir, ni dans
@@ -347,7 +368,12 @@ function paint() {
     // Le script à coller dans Scriptable, avec les réglages du moment.
     state.script = state.loader?.replace('__SB_CONFIG__', configText()) ?? null;
     const ctx = compute('aujourdhui');
-    if (ctx?.moment === 'soir') ctx.evening = compute('demain');
+    // Ce que montre le widget, calculé comme lui : la sortie (en cours, choisie, sinon maintenant), ou demain le soir.
+    if (ctx) {
+      const { date, time } = parisNow();
+      ctx.widget = widgetView({ forecast: state.forecast.data, profile: engineProfile(state.profile), date, time, lat: state.profile.commune.lat, outings: widgetOutings() },
+        state.bundle, { drawings: state.household.outfit_view !== 'texte' });
+    }
     html = V.viewWidget(state, ctx);
   } else if (view === 'apropos') html = V.viewAbout(state);
   else {
@@ -411,11 +437,16 @@ function setReminder(next) {
   }
   if (host === 'android') {
     state.reminderState = ask(() => android.reminder(next.on, next.at), 'off');
+    // Le rappel avant une sortie : sa propre autorisation demandée s'il est seul activé.
+    if (androidOutings) {
+      const before = ask(() => android.outingReminder(Boolean(next.before)), 'off');
+      if (!next.on || state.reminderState === 'off') state.reminderState = before;
+    }
     if (state.reminderState === 'demande') toast('Autorisez les notifications de Superbébé.');
   }
   if (host === 'scriptable') {
     syncHost();
-    if (next.on) toast(`Rappel vers ${hourFr(next.at)}. Scriptable demandera peut-être l'autorisation d'envoyer des notifications.`);
+    if (next.on || next.before) toast(`${next.on ? `Rappel vers ${hourFr(next.at)}` : 'Rappel avant vos sorties'}. Scriptable demandera peut-être l'autorisation d'envoyer des notifications.`);
   }
   paint();
 }
@@ -531,7 +562,7 @@ async function pushSubscription(reminder) {
 // Ce dont le service worker a besoin pour calculer le rappel sans l'app : le foyer et la dernière météo.
 function writeSwData() {
   if (!webPush || !state.household || !('caches' in window)) return;
-  const data = { household: state.household, reminder: state.reminder, forecast: state.forecast?.data ?? null };
+  const data = { household: state.household, reminder: state.reminder, forecast: state.forecast?.data ?? null, outings: widgetOutings() };
   caches.open('superbebe-donnees').then((cache) => cache.put('donnees.json', new Response(JSON.stringify(data)))).catch(() => {});
 }
 
@@ -568,6 +599,8 @@ function syncHost() {
     if (androidMulti) {
       const rooms = Object.fromEntries(children.filter((c) => c.room).map((c) => [c.id, c.room]));
       ask(() => android.sync(h ? configText() : '', JSON.stringify(rooms)));
+      // Les sorties d'aujourd'hui et de demain : le widget montre la même que l'app, et le rappel avant de sortir s'y cale.
+      if (androidOutings) ask(() => android.syncOutings(h ? JSON.stringify(widgetOutings()) : '{}'));
       const days = Object.fromEntries(children.filter((c) => c.room_day).map((c) => [c.id, c.room_day]));
       if (androidHome && h) ask(() => android.syncReadings(JSON.stringify({ jour: days, nuit: rooms })));
     } else {
@@ -584,7 +617,8 @@ function syncHost() {
   const rooms = children.filter((c) => c.room).map((c) => `${c.id}:${c.room.value}@${c.room.at}`).join(',');
   const dayrooms = children.filter((c) => c.room_day).map((c) => `${c.id}:${c.room_day.value}@${c.room_day.at}`).join(',');
   const first = children[0]?.room;
-  const reminder = `&rappel=${h && state.reminder.on ? state.reminder.at : '0'}`;
+  // sorties= : les sorties d'aujourd'hui et de demain (JSON) ; avant= : le rappel avant une sortie choisie.
+  const reminder = `&rappel=${h && state.reminder.on ? state.reminder.at : '0'}&avant=${h && state.reminder.before ? 1 : 0}${h ? `&sorties=${encodeURIComponent(JSON.stringify(widgetOutings()))}` : ''}`;
   let frame = document.getElementById('sb-sync');
   if (!frame) {
     frame = document.createElement('iframe');
@@ -953,6 +987,10 @@ const actions = {
   },
   reminder(el) {
     setReminder({ ...state.reminder, on: el.dataset.value === 'on' });
+  },
+  // 15 minutes avant une sortie dont on a choisi l'heure : sa tenue et son sac.
+  'reminder-before'(el) {
+    setReminder({ ...state.reminder, before: el.dataset.value === 'on' });
   },
   // Fiche « Ajouter un enfant » : enregistré d'un coup, puis affiché.
   'child-add'() {

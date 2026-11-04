@@ -31,7 +31,7 @@ Comment habiller bébé aujourd'hui ? Superbébé répond en un coup d'œil, ave
 • Intérieur, la nuit : quelle gigoteuse (TOG) et quoi mettre dessous, selon la température de la chambre.
 • En poussette, en porte-bébé, en voiture ou à pied : la tenue s'adapte, avec les repères de sécurité du portage et du siège auto.
 • De la naissance à 6 ans, pour un ou plusieurs enfants, avec ce que vous avez déjà dans la garde-robe.
-• Des widgets pour l'écran d'accueil, un rappel le soir pour préparer la tenue du lendemain, et la fiche du jour à envoyer à la nounou ou à la crèche.
+• Des widgets pour l'écran d'accueil (votre sortie, et la température chez vous), un rappel le soir pour préparer la sortie du lendemain, un autre 15 minutes avant une sortie, et la fiche du jour à envoyer à la nounou ou à la crèche.
 
 Des repères officiels, cités
 Toute information de santé relaie une source officielle, avec son lien : Assurance Maladie, Santé.fr, Santé publique France… Les tenues sont des suggestions pratiques, présentées comme telles. Superbébé ne donne pas d'avis médical.

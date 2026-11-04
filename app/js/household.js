@@ -1,7 +1,7 @@
 // Le foyer : commune et horaires communs, puis les enfants, chacun avec ses réglages, sa garde-robe et deux relevés :
 // `room_day`, la pièce où il passe la journée, et `room`, sa chambre la nuit ({ value, at }), gardés comme des habitudes.
 // Fonctions pures, testées par tools/test-foyer.js.
-import { configChildren } from '../../engine/adapter.js';
+import { configChildren, outingHours } from '../../engine/adapter.js';
 import { addDays } from '../../engine/engine.js';
 
 const DEFAULT_WINDOW = { from: '09:00', to: '18:00' };
@@ -53,9 +53,9 @@ export function feedbackStats(feedback) {
   return { total: values.length, juste: n('juste'), chaud: n('chaud'), froid: n('froid') };
 }
 
-// Durée d'une sortie, en heures. Une sortie de 30 minutes est notée `outing_short` : `outing_duration_h` vaut alors 1,
-// ce que lisent le moteur, les widgets et l'autre parent sur une version plus ancienne (ils comptent par heure).
-export const outingHours = (h) => (h?.outing_short ? 0.5 : h?.outing_duration_h ?? 1);
+// Durée d'une sortie, en heures (engine/adapter.js). Une sortie de 30 minutes est notée `outing_short` :
+// `outing_duration_h` vaut alors 1, ce que lisent le moteur et les versions plus anciennes (ils comptent par heure).
+export { outingHours };
 
 // Pièces au choix encore utiles : celles de toujours, et celles d'aujourd'hui ou d'un jour à venir.
 export const liveSwaps = (swaps, today) => Object.fromEntries(Object.entries(swaps ?? {}).filter(([, s]) => s?.to && (!s.day || s.day >= today)));
@@ -133,8 +133,8 @@ export function fromConfig(cfg, local, { keepView = false } = {}) {
     commune: same ? local.commune : { nom: cfg.n ?? '', code: cfg.c || `${cfg.la},${cfg.lo}`, dep: cfg.dp ?? '', cp: '', lat: cfg.la, lon: cfg.lo },
     outing_window: { from: cfg.f ?? DEFAULT_WINDOW.from, to: cfg.u ?? DEFAULT_WINDOW.to },
     outing_duration_h: cfg.d ?? 1,
-    // Les widgets ne connaissent que les heures : une sortie de 30 minutes gardée sur ce téléphone le reste.
-    outing_short: Boolean(local?.outing_short) && (cfg.d ?? 1) === 1,
+    // 30 minutes : ds dans la configuration (0.25) ; une configuration plus ancienne garde le choix de ce téléphone.
+    outing_short: cfg.ds === 1 || (cfg.ds === undefined && Boolean(local?.outing_short) && (cfg.d ?? 1) === 1),
     // Le rythme de lessive n'est pas dans la configuration des widgets : celui du téléphone est gardé.
     wash_days: local?.wash_days ?? null,
     outfit_view: keepView && local ? local.outfit_view : cfg.i === 0 ? 'texte' : 'dessins',

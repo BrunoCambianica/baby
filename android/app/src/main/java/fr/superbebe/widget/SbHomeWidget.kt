@@ -85,8 +85,8 @@ class SbHomeWidget : GlanceAppWidget() {
                 Text(text = "Ouvrez Superbébé pour préparer le widget Maison.", style = TextStyle(color = white, fontSize = 14.sp), maxLines = 3)
                 return@Column
             }
-            // Sans relevé de moins de 16 heures : la dernière valeur en grisé, la tenue du repère, et comment noter.
-            val fresh = reading?.fresh() == true
+            // Sans relevé : le repère en grisé, sa tenue, et comment noter. Un relevé est gardé comme une habitude.
+            val fresh = reading != null
             val value = reading?.value ?: if (night) 19.0 else 21.0
             val table = home.table.optJSONObject(kind)
             val entry = if (fresh) table?.optJSONObject("by")?.optJSONObject(key(value)) else table?.optJSONObject("unknown")

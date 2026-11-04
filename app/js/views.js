@@ -1,5 +1,5 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { addDays, ageMonths, baseTransport, homeStatus, hourFr, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin, widgetLines } from '../../engine/engine.js';
+import { addDays, ageMonths, baseTransport, homeStatus, hourFr, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin } from '../../engine/engine.js';
 import { configChildren, parisNow } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, guideBandPath, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.24.1';
+export const VERSION = '0.25.0';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -1281,29 +1281,33 @@ function homeScreenGroup(state) {
   return `<section class="group"><h2 class="group-title">Écran d'accueil</h2><div class="group-body">${rows}</div>${note}</section>`;
 }
 
-// Rappel du soir : seulement si on l'active ; une notification par jour au plus, calculée sur le téléphone.
-// Il passe par l'app Android ou par le widget iPhone (Scriptable) ; ailleurs, on dit comment l'avoir.
+// Rappels : seulement si on les active ; le soir, une notification par jour au plus ; 15 minutes avant une sortie dont
+// on a choisi l'heure, sa tenue et son sac. Calculés sur le téléphone, par l'app Android ou le widget iPhone
+// (Scriptable) ; le soir, aussi par l'app de l'écran d'accueil avec l'API. Ailleurs, on dit comment les avoir.
+const LEAD_MIN = 15;
 function reminderGroup(state) {
-  const title = '<h2 class="group-title">Rappel du soir</h2>';
+  const title = '<h2 class="group-title">Rappels</h2>';
   if (!state.reminderHost && !state.webPush) {
     return `<section class="group">${title}<div class="group-body"><a class="row" href="#widget"><span>Avec le widget</span>${chev()}</a></div>
-      <p class="group-note">La veille au soir, une notification avec la tenue et le sac de demain, et la nuit. Elle passe par l'app Android ou par le widget iPhone (Scriptable)${state.api ? ', ou par l\'app de l\'écran d\'accueil' : ''}.</p></section>`;
+      <p class="group-note">La veille au soir, une notification avec la tenue et le sac de demain, et la nuit ; ${LEAD_MIN} minutes avant une sortie dont vous avez choisi l'heure, sa tenue et son sac. Elles passent par l'app Android ou par le widget iPhone (Scriptable)${state.api ? ' ; le soir, aussi par l\'app de l\'écran d\'accueil' : ''}.</p></section>`;
   }
   const r = state.reminder;
   const times = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
-  const refused = r.on && state.reminderState === 'refuse'
+  const seg = (action, on, label) => `<div class="seg" role="radiogroup" aria-label="${label}">${[['off', 'Non'], ['on', 'Oui']].map(([v, l]) =>
+    `<button role="radio" aria-checked="${(on ? 'on' : 'off') === v}" data-action="${action}" data-value="${v}">${l}</button>`).join('')}</div>`;
+  const before = state.outingReminderHost
+    ? `<div class="row column"><span>${LEAD_MIN} min avant une sortie dont vous avez choisi l'heure, sa tenue et son sac</span>${seg('reminder-before', r.before, 'Rappel avant une sortie')}</div>` : '';
+  const refused = (r.on || r.before) && state.reminderState === 'refuse'
     ? `<p class="error group-note">Notifications refusées : ${state.host === 'android' ? 'Réglages d\'Android, Applications, Superbébé, Notifications' : 'autorisez-les dans les réglages du téléphone'}.</p>`
     : r.on && state.reminderState === 'indisponible' ? '<p class="error group-note">Serveur des notifications injoignable : réessayez plus tard.</p>' : '';
   return `<section class="group">${title}
     <div class="group-body">
-      <div class="row column"><span>La veille, la tenue et le sac de demain</span>
-        <div class="seg" role="radiogroup" aria-label="Rappel du soir">${[['off', 'Non'], ['on', 'Oui']].map(([v, l]) =>
-          `<button role="radio" aria-checked="${(r.on ? 'on' : 'off') === v}" data-action="reminder" data-value="${v}">${l}</button>`).join('')}</div>
-      </div>
+      <div class="row column"><span>La veille, la tenue et le sac de demain</span>${seg('reminder', r.on, 'Rappel du soir')}</div>
       ${r.on ? `<div class="row column"><span>Vers</span><select id="reminder-at" aria-label="Heure du rappel">${times.map((t) => `<option value="${t}"${r.at === t ? ' selected' : ''}>${hourFr(t)}</option>`).join('')}</select></div>` : ''}
+      ${before}
     </div>
     ${refused}
-    <p class="group-note">Une notification par jour au plus, calculée sur ce téléphone${state.webPush ? ' : le serveur ne fait que le réveiller à l\'heure dite, sans rien lui envoyer d\'autre' : ', sans serveur'}.${state.host === 'scriptable' ? ' Scriptable demande l\'autorisation la première fois.' : ''}</p>
+    <p class="group-note">Le soir, une notification par jour au plus${before ? ' ; avant une sortie, seulement si vous avez choisi son heure' : ''}. Calculées sur ce téléphone${state.webPush ? ' : le serveur ne fait que le réveiller à l\'heure dite, sans rien lui envoyer d\'autre' : ', sans serveur'}.${state.host === 'scriptable' ? ' Scriptable demande l\'autorisation la première fois.' : ''}</p>
   </section>`;
 }
 
@@ -1363,7 +1367,7 @@ function widgetHowTo() {
 
 // Assistant du widget : la plateforme du téléphone d'abord, une action par étape.
 export function viewWidget(state, ctx) {
-  const lines = ctx ? widgetLines(ctx.result, ctx.moment, state.bundle.messages, { drawings: drawingsOn(state), tomorrow: ctx.evening?.result }) : [];
+  const lines = ctx?.widget?.lines ?? [];
   const theme = ctx ? sortirTheme(ctx) : 'clair';
   const done = (n) => (state.steps.has(`${state.platform}-${n}`) ? ' done' : '');
   const num = (n) => `<span class="step-num">${state.steps.has(`${state.platform}-${n}`) ? icon('check', { size: 16 }) : n}</span>`;

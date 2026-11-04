@@ -603,6 +603,31 @@
       "text": "Cette nuit : {wear} sous une gigoteuse d'environ {tog} TOG (repère des fabricants).",
       "short": "nuit{room} : {wear} + {tog} TOG"
     },
+    "widget.outing.now": {
+      "kind": "meteo",
+      "text": "Pour sortir maintenant, pendant {duration} : {feels} ressentis.",
+      "short": "Sortir maintenant ({duration}) · {feels}"
+    },
+    "widget.outing.going": {
+      "kind": "meteo",
+      "text": "Sortie en cours, jusqu'à {end} : {feels} ressentis.",
+      "short": "Sortie jusqu'à {end} · {feels}"
+    },
+    "widget.outing.next": {
+      "kind": "meteo",
+      "text": "Sortie de {start} à {end} : {feels} ressentis.",
+      "short": "Sortie de {start} à {end} · {feels}"
+    },
+    "widget.outing.tomorrow": {
+      "kind": "meteo",
+      "text": "Demain, sortie de {start} à {end}, à préparer ce soir : {feels} ressentis.",
+      "short": "Demain, sortie de {start} à {end} · {feels}"
+    },
+    "outing.reminder": {
+      "kind": "pratique",
+      "text": "{outfit}{bag}",
+      "short": "Sortie à {start}"
+    },
     "evening.reminder": {
       "kind": "pratique",
       "text": "{outfit}{bag} · {night}",

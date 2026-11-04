@@ -71,9 +71,9 @@ Cadrage ouvert le 4 novembre 2026, avec la version 0.23.0 (onglets alors nommés
 | Surface | Ce que la refonte change | À faire |
 |---|---|---|
 | Moteur, règles, guide | Rien. Une sortie de moins de 4 h n'a jamais de changement en route (deux heures au moins par étape, `journee.min_hold_h`). | — |
-| **Widgets iPhone et Android** | Ils montrent toujours la journée entière (tenue du matin, changements, sac de la plage horaire), plus la même chose que l'app. Cohérent mais différent. | Décider : voir A |
-| **Températures dans les widgets** | Les widgets oublient encore une température après 16 h : 16 h dans `SbStore.kt` (Android) et `SB_ROOM_TTL_MS` (iPhone). Après 16 h, le widget Maison affiche « à noter » alors que l'app garde l'habitude. | Aligner dans le prochain APK. Le widget iPhone se met à jour par le site. |
-| Rappel du soir | Il annonce la journée de demain, pas la sortie choisie. | Voir B |
+| **Widgets iPhone et Android** | Depuis 0.25.0 (A), la même sortie que l'app : en cours, choisie, sinon maintenant pour la durée réglée ; le soir, celle de demain (choisie, sinon au début de la plage horaire) ; la fiche garde la journée entière. La sortie part de l'app vers le widget : sur Android tout de suite, sur iPhone quand l'app est ouverte depuis le widget. | Fait (0.25.0, APK) |
+| **Températures dans les widgets** | Gardées comme des habitudes, comme dans l'app (0.25.0 : `SbStore.kt`, widget iPhone, service worker) ; avant, oubliées après 16 h. | Fait (0.25.0, APK) |
+| Rappel du soir | Il annonce la sortie de demain (choisie, sinon au début de la plage horaire), sa tenue, son sac, et la nuit. | Fait (0.25.0) |
 | « C'était juste ? » | Une réponse par jour, sur la dernière sortie finie, choisie ou par défaut (C, 0.24.0 ; la sortie par défaut depuis 0.24.1, `a` dans la réponse). Une sortie par défaut peut n'avoir été qu'un coup d'œil : sa question reste à sa place, et les retours de test disent « (par défaut) ». | Comparer, dans les retours, les réponses par défaut et choisies |
 | Deux parents | La durée est partagée (réglage du foyer), l'heure de la sortie non (propre au téléphone). | Voir D (avec l'API) |
 | Retours de test | Chaque réponse après une sortie dit son heure et sa durée ; la durée réglée y est aussi (« 30 min »). | Fait (0.24.0) |
@@ -89,8 +89,8 @@ Une sortie a désormais une heure, une durée et un mode connus : on peut **la p
 
 | | Proposition | Ce que ça apporte | Effort |
 |---|---|---|---|
-| **A** | **Widget « prochaine sortie »** : le créneau idéal (ou la sortie choisie), sa tenue et son sac, à la place de la journée entière ; la journée reste pour les jours de crèche | Le widget dit la même chose que l'app | APK + widget iPhone |
-| **B** | **Rappel avant de sortir** : une notification 15 min avant la sortie choisie (« Sortie à 11 h : combi, bonnet ; habillage pluie dans le sac ») | Le bon geste au bon moment, sans ouvrir l'app | APK ; iPhone par l'API |
+| **A** ✓ 0.25.0 | **Widget « prochaine sortie »** : le créneau idéal (ou la sortie choisie), sa tenue et son sac, à la place de la journée entière ; la journée reste pour les jours de crèche | Le widget dit la même chose que l'app | APK + widget iPhone |
+| **B** ✓ 0.25.0 | **Rappel avant de sortir** : une notification 15 min avant la sortie choisie (« Sortie à 11 h : combi, bonnet ; habillage pluie dans le sac ») | Le bon geste au bon moment, sans ouvrir l'app | APK ; iPhone par l'API |
 | **C** ✓ 0.24.0 | **« C'était juste ? » après la sortie** : demandé à la fin de la sortie, avec son ressenti, son mode et sa durée | Une mesure de justesse bien plus fiable, et une tendance mieux calibrée | Web, petit |
 | **D** | **Sortie partagée** avec l'autre parent : « Sortie prévue à 11 h, en porte-bébé » | Les deux parents préparent la même chose | Web + API famille (pas encore en ligne) |
 | **E** ✓ 0.24.0 | **En rentrant** : à la fin de la sortie, ce qu'on enlève à la maison (repère NHS déjà dans la charte : bonnet et couches en trop enlevés à l'intérieur) | Ferme la boucle dehors puis dedans ; évite qu'il garde la combinaison au chaud | Web, petit |
@@ -98,7 +98,7 @@ Une sortie a désormais une heure, une durée et un mode connus : on peut **la p
 | **G** ✓ 0.24.0 | **30 minutes** : les petites sorties (courses, école) | Le cas le plus fréquent ; le moteur compte par heure, on prend l'heure entamée | Web, petit |
 | **H** | **Sieste** dans Dedans, Jour : la gigoteuse de la sieste pour la température de la pièce du jour | Répond à « et pour la sieste ? » ; à vérifier : les repères de nuit valent-ils pour la sieste (sources à relire) ? | Web + sources |
 
-Recommandation retenue le 4 novembre. **C, E, G** sont faits (0.24.0, web seulement). Ensuite **A + B** dans un même APK, avec l'alignement des températures des widgets. **F** quand les testeurs auront dit quelles sorties reviennent. **D** quand l'API famille sera en ligne. **H** seulement si les sources le permettent, et si tu veux revenir sur « pas de gigoteuse le jour ».
+Recommandation retenue le 4 novembre. **C, E, G** sont faits (0.24.0, web seulement) ; **A + B** aussi (0.25.0, APK). Ensuite **A + B** dans un même APK, avec l'alignement des températures des widgets. **F** quand les testeurs auront dit quelles sorties reviennent. **D** quand l'API famille sera en ligne. **H** seulement si les sources le permettent, et si tu veux revenir sur « pas de gigoteuse le jour ».
 
 ## 6. Suivi
 
@@ -108,7 +108,8 @@ Recommandation retenue le 4 novembre. **C, E, G** sont faits (0.24.0, web seulem
 - [x] Propositions : la recommandation (C, E, G ; puis A + B ; F, D, H plus tard)
 - [x] « Go » pour la 0.24.0 (C, E, G, onglets, maintenant ; sans APK : à recompiler)
 - [ ] Captures Play Store refaites
-- [ ] Prochain APK : A (widget « prochaine sortie ») et B (rappel avant la sortie), les températures des widgets sans expiration, et le texte du moteur « dans l'onglet Intérieur » (0.24.0)
+- [x] APK 0.25.0 : A (le widget montre la sortie), B (rappel 15 minutes avant une sortie choisie), températures des widgets sans expiration, texte « onglet Intérieur »
+- [x] « Go » pour la 0.25.0 (commit, `npm run deploy`, APK dans dist/)
 
 ## Journal
 
@@ -117,3 +118,4 @@ Recommandation retenue le 4 novembre. **C, E, G** sont faits (0.24.0, web seulem
 - 2026-11-04 : choix faits : Extérieur et Intérieur, maintenant par défaut, la recommandation pour le reste. 0.24.0 prête : C, E, G, « Choisir » pour le créneau idéal.
 - 2026-11-04 : « Go », 0.24.0 commitée et déployée (sans APK : à recompiler). Suite : A + B dans un même APK.
 - 2026-11-04 : demande : la sortie par défaut compte comme une sortie (maintenant, pour la durée réglée), la question porte aussi sur elle. 0.24.1 prête ; « Go », commitée et déployée (sans APK).
+- 2026-11-04 : « Ok go » pour A + B : 0.25.0 prête (APK 28), widgets sur la sortie, rappel avant une sortie choisie, températures sans expiration dans les widgets.

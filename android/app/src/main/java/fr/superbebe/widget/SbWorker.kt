@@ -22,7 +22,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Récupère la météo, calcule les lignes de chaque enfant et les tenues de la maison, puis redessine les widgets
- * (toutes les 30 minutes, et quelques secondes après un relevé noté sur le widget Maison).
+ * (toutes les 30 minutes, quelques secondes après un relevé noté sur le widget Maison, et à l'heure des rappels) ;
+ * envoie le rappel du soir et le rappel avant une sortie choisie quand ils sont dus.
  */
 class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
@@ -57,7 +58,13 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         val time = if (updated.minute == 0) "${updated.hour} h" else String.format(Locale.FRANCE, "%d h %02d", updated.hour, updated.minute)
         val footer = (if (offline) "Hors ligne · " else "") + time
         val reminderDue = SbReminder.due(c, now)
+        val outingDue = SbOutingReminder.due(c, now)
+        // Les sorties de l'app : le widget montre la même ; `outing` : celle dont le rappel est dû.
         val state = JSONObject().put("rooms", SbStore.rooms(c)).put("room", SbStore.room(c) ?: JSONObject.NULL).put("reminder", reminderDue)
+            .put("outings", runCatching { JSONObject(SbStore.outings(c)) }.getOrDefault(JSONObject()))
+        if (outingDue != null) {
+            state.put("outing", JSONObject().put("date", outingDue.date).put("s", outingDue.start).put("d", outingDue.hours))
+        }
         try {
             val out = SbEngine.compute(
                 c, forecast, config, state,
@@ -72,6 +79,14 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
                 SbReminder.post(
                     c, reminder?.optString("title") ?: "Superbébé",
                     (0 until (lines?.length() ?: 0)).map { lines!!.getString(it) }, now.toLocalDate().toString(),
+                )
+            }
+            if (outingDue != null) {
+                val before = out.optJSONObject("outingReminder")
+                val lines = before?.optJSONArray("lines")
+                SbOutingReminder.post(
+                    c, before?.optString("title") ?: "Superbébé",
+                    (0 until (lines?.length() ?: 0)).map { lines!!.getString(it) }, outingDue.key,
                 )
             }
             val children = out.getJSONArray("children")
@@ -97,6 +112,7 @@ class SbWorker(context: Context, params: WorkerParameters) : CoroutineWorker(con
         }
         updateWidgets(c)
         SbReminder.schedule(c)
+        SbOutingReminder.schedule(c)
         return Result.success()
     }
 
