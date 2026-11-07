@@ -15,6 +15,8 @@ const KEYS = {
   family: 'sb.famille',
   // Sorties choisies dans Dehors, propres à ce téléphone : { 'AAAA-MM-JJ': 'HH:MM' } (heure de départ).
   outings: 'sb.sorties',
+  // Heure du coucher de bébé, propre à ce téléphone : après elle, l'app passe en sombre (« HH:MM »).
+  bedtime: 'sb.coucher',
 };
 
 function read(key, fallback) {
@@ -66,6 +68,8 @@ export const store = {
     const kept = Object.fromEntries(Object.entries(read(KEYS.outings, {})).filter(([day]) => day >= today && day !== date));
     write(KEYS.outings, list.length ? { ...kept, [date]: list } : kept);
   },
+  bedtime: () => { const v = read(KEYS.bedtime, '19:30'); return /^\d{2}:\d{2}$/.test(v) ? v : '19:30'; },
+  saveBedtime: (value) => write(KEYS.bedtime, value),
   promoHidden: () => read(KEYS.promo, false),
   hidePromo: () => write(KEYS.promo, true),
   clear() {

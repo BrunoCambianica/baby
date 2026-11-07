@@ -361,6 +361,8 @@ function paint() {
   else if (view === 'reglages') {
     state.updateLink = scriptableLink();
     state.androidLink = androidLink();
+    state.bedtime = store.bedtime();
+    state.buyCount = compute('aujourdhui')?.result.purchases.length ?? 0;
     html = V.viewSettings(state);
   }
   else if (view === 'widget') {
@@ -402,13 +404,30 @@ function paint() {
 // Barre d'état d'Android assortie au ciel de l'écran (iOS garde sa barre standard).
 const SKY = {
   clair: '#3b8cf6', nuageux: '#5b7aa0', pluie: '#3f5d7c', chaleur: '#ec7f24', froid: '#4a72c0',
-  soir: '#5650c6', nuit: '#121a33', prevoir: '#6a5bdc', maison: '#2f8f83',
+  soir: '#5650c6', nuit: '#1e2a4a', prevoir: '#7c4ddb', maison: '#2f9a78', reglages: '#3b4a6b',
 };
+
+// Clair le jour, sombre la nuit : Intérieur de nuit, ou une sortie qui part après l'heure du coucher de bébé, passent
+// en sombre ; les autres écrans suivent l'heure qu'il est (sombre après le coucher, et avant 6 h).
+const isNight = (time, bed) => time >= bed || time < '06:00';
+function darkTheme(view) {
+  const bed = store.bedtime();
+  const now = parisNow().time;
+  if (view === 'app' && state.tab === 'dedans') return state.inside === 'nuit';
+  if (view === 'app' && state.tab === 'dehors') {
+    const ctx = compute(dehorsDay());
+    const start = ctx?.slot?.start ?? (dehorsDay() === 'demain' ? '09:00' : now);
+    return isNight(start, bed);
+  }
+  return isNight(now, bed);
+}
+
 function setThemeColor(view) {
   const meta = document.querySelector('meta[name="theme-color"]');
+  const dark = darkTheme(view);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   if (!meta) return;
-  const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-  let color = dark ? '#0b0d11' : '#f2f3f7';
+  let color = dark ? '#0b1324' : '#f8fafc';
   if (view === 'onboarding') color = SKY.clair;
   if (view === 'app') {
     const ctx = state.tab === 'dehors' ? compute(dehorsDay()) : null;
@@ -416,9 +435,10 @@ function setThemeColor(view) {
     else if (state.tab === 'prevoir') color = SKY.prevoir;
     else color = ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
   }
+  if (view === 'reglages') color = SKY.reglages;
   meta.setAttribute('content', color);
   // Barres du système de l'app Android : ciel en haut, couleur de la barre d'onglets en bas.
-  const bottom = view === 'app' ? (dark ? '#14171e' : '#fcfcfd') : dark ? '#0b0d11' : '#f2f3f7';
+  const bottom = view === 'app' || view === 'reglages' ? (dark ? '#162238' : '#ffffff') : dark ? '#0b1324' : '#f8fafc';
   if (host === 'android') ask(() => android.colors(color, bottom));
 }
 
@@ -872,6 +892,12 @@ const actions = {
   'apply-update': () => location.reload(),
   refresh: () => loadData({ force: true }),
   tab(el) {
+    if (el.dataset.value === 'reglages') {
+      location.hash = '#reglages';
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (currentView() !== 'app') location.hash = '';
     state.tab = el.dataset.value;
     paint();
     window.scrollTo(0, 0);
@@ -1225,6 +1251,11 @@ const actions = {
     document.querySelector('.wardrobe')?.scrollIntoView({ block: 'start' });
   },
   // Rythme de lessive, commun au foyer : il fixe les quantités conseillées des vêtements de tous les jours.
+  // Heure du coucher de bébé : après elle, l'app passe en sombre (Réglages, Affichage).
+  bedtime(el) {
+    store.saveBedtime(el.dataset.value);
+    paint();
+  },
   wash(el) {
     updateHousehold({ wash_days: Number(el.dataset.value) });
     paint();

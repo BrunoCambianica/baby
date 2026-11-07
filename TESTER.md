@@ -11,7 +11,9 @@ Au premier lancement, trois questions : votre commune, le mois de naissance de v
 
 **Plusieurs enfants ?** Réglages, **Ajouter un enfant**. Chacun a son mode de sortie, sa tendance, sa garde-robe et ses relevés de température ; des pastilles en haut de l'écran passent de l'un à l'autre. À partir de 2 ans, les tenues changent (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière) et les tailles passent en années.
 
-L'app a trois onglets :
+**Nouveau look (0.26)** : police Plus Jakarta Sans, créneau idéal dans une vitre avec « Choisir » en or, onglets flottants en bas (bleu, sauge, violet, ardoise) et **Réglages devient le quatrième onglet**. L'écran est **clair le jour et sombre la nuit** : Intérieur, Nuit est sombre ; une sortie qui part après l'heure du coucher de bébé aussi (Réglages, Affichage, **Heure du coucher de bébé**, 19 h 30 par défaut) ; Achats et Réglages suivent l'heure qu'il est. Dites-nous si un écran est trop sombre ou trop clair à un moment.
+
+L'app a quatre onglets (Extérieur, Intérieur, Achats, Réglages) :
 - **Extérieur** : quand sortir, et la tenue de **votre sortie**.
   - En haut, le **créneau idéal** (« Idéal pour sortir 10–11 h · 9° ressentis · sec ») ; **Choisir** y fait partir votre sortie ; **Pourquoi ?** dit ce qui le rend meilleur que les autres heures (« Au sec avant la pluie de 12 h »), seulement si vous le touchez. **Aujourd'hui** ou **Demain** au-dessus ; le soir, une fois la dernière sortie possible passée, l'app passe d'elle-même à demain, à préparer.
   - **Votre sortie** : une bande d'heures, chacune avec son ciel et son ressenti (« idéal », « bien », « pluie » en tête). Touchez l'heure où vous partez : les heures de la sortie s'allument. Choisissez la durée à côté (30 min, 1 h par défaut, jusqu'à 4 h). Sans choix, la sortie part maintenant, pour la durée réglée : la première heure d'aujourd'hui est l'heure en cours (« Maintenant → 10 h 45 »), et la fin reste la même tant que la sortie dure ; demain, le début de la plage horaire des réglages. La sortie choisie est gardée pour la journée sur ce téléphone.

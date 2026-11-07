@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Superbébé</title>
   <meta name="description" content="Quand sortir avec bébé, comment l'habiller, et ce qu'il lui faudra bientôt. Repères officiels, pas d'avis médical.">
-  <meta name="theme-color" content="#3b8cf6">
+  <meta name="theme-color" content="#f8fafc">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -14,6 +14,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Superbébé">
   <link rel="stylesheet" href="style.css">
+  <link rel="preload" href="fonts/jakarta-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <script>
+    // Avant le premier affichage : clair le jour, sombre après le coucher (main.js affine ensuite, selon l'écran).
+    try {
+      var b = localStorage.getItem('sb.coucher'), h = new Date().getHours();
+      var bed = b ? parseInt(JSON.parse(b), 10) : 19;
+      document.documentElement.dataset.theme = (h >= bed || h < 6) ? 'dark' : 'light';
+    } catch (e) {}
+  </script>
   <script type="module" src="js/main.js"></script>
   <script data-goatcounter="https://brunocambianica.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>

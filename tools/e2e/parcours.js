@@ -172,7 +172,7 @@ await test('Deuxième enfant : fiche, pastilles, tenue et mode propres à chacun
   await page.waitForSelector('text=Ajouter un enfant');
   assert((await page.locator('.group-body a.row[href^="#enfant/"]').count()) === 3, 'deux enfants et « Ajouter » attendus');
   await shot(page, 'l1-reglages');
-  await page.click('.back');
+  await page.click('.tabbar >> text=Extérieur');
   await page.waitForSelector('.kids');
   const chips = await page.locator('.kids button').allTextContents();
   assert(chips.join() === 'Léo,Zoé', chips.join());
@@ -445,7 +445,7 @@ await test('Extérieur : maintenant par défaut, le créneau idéal d\'un touche
   const back = await page.textContent('.day .homecoming');
   assert(back.includes('En rentrant') && back.includes('Combi pilote') && back.includes('Bonnet') && back.includes('le dessous change aussi'), back);
   const tabbar = (await page.locator('.tabbar').boundingBox()).y;
-  assert((await page.locator('.day > .dress .dress-ico').first().boundingBox()).y + 58 <= tabbar, 'tenue de la sortie sous la barre d\'onglets');
+  assert((await page.locator('.day > .dress .dress-ico').first().boundingBox()).y + 60 <= tabbar, 'tenue de la sortie sous la barre d\'onglets');
   assert(!(await page.isVisible('.bag')), 'sac pour une heure sèche sans changement');
   assert(await page.isVisible('text=Touchez sa nuque, pas ses mains'), 'geste de la nuque absent');
   await shot(page, 'l2-sortie-matin');
@@ -744,7 +744,7 @@ await test('Rappels : expliqués dans le navigateur, demandés à l\'app Android
 await test('Intérieur : le jour et la nuit, chacun sa température, gardée comme une habitude ; le widget Maison ouvre le moment', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
   await page.goto(APP);
-  assert((await page.textContent('.tabbar')).replace(/[\s\d]+/g, '') === 'ExtérieurIntérieurAchats', await page.textContent('.tabbar'));
+  assert((await page.textContent('.tabbar')).replace(/[\s\d]+/g, '') === 'ExtérieurIntérieurAchatsRéglages', await page.textContent('.tabbar'));
   await page.click('.tabbar [data-value="dedans"]');
   // Le jour : 21 °C proposé tant que rien n'est noté, la tenue pour 20 à 22 °C, en le disant.
   assert((await page.getAttribute('.days [data-value="jour"]', 'aria-selected')) === 'true', 'le jour attendu à 10 h');

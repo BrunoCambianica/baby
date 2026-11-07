@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.25.1';
+export const VERSION = '0.26.0';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -163,7 +163,7 @@ function heroTop(state, date) {
         <a class="hero-place" href="#reglages/commune">${icon('pin', { size: 18 })}${esc(state.profile.commune.nom)}</a>
         <p class="hero-date">${esc(dayLong(date))}</p>
       </div>
-      <a class="glass glass-btn" href="#reglages" aria-label="Réglages">${icon('settings', { size: 20 })}</a>
+      <a class="glass glass-pill hero-baby" href="#reglages" aria-label="Réglages de ${esc(state.profile.name || 'bébé')}">${esc(state.profile.name || 'Bébé')} · ${esc(ageLabel(ageMonths(state.profile.birth, state.today)))}</a>
     </div>${kids}`;
 }
 
@@ -210,16 +210,18 @@ function heroDehors(state, ctx) {
     const s = ctx.slot;
     const pick = s?.cells.some((c) => c.time === w.start) && s.start !== w.start
       ? `<button class="glass glass-pill pick-btn" data-action="slot" data-value="${w.start}" data-center aria-label="Choisir ce créneau pour la sortie">Choisir</button>` : '';
-    main = `<p class="hero-label">${who}Idéal pour sortir</p>
+    main = `<div class="cockpit glass">
+      <p class="hero-label">${who}Idéal pour sortir</p>
       <div class="when-row"><p class="hero-big when">${span(w)}</p>${pick}</div>
       <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}<span>${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots))}</span>${w.why ? whyBtn : ''}</p>
-      ${open && w.why ? `<p class="hero-why">${esc(nbsp(whyText(M, w)))}</p>` : ''}`;
+      ${open && w.why ? `<p class="hero-why">${esc(nbsp(whyText(M, w)))}</p>` : ''}</div>`;
   } else {
     const reason = result.outing.reason;
-    main = `<p class="hero-label">${who}${tomorrow ? 'Demain' : "Aujourd'hui"}</p>
+    main = `<div class="cockpit glass">
+      <p class="hero-label">${who}${tomorrow ? 'Demain' : "Aujourd'hui"}</p>
       <p class="hero-big words">${esc(render(M, `outing.none.${reason}`, 'short'))}</p>
       <p class="hero-sub">${whyBtn}</p>
-      ${open ? `<p class="hero-why">${esc(render(M, `outing.none.${reason}`, 'text'))}</p>` : ''}`;
+      ${open ? `<p class="hero-why">${esc(render(M, `outing.none.${reason}`, 'text'))}</p>` : ''}</div>`;
   }
   const days = switcher('Jour', 'day', [['aujourdhui', "Aujourd'hui"], ['demain', 'Demain']], tomorrow ? 'demain' : 'aujourdhui');
   const art = { clair: 'sun', nuageux: 'cloud', pluie: 'rain', chaleur: 'sun', froid: 'snow', soir: 'moon', nuit: 'moonStars' }[theme];
@@ -1032,13 +1034,13 @@ function prevoirContent(state, ctx) {
     ${foot()}`;
 }
 
-// Trois onglets : Extérieur (quand sortir, et la tenue de la sortie), Intérieur (le jour, la nuit), Achats. Dans le
-// code, `dehors` et `dedans`.
-function tabbar(state, ctx) {
-  const count = ctx?.result.purchases.length ?? 0;
-  const tabs = [['dehors', 'Extérieur', 'sun'], ['dedans', 'Intérieur', 'home'], ['prevoir', 'Achats', 'bag']];
-  return `<nav class="tabbar" role="tablist" aria-label="Sections">${tabs.map(([v, l, i]) =>
-    `<button role="tab" aria-selected="${state.tab === v}" data-action="tab" data-value="${v}">${icon(i)}<span>${l}</span>${v === 'prevoir' && count ? `<span class="badge">${count}</span>` : ''}</button>`).join('')}</nav>`;
+// Quatre onglets : Extérieur (quand sortir, et la tenue de la sortie), Intérieur (le jour, la nuit), Achats, Réglages.
+// Dans le code, `dehors` et `dedans`. Chaque onglet a sa couleur : bleu, sauge, violet, ardoise.
+function tabbar(state, ctx, current = state.tab) {
+  const count = ctx?.result.purchases.length ?? state.buyCount ?? 0;
+  const tabs = [['dehors', 'Extérieur', 'sun', 'blue'], ['dedans', 'Intérieur', 'home', 'sage'], ['prevoir', 'Achats', 'bag', 'violet'], ['reglages', 'Réglages', 'settings', 'slate']];
+  return `<nav class="tabbar" role="tablist" aria-label="Sections">${tabs.map(([v, l, i, tone]) =>
+    `<button role="tab" class="tone-${tone}" aria-selected="${current === v}" data-action="tab" data-value="${v}"><span class="tab-ico">${icon(i, { size: 22 })}</span><span>${l}</span>${v === 'prevoir' && count ? `<span class="badge">${count}</span>` : ''}</button>`).join('')}</nav>`;
 }
 
 export function viewApp(state, ctx) {
@@ -1071,10 +1073,15 @@ export function viewSettings(state) {
   const { draft, results, profile } = state;
   const hours = (from, to) => Array.from({ length: to - from + 1 }, (_, k) => `${String(from + k).padStart(2, '0')}:00`);
   const label = Object.fromEntries(TRANSPORTS.map(([v, l]) => [v, l]));
-  const kids = state.household.children.map((c, i) => `<a class="row" href="#enfant/${esc(c.id)}">
-      <span>${esc(childName(c, i))}<span class="hint"> · ${esc(ageLabel(ageMonths(c.birth, state.today)))} · ${esc(label[c.transport] ?? '')}</span></span>${chev()}</a>`).join('');
-  return `<header class="page-head"><a class="back" href="#">${icon('chevronLeft')}Retour</a><h1>Réglages</h1></header>
-  <div class="page">
+  const kids = state.household.children.map((c, i) => `<a class="row kid-row" href="#enfant/${esc(c.id)}">
+      <span class="avatar" aria-hidden="true">${esc(childName(c, i).slice(0, 1).toUpperCase())}</span>
+      <span class="kid-text"><strong>${esc(childName(c, i))}</strong><span class="hint">${esc(ageLabel(ageMonths(c.birth, state.today)))} · ${esc(label[c.transport] ?? '')}</span></span>${chev()}</a>`).join('');
+  return `<header class="hero hero--reglages">${heroArt('settings')}<div class="hero-top"><p class="hero-date">${esc(dayLong(state.today))}</p></div>
+    <p class="hero-label">Préférences et sécurité</p>
+    <p class="hero-big words">Réglages</p>
+    <p class="hero-sub"><span>Les calculs d'habillage, l'autre parent, les rappels et les widgets.</span></p>
+  </header>
+  <div class="page sheet-page">
     <section class="group"><h2 class="group-title">Enfants</h2>
       <div class="group-body">
         ${kids}
@@ -1106,8 +1113,11 @@ export function viewSettings(state) {
           <div class="seg" role="radiogroup" aria-label="Affichage des tenues">${[['dessins', 'Dessins'], ['texte', 'Texte']].map(([v, l]) =>
             `<button role="radio" aria-checked="${(profile.outfit_view ?? 'dessins') === v}" data-action="outfit-view" data-value="${v}">${l}</button>`).join('')}</div>
         </div>
+        <div class="row column"><span>Heure du coucher de bébé</span>
+          <select data-action="bedtime" aria-label="Heure du coucher de bébé" data-title="Heure du coucher de bébé">${['18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'].map((h) => `<option value="${h}"${state.bedtime === h ? ' selected' : ''}>${hourFr(h)}</option>`).join('')}</select>
+        </div>
       </div>
-      <p class="group-note">Dans l'app et le widget : un petit dessin par vêtement, ou la liste écrite.</p>
+      <p class="group-note">Dans l'app et le widget : un petit dessin par vêtement, ou la liste écrite. L'écran est clair le jour et passe en sombre après l'heure du coucher : la nuit, ou pour une sortie qui part après.</p>
     </section>
     ${homeScreenGroup(state)}
     ${reminderGroup(state)}
@@ -1124,7 +1134,7 @@ export function viewSettings(state) {
       </div>
     </section>
     <section class="group"><div class="group-body"><button class="row danger" data-action="clear">${state.confirmClear ? 'Toucher à nouveau pour tout effacer' : 'Effacer toutes mes données'}</button></div></section>
-  </div>`;
+  </div>${tabbar(state, null, 'reglages')}`;
 }
 
 // Avec l'autre parent. Avec l'API : une famille synchronisée, chiffrée sur les téléphones. Sans : un lien à usage unique.
