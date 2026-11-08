@@ -156,7 +156,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 /* « Pourquoi ? » et sa réponse, dans le ciel : l'explication n'apparaît que si on la demande. */
 .why-btn { color: #fff; font-weight: 650; font-size: 0.95rem; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; min-height: 32px; flex: none; }
 .why-btn[aria-expanded="true"] { text-decoration: none; opacity: 0.8; }
-.hero-why { margin-top: 10px; padding: 10px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.18); font-size: 0.98rem; line-height: 1.4; position: relative; }
 .hero-note { margin-top: 10px; font-size: 0.92rem; opacity: 0.95; position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 /* Votre sortie : la durée, puis la bande des heures où l'on touche l'heure de départ ; la sortie surlignée en blanc. */
 .outing-pick { position: relative; margin-top: 8px; }
@@ -171,7 +170,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .cockpit .hero-sub { margin-top: 4px; font-size: 0.98rem; }
 .cockpit .pick-btn { margin-top: 0; }
 .cockpit .hero-big { margin-top: 2px; }
-.cockpit .hero-why { background: rgba(255, 255, 255, 0.16); }
 /* Le créneau idéal et « Choisir », qui y fait partir la sortie. */
 .when-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: relative; }
 .pick-btn { position: relative; overflow: hidden; flex: none; margin-top: 4px; background: linear-gradient(90deg, #fbbf24, #fcd34d); border: 0; color: #1c1917; font-weight: 700; box-shadow: 0 0 22px -4px rgba(251, 191, 36, 0.55); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -386,7 +384,7 @@ p.check { display: block; }
 .carrier-guide .principles { margin-bottom: 10px; }
 
 /* Heure par heure */
-.hours { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: 0 -8px; padding: 0 8px; }
+.hours { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 8px; scrollbar-width: none; margin: 0 -8px; padding: 0 8px; }
 .hours::-webkit-scrollbar { display: none; }
 .h-cell {
   flex: none;
@@ -409,7 +407,7 @@ p.check { display: block; }
 .h-cell.off { opacity: 0.45; }
 .h-cell[aria-pressed="true"] { border-color: var(--blue); }
 /* La bande des heures de « Votre sortie », dans le ciel */
-.strip { position: relative; display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: 10px calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter); }
+.strip { position: relative; display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter); scrollbar-width: none; margin: 10px calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter); }
 .strip::-webkit-scrollbar { display: none; }
 .strip .h-cell { background: rgba(255, 255, 255, 0.14); color: #fff; gap: 2px; padding: 5px 0 4px; }
 .strip .h-time, .strip .h-cell .ico, .strip .h-flag { color: inherit; }

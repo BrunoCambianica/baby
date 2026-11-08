@@ -7,7 +7,7 @@ import { ageLabel, birthOf, daysInMonth, feedbackHint, outingHours } from './hou
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.29.0';
+export const VERSION = '0.29.1';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -168,7 +168,7 @@ function heroTop(state, date) {
         <a class="hero-place" href="#reglages/commune">${icon('pin', { size: 18 })}${esc(state.profile.commune.nom)}</a>
         <p class="hero-date">${esc(dayLong(date))}</p>
       </div>
-      <a class="glass glass-pill hero-baby" href="#reglages" aria-label="Réglages de ${esc(state.profile.name || 'bébé')}">${esc(state.profile.name || 'Bébé')} · ${esc(ageLabel(ageMonths(state.profile.birth, state.today)))}</a>
+      <a class="glass glass-pill hero-baby" href="#reglages" aria-label="Réglages de ${esc(state.profile.name || 'bébé')}">${state.profile.name ? esc(state.profile.name) : `Bébé · ${esc(ageLabel(ageMonths(state.profile.birth, state.today)))}`}</a>
     </div>${kids}`;
 }
 
@@ -201,21 +201,16 @@ function conditions(slots, state) {
 const switcher = (label, action, choices, current) => `<div class="days glass" role="tablist" aria-label="${esc(label)}">${choices
   .map(([v, l]) => `<button role="tab" aria-selected="${current === v}" data-action="${action}" data-value="${v}">${l}</button>`).join('')}</div>`;
 
-// Ce qui fait le meilleur créneau, en clair : « Au sec avant la pluie de 12 h et plus doux qu'à 9 h ».
-const whyText = (M, w) => capitalize(w.why.map((x) => render(M, x.id, 'short', { hour: x.hour ? hourFr(x.hour) : '' })).join(' et '));
-
 // ——— Extérieur ———
-// Le ciel répond à « quand sortir ? » : le créneau idéal, « Choisir » pour y faire partir la sortie, et pourquoi
-// seulement si on touche « Pourquoi ? » ; puis la bande des heures, où l'on choisit sa sortie (maintenant par défaut,
-// l'heure de départ d'un toucher, la durée à côté). Les cartes disent la tenue de cette sortie-là. Sans créneau idéal,
-// la raison en quelques mots, et le détail sous « Pourquoi ? ».
+// Le ciel répond à « quand sortir ? » : le créneau idéal et « Choisir » pour y faire partir la sortie ; puis la bande des
+// heures, où l'on choisit sa sortie (maintenant par défaut, l'heure de départ d'un toucher, la durée à côté). Les cartes
+// disent la tenue de cette sortie-là. Sans créneau idéal, la raison en quelques mots. (Le moteur garde `window.why`,
+// la raison du créneau : l'app ne l'affiche plus.)
 function heroDehors(state, ctx) {
   const M = state.bundle.messages;
   const { result, tomorrow } = ctx;
   const theme = sortirTheme(ctx);
   const w = result.outing.window;
-  const open = state.open.has('pourquoi');
-  const whyBtn = `<button class="why-btn" data-action="fold" data-value="pourquoi" aria-expanded="${open}">Pourquoi ?</button>`;
   const who = state.profile.count > 1 ? `${esc(childName(state.profile, state.profile.index))} · ` : '';
   let main;
   if (w) {
@@ -227,15 +222,12 @@ function heroDehors(state, ctx) {
     main = `<div class="cockpit glass">
       <p class="hero-label">${who}Idéal pour sortir</p>
       <div class="when-row"><p class="hero-big when">${span(w)}</p>${pick}</div>
-      <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}<span>${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots, state))}</span>${w.why ? whyBtn : ''}</p>
-      ${open && w.why ? `<p class="hero-why">${esc(nbsp(whyText(M, w)))}</p>` : ''}</div>`;
+      <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}<span>${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots, state))}</span></p></div>`;
   } else {
     const reason = result.outing.reason;
     main = `<div class="cockpit glass">
       <p class="hero-label">${who}${tomorrow ? 'Demain' : "Aujourd'hui"}</p>
-      <p class="hero-big words">${esc(render(M, `outing.none.${reason}`, 'short'))}</p>
-      <p class="hero-sub">${whyBtn}</p>
-      ${open ? `<p class="hero-why">${esc(render(M, `outing.none.${reason}`, 'text'))}</p>` : ''}</div>`;
+      <p class="hero-big words">${esc(render(M, `outing.none.${reason}`, 'short'))}</p></div>`;
   }
   const days = switcher('Jour', 'day', [['aujourdhui', "Aujourd'hui"], ['demain', 'Demain']], tomorrow ? 'demain' : 'aujourdhui');
   const art = { clair: 'sun', nuageux: 'cloud', pluie: 'rain', chaleur: 'sun', froid: 'snow', soir: 'moon', nuit: 'moonStars' }[theme];

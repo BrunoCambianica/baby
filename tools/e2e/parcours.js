@@ -207,6 +207,20 @@ await test('Deuxième enfant : fiche, pastilles, tenue et mode propres à chacun
   assert(h.children[0].room?.value === 19.5 && !h.children[1].room && !h.children[0].room_day, JSON.stringify(h.children.map((c) => [c.room, c.room_day])));
 });
 
+await test('Pastille du ciel : sans prénom « Bébé · 5 mois », avec prénom le prénom seul', async (use) => {
+  const init = (child) => `if (!localStorage.getItem('sb.profil')) { ${seed(household([child], { outing_window: { from: '08:00', to: '18:00' } }))} }`;
+  let page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: init({ ...LEO, name: '' }) }));
+  await page.goto(APP);
+  await page.waitForSelector('.hero-baby');
+  const unnamed = (await page.textContent('.hero-baby')).replace(/\s+/g, ' ').trim();
+  assert(unnamed === 'Bébé · 5 mois', unnamed);
+  await page.context().close();
+  page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: init(LEO) }));
+  await page.goto(APP);
+  await page.waitForSelector('.hero-baby');
+  assert((await page.textContent('.hero-baby')).trim() === 'Léo', await page.textContent('.hero-baby'));
+});
+
 await test('Jour de naissance facultatif : sans lui le 15 du mois, avec lui l\'âge exact ; un jour qui n\'existe pas est oublié', async (use) => {
   // Né en juillet 2026, le 8 novembre : sans le jour (le 15 juillet), 3 mois ; né le 1er juillet, 4 mois.
   const july = { ...LEO, birth: '2026-07' };
@@ -444,17 +458,18 @@ await test('Assistant du widget iPhone : un widget par enfant, choisi par son pr
   assert((await page.textContent('.w-head')).startsWith('Léo · Lyon'), await page.textContent('.w-head'));
 });
 
-await test('Extérieur : maintenant par défaut, le créneau idéal d\'un toucher, pourquoi sur demande, la sortie choisie dans la bande des heures, sa tenue, son sac, en rentrant, 30 minutes', async (use) => {
+await test('Extérieur : maintenant par défaut, le créneau idéal d\'un toucher, la sortie choisie dans la bande des heures, sa tenue, son sac, en rentrant, 30 minutes', async (use) => {
   const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }` }));
   await page.goto(APP);
   await page.waitForSelector('.day');
-  // Le ciel : le créneau idéal et son temps ; la raison seulement si on la demande.
+  // Le ciel : le créneau idéal et son temps, sans « Pourquoi ? » ; le prénom seul en haut à droite.
   assert((await page.textContent('.hero-label')).trim() === 'Idéal pour sortir', await page.textContent('.hero-label'));
   assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '17–18h', await page.textContent('.hero-big'));
-  assert(!(await page.isVisible('.hero-why')), 'raison affichée sans la demander');
-  await page.click('.why-btn');
-  const why = await page.textContent('.hero-why');
-  assert(/^[A-ZÀ-Ý]/.test(why.trim()) && !why.includes('ressentis'), why);
+  assert(!(await page.locator('.hero .why-btn, .hero-why').count()), '« Pourquoi ? » encore affiché dans le ciel');
+  assert((await page.textContent('.hero-baby')).trim() === 'Léo', `pastille : ${await page.textContent('.hero-baby')}`);
+  // La première heure de la bande garde sa marge à gauche (elle ne colle pas au bord de l'écran).
+  const gap = await page.evaluate(() => document.querySelector('.strip .h-cell').getBoundingClientRect().left);
+  assert(gap >= 12, `première heure à ${gap} px du bord`);
   // Votre sortie : maintenant, d'une heure, tant qu'on n'en a pas choisi ; la bande part de l'heure en cours.
   const cells = await page.locator('.strip .h-time').allTextContents();
   assert(cells[0] === '7 h' && (await page.textContent('.strip .h-cell:first-child .h-flag')) === 'en cours', cells.join());

@@ -369,7 +369,6 @@ function applyPulse() {
   const tick = (n) => (Number(n) < 0 ? 'tick-down' : Number(n) > 0 ? 'tick-up' : 'pop');
   if (p.action === 'room') return app.querySelector('.stepper .hero-big')?.classList.add(tick(p.value));
   if (p.action === 'count') return find({ action: 'count', cat: p.cat, size: p.size, value: p.value })?.closest('.counter')?.querySelector('.counter-n')?.classList.add(tick(p.value));
-  if (p.action === 'fold') app.querySelector('.hero-why')?.classList.add('reveal');
   if (RESTYLE.has(p.action)) app.querySelectorAll('.card .dress').forEach((ul) => ul.classList.add('restyle'));
   find({ action: p.action, value: p.value })?.classList.add('pop');
 }
