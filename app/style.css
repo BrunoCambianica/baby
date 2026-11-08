@@ -9,6 +9,8 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 :root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --bg: #f8fafc;
   --card: #ffffff;
   --ink: #0f172a;
@@ -85,7 +87,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   border-radius: 0 0 36px 36px;
   padding: calc(env(safe-area-inset-top, 0px) + 10px) var(--gutter) 44px;
 }
-.hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 88% 8%, rgba(255, 222, 120, 0.26) 0%, transparent 42%), radial-gradient(circle at 8% 38%, rgba(120, 130, 255, 0.28) 0%, transparent 50%); }
+.hero { isolation: isolate; }
+.hero::before, .hero::after { z-index: -1; }
+.hero::before { content: ""; position: absolute; inset: -20%; pointer-events: none; background: radial-gradient(circle at 88% 8%, rgba(255, 222, 120, 0.26) 0%, transparent 42%), radial-gradient(circle at 8% 38%, rgba(120, 130, 255, 0.28) 0%, transparent 50%); }
 .hero--clair { background: linear-gradient(170deg, #1f4fc4 0%, #3b82f0 38%, #62a9fb 72%, #a8d2ff 100%); }
 .hero--nuageux { background: linear-gradient(165deg, #5b7aa0 0%, #82a0c1 60%, #aec3da 100%); }
 .hero--pluie { background: linear-gradient(165deg, #3f5d7c 0%, #66839f 60%, #8ea7be 100%); }
@@ -93,9 +97,23 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .hero--froid { background: linear-gradient(165deg, #4a72c0 0%, #7ea7e3 60%, #b8d3f4 100%); }
 .hero--soir { background: linear-gradient(165deg, #3d3aa8 0%, #7a55b8 55%, #d98fa8 100%); }
 .hero--nuit { background: linear-gradient(165deg, #121a33 0%, #1e2a4a 55%, #2f3f70 100%); }
+.hero--nuit::after, .hero--soir::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.6;
+  background-image: radial-gradient(1.6px 1.6px at 12% 20%, #fff 50%, transparent 55%), radial-gradient(1.2px 1.2px at 27% 62%, #fff 50%, transparent 55%),
+    radial-gradient(1.4px 1.4px at 44% 12%, #fff 50%, transparent 55%), radial-gradient(1px 1px at 58% 44%, #fff 50%, transparent 55%),
+    radial-gradient(1.7px 1.7px at 76% 26%, #fff 50%, transparent 55%), radial-gradient(1.2px 1.2px at 91% 66%, #fff 50%, transparent 55%),
+    radial-gradient(1px 1px at 35% 86%, #fff 50%, transparent 55%), radial-gradient(1.3px 1.3px at 68% 84%, #fff 50%, transparent 55%),
+    radial-gradient(1px 1px at 6% 52%, #fff 50%, transparent 55%), radial-gradient(1.4px 1.4px at 84% 8%, #fff 50%, transparent 55%);
+}
+.hero--soir::after { opacity: 0.3; }
 .hero--nuit::before { background: radial-gradient(circle at 86% 10%, rgba(180, 197, 255, 0.2) 0%, transparent 42%), radial-gradient(circle at 10% 40%, rgba(99, 102, 241, 0.2) 0%, transparent 50%); }
 .hero--maison { background: linear-gradient(165deg, #1b7a60 0%, #34a883 58%, #93dcc0 100%); }
 .hero--prevoir { background: linear-gradient(165deg, #5b21b6 0%, #8b5cf6 58%, #c4b5fd 100%); }
+.hero--reglages { padding-bottom: 40px; }
 .hero--reglages { background: linear-gradient(165deg, #1e2a4a 0%, #3b4a6b 58%, #7186ad 100%); }
 .hero-art { position: absolute; right: -18px; top: calc(env(safe-area-inset-top, 0px) + 28px); opacity: 0.2; pointer-events: none; }
 .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; position: relative; }
@@ -156,7 +174,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .cockpit .hero-why { background: rgba(255, 255, 255, 0.16); }
 /* Le créneau idéal et « Choisir », qui y fait partir la sortie. */
 .when-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: relative; }
-.pick-btn { flex: none; margin-top: 4px; background: linear-gradient(90deg, #fbbf24, #fcd34d); border: 0; color: #1c1917; font-weight: 700; box-shadow: 0 0 22px -4px rgba(251, 191, 36, 0.55); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.pick-btn { position: relative; overflow: hidden; flex: none; margin-top: 4px; background: linear-gradient(90deg, #fbbf24, #fcd34d); border: 0; color: #1c1917; font-weight: 700; box-shadow: 0 0 22px -4px rgba(251, 191, 36, 0.55); -webkit-backdrop-filter: none; backdrop-filter: none; }
 
 .pick-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .pick-head .hero-label { margin-top: 0; }
@@ -164,8 +182,17 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .dur button { min-width: 44px; padding: 5px 10px; border-radius: 999px; color: #fff; font-weight: 650; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
 .dur button[aria-checked="true"] { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; }
 .less { display: grid; gap: 6px; }
-.fiche-card { gap: 10px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.pick-btn::after { content: ""; position: absolute; inset: 0; pointer-events: none; transform: translateX(-130%); background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%); }
+/* Fiche de la journée : une carte nuit, pour la retrouver d'un coup d'œil */
+.card.fiche-card { position: relative; overflow: hidden; gap: 14px; color: #fff; border-color: transparent; background: linear-gradient(140deg, #312e81 0%, #1e293b 58%, #172554 100%); }
+.fiche-card::before { content: ""; position: absolute; right: -50px; bottom: -60px; width: 200px; height: 200px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, transparent 70%); }
+.fiche-head { display: flex; align-items: center; gap: 12px; position: relative; }
+.fiche-ico { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 16px; color: #fcd34d; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.16); }
+.fiche-title { font-size: 1.02rem; font-weight: 800; letter-spacing: -0.01em; }
+.fiche-sub { font-size: 0.84rem; line-height: 1.35; color: rgba(255, 255, 255, 0.72); margin-top: 2px; }
+.fiche-card .btn { position: relative; background: linear-gradient(90deg, #3b82f6, #6366f1); box-shadow: 0 0 24px -6px rgba(56, 189, 248, 0.55); }
+.dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.dot.ok::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; opacity: 0; }
 .dot.ok { background: #5fe39a; }
 .dot.warn { background: #ffc35a; }
 
@@ -181,6 +208,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 18px; box-shadow: var(--shadow); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 /* Dehors : un peu plus serré, pour que la tenue tienne au premier écran sous les créneaux et leur pourquoi */
 .card.day { gap: 10px; padding: 16px; }
+/* Une carte repliée : rien sous son titre */
+details.card:not([open]) { gap: 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .card-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 650; color: var(--ink-2); }
 .card-title .ico { color: var(--ink-3); }
@@ -223,7 +252,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .when-why { font-size: 0.86rem; line-height: 1.35; color: var(--ink-2); margin-top: -6px; }
 .when-why strong { color: var(--blue); font-weight: 650; }
 .icon-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--fill); color: var(--ink-2); }
-.hint { color: var(--ink-3); font-size: 0.88rem; }
+.hint { color: var(--ink-3); font-size: 0.86rem; }
+.page-note { padding: 0 6px; }
 .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--fill); color: var(--ink-2); white-space: nowrap; }
 .tag.blue { background: var(--blue-soft); color: var(--blue); }
 .tag.amber { background: var(--amber-soft); color: var(--amber); }
@@ -231,8 +261,15 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tag.violet { background: var(--violet-soft); color: var(--violet); }
 
 /* Choix du mode de sortie */
-.modes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 4px; background: var(--fill); border-radius: 18px; }
-.modes button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 4px; border-radius: 14px; font-size: 0.8rem; font-weight: 600; color: var(--ink-2); }
+.modes { container-type: inline-size; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; background: var(--fill); border-radius: 999px; }
+.modes button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 40px; padding: 6px 4px; border-radius: 999px; font-size: 0.84rem; font-weight: 650; color: var(--ink-2); white-space: nowrap; }
+.modes button .ico { color: var(--ink-3); }
+.modes button[aria-checked="true"] .ico { color: var(--blue); }
+.modes:has(> :nth-child(4)) { border-radius: 18px; }
+.modes:has(> :nth-child(4)) button { flex-direction: column; gap: 1px; border-radius: 14px; font-size: 0.78rem; }
+@container (max-width: 300px) {
+  .modes button { flex-direction: column; gap: 1px; font-size: 0.78rem; }
+}
 .modes button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 
 /* Tenue en couches */
@@ -322,6 +359,22 @@ p.check { display: block; }
 .share-row { display: grid; gap: 10px; }
 .fiche-hero { padding-bottom: 54px; }
 
+.notes { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--line); }
+.notes li { border-bottom: 1px solid var(--line); }
+.notes li:last-child { border-bottom: 0; }
+.notes summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 0; cursor: pointer; font-size: 0.94rem; line-height: 1.35; color: var(--ink); }
+.notes summary::-webkit-details-marker { display: none; }
+.notes summary > span:not(.chev) { flex: 1; min-width: 0; }
+.notes summary .chev { flex: none; }
+.notes summary strong { font-weight: 650; }
+.notes summary .ico { color: var(--blue); flex: none; }
+.notes .official-tip summary .ico { color: var(--green); }
+.notes summary .chev { color: var(--ink-3); transition: transform 0.25s var(--ease-out); }
+.notes details[open] summary .chev { transform: rotate(90deg); }
+.notes details p { padding: 0 0 12px 30px; font-size: 0.9rem; color: var(--ink-2); }
+.notes .source { display: block; margin-top: 4px; }
+.guide-link { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: -4px; font-weight: 650; font-size: 0.92rem; color: var(--blue); }
+.guide-link .chev { margin-left: auto; color: var(--ink-3); }
 .tips { list-style: none; display: grid; gap: 8px; margin: 0; background: var(--fill); border-radius: 14px; padding: 10px 12px; font-size: 0.92rem; color: var(--ink-2); }
 .tips li { display: flex; gap: 10px; align-items: flex-start; }
 .tips .ico { color: var(--blue); margin-top: 1px; flex: none; }
@@ -480,9 +533,12 @@ p.check { display: block; }
 .tone-violet { --tone: var(--violet); --tone-soft: var(--violet-soft); }
 .tone-slate { --tone: var(--ink); --tone-soft: var(--fill); }
 .tabbar button { display: grid; justify-items: center; gap: 1px; padding: 3px 0 2px; color: var(--ink-3); font-size: 0.7rem; font-weight: 700; position: relative; min-height: 48px; }
-.tab-ico { display: grid; place-items: center; width: 54px; height: 28px; border-radius: 999px; transition: background 0.2s; }
+.tab-ico { position: relative; display: grid; place-items: center; width: 54px; height: 28px; border-radius: 999px; }
+.tab-ico::before { content: ""; position: absolute; inset: 0; border-radius: 999px; background: transparent; transition: background 0.2s; }
+.tab-ico .ico { position: relative; }
 .tabbar button[aria-selected="true"] { color: var(--tone); }
-.tabbar button[aria-selected="true"] .tab-ico { background: var(--tone-soft); }
+.tabbar button[aria-selected="true"] .tab-ico::before { background: var(--tone-soft); }
+.tabbar { view-transition-name: tabbar; }
 .badge { position: absolute; top: 2px; left: calc(50% + 8px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--rose); color: #fff; font-size: 0.68rem; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--card); }
 
 /* Pages (réglages, widget, charte) */
@@ -609,7 +665,7 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
   z-index: 30;
 }
 .update { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18); font-weight: 600; font-size: 0.92rem; white-space: nowrap; }
-.foot { text-align: center; font-size: 0.8rem; color: var(--ink-3); padding: 6px 12px 0; display: grid; gap: 4px; }
+.foot { text-align: center; font-size: 0.76rem; color: var(--ink-3); padding: 6px 12px 0; display: grid; gap: 4px; }
 /* Sans carte au-dessus, le pied de page ne doit pas remonter sur le ciel. */
 .content > .foot:first-child { padding-top: 46px; }
 .foot a { color: var(--ink-2); }
@@ -676,8 +732,11 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
 /* « C'était juste ? » : trois réponses, celle du jour en bleu */
 .fb-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .fb { min-height: 44px; padding: 8px 2px; border-radius: 14px; background: var(--fill); color: var(--ink); font-weight: 650; font-size: 0.88rem; white-space: nowrap; }
-.fb { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
+.fb { position: relative; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
 .fb[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.fb { --burst: var(--blue); }
+.fb[data-value="chaud"] { --burst: var(--rose); }
+.fb[data-value="juste"] { --burst: var(--green); }
 .fb[data-value="chaud"][aria-pressed="true"] { background: var(--rose); }
 .fb[data-value="juste"][aria-pressed="true"] { background: var(--green); }
 :root[data-theme="dark"] .fb[aria-pressed="true"] { color: #0b1324; }
@@ -736,11 +795,90 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
   #app:has(> .tabbar) .cockpit > .hero-label { margin-top: 0; }
 }
 
+/* Animations : l'écran qui arrive monte en douceur, les pièces de la tenue se posent une à une, ce qu'on touche rebondit.
+   Le ciel respire (lueurs, étoiles, dessin) sur des cycles qui divisent 36 s : --t (main.js) les fait reprendre où elles
+   en étaient quand l'écran est redessiné. Rien de tout cela si le téléphone demande moins d'animations. */
 @media (prefers-reduced-motion: no-preference) {
-  .anim .content > *, .anim .page > * { animation: rise 0.35s ease-out both; }
-  .anim .content > *:nth-child(2) { animation-delay: 0.04s; }
-  .anim .content > *:nth-child(3) { animation-delay: 0.08s; }
-  .anim .content > *:nth-child(4) { animation-delay: 0.12s; }
-  button:active { transform: scale(0.97); }
+  body { transition: background-color 0.5s ease; }
+  /* Le ciel, en continu */
+  .hero-art { animation: float 9s ease-in-out var(--t, 0s) infinite alternate; }
+  .hero::before { animation: aurora 18s ease-in-out var(--t, 0s) infinite alternate; }
+  .hero--nuit::after, .hero--soir::after { animation: twinkle 3s ease-in-out var(--t, 0s) infinite alternate; }
+  .pick-btn::after { animation: shimmer 6s ease-in-out var(--t, 0s) infinite; }
+  .dot.ok::after { animation: ring 2.4s ease-out var(--t, 0s) infinite; }
+
+  /* Un écran qui arrive : le ciel, puis les cartes, en cascade */
+  .anim .hero > :not(.hero-art) { animation: rise 0.5s var(--ease-out) both; }
+  .anim .hero > :nth-child(3) { animation-delay: 0.04s; }
+  .anim .hero > :nth-child(4) { animation-delay: 0.08s; }
+  .anim .hero > :nth-child(5) { animation-delay: 0.12s; }
+  .anim .hero > :nth-child(n+6) { animation-delay: 0.16s; }
+  .anim .hero .cockpit { animation-name: riseScale; }
+  .anim .content > *, .anim .page > * { animation: rise 0.55s var(--ease-out) both; }
+  .anim .content > :nth-child(1), .anim .page > :nth-child(1) { animation-delay: 0.1s; }
+  .anim .content > :nth-child(2), .anim .page > :nth-child(2) { animation-delay: 0.16s; }
+  .anim .content > :nth-child(3), .anim .page > :nth-child(3) { animation-delay: 0.22s; }
+  .anim .content > :nth-child(4), .anim .page > :nth-child(4) { animation-delay: 0.28s; }
+  .anim .content > :nth-child(n+5), .anim .page > :nth-child(n+5) { animation-delay: 0.34s; }
+  .anim .strip .h-cell { animation: slideIn 0.45s var(--ease-out) both; }
+  .anim .strip .h-cell:nth-child(2) { animation-delay: 0.03s; }
+  .anim .strip .h-cell:nth-child(3) { animation-delay: 0.06s; }
+  .anim .strip .h-cell:nth-child(4) { animation-delay: 0.09s; }
+  .anim .strip .h-cell:nth-child(5) { animation-delay: 0.12s; }
+  .anim .strip .h-cell:nth-child(n+6) { animation-delay: 0.15s; }
+  .anim .badge { animation: pop 0.45s var(--spring) 0.4s both; }
+
+  /* La tenue : ses pièces se posent une à une, à l'arrivée ou quand elle change (mode, heure, pièce choisie) */
+  .anim .dress li, .restyle li { animation: tileIn 0.5s var(--spring) both; }
+  .anim .dress li { animation-delay: 0.2s; }
+  .anim .dress li:nth-child(2) { animation-delay: 0.24s; }
+  .anim .dress li:nth-child(3) { animation-delay: 0.28s; }
+  .anim .dress li:nth-child(4) { animation-delay: 0.32s; }
+  .anim .dress li:nth-child(5) { animation-delay: 0.36s; }
+  .anim .dress li:nth-child(6) { animation-delay: 0.4s; }
+  .anim .dress li:nth-child(7) { animation-delay: 0.44s; }
+  .anim .dress li:nth-child(n+8) { animation-delay: 0.48s; }
+  .restyle li { animation-duration: 0.38s; }
+  .restyle li:nth-child(2) { animation-delay: 0.025s; }
+  .restyle li:nth-child(3) { animation-delay: 0.05s; }
+  .restyle li:nth-child(4) { animation-delay: 0.075s; }
+  .restyle li:nth-child(5) { animation-delay: 0.1s; }
+  .restyle li:nth-child(6) { animation-delay: 0.125s; }
+  .restyle li:nth-child(7) { animation-delay: 0.15s; }
+  .restyle li:nth-child(n+8) { animation-delay: 0.175s; }
+
+  /* Changer d'onglet : la pastille s'étire, l'icône saute */
+  .tabbed [aria-selected="true"] .tab-ico::before { animation: pill 0.45s var(--spring); }
+  .tabbed [aria-selected="true"] .tab-ico .ico { animation: hop 0.5s var(--spring); }
+
+  /* Ce qu'on touche */
+  .pop { animation: pop 0.4s var(--spring); }
+  .fb.pop::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: burst 0.6s var(--ease-out) forwards; }
+  .tick-up { animation: tickUp 0.32s var(--ease-out); }
+  .tick-down { animation: tickDown 0.32s var(--ease-out); }
+  .reveal, .opened > :not(summary) { animation: reveal 0.32s var(--ease-out); }
+  .toast:not([hidden]) { animation: toastIn 0.4s var(--spring); }
+  button, .btn, a.row, summary { transition: transform 0.15s var(--ease-out), background-color 0.2s; }
+  button:active, .btn:active, a.row:active { transform: scale(0.97); }
+
+  /* Fondu d'un écran à l'autre (onglets, jours, Jour et Nuit) */
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.3s; animation-timing-function: var(--ease-out); }
+  ::view-transition-group(tabbar) { animation-duration: 0.3s; }
 }
-@keyframes rise { from { transform: translateY(8px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+@keyframes rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes riseScale { from { transform: translateY(14px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slideIn { from { transform: translateX(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tileIn { from { transform: translateY(10px) scale(0.7); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop { 0% { transform: scale(0.9); } 55% { transform: scale(1.07); } 100% { transform: scale(1); } }
+@keyframes burst { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--burst) 55%, transparent); } to { box-shadow: 0 0 0 14px transparent; } }
+@keyframes pill { from { transform: scaleX(0.35); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes hop { 0% { transform: none; } 40% { transform: translateY(-5px) scale(1.1); } 100% { transform: none; } }
+@keyframes tickUp { from { transform: translateY(45%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tickDown { from { transform: translateY(-45%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes reveal { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes toastIn { from { transform: translate(-50%, 18px) scale(0.96); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+@keyframes float { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(-10px) rotate(-4deg); } }
+@keyframes aurora { from { transform: translate3d(-4%, -2%, 0) scale(1); } to { transform: translate3d(4%, 3%, 0) scale(1.08); } }
+@keyframes twinkle { from { opacity: 0.25; } to { opacity: 0.7; } }
+@keyframes shimmer { 0%, 78% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+@keyframes ring { 0% { transform: scale(1); opacity: 0.7; } 70%, 100% { transform: scale(2.8); opacity: 0; } }

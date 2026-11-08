@@ -14,11 +14,14 @@ let after = null;
 
 document.documentElement.classList.add('sheets');
 
-// La liste touchée : celle du libellé (la pastille du mode de sortie, « Selon votre gigoteuse »), sinon celle sous le doigt.
+// La liste touchée : celle du libellé (la pastille du mode de sortie, « Selon votre gigoteuse »), sinon celle sous le doigt,
+// à condition que le doigt soit bien sur elle (sa ligne, son cadre) : pas sur la barre d'onglets qui flotte par-dessus.
 function touched(event) {
   const own = event.target.closest?.('label')?.querySelector('select');
   if (own) return own;
+  const target = event.target;
   return [...document.querySelectorAll('#app select')].find((s) => {
+    if (!(target instanceof Node) || !(target.contains(s) || s.parentElement?.contains(target))) return false;
     const r = s.getBoundingClientRect();
     return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
   }) ?? null;

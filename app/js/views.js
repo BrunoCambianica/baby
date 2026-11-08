@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.26.0';
+export const VERSION = '0.26.1';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -267,7 +267,7 @@ function outingPicker(state, ctx) {
 // Le mode de sortie, en tête de la tenue de la sortie : poussette, porte-bébé, voiture (à pied à partir de 2 ans).
 function modes(state, current, birth) {
   return `<div class="modes" role="radiogroup" aria-label="Mode de sortie">${modesFor(state, birth).map(([v, l, i]) =>
-    `<button role="radio" aria-checked="${current === v}" data-action="transport" data-value="${v}">${icon(i, { size: 20 })}${l}</button>`).join('')}</div>`;
+    `<button role="radio" aria-checked="${current === v}" data-action="transport" data-value="${v}">${icon(i, { size: 19 })}<span>${l}</span></button>`).join('')}</div>`;
 }
 
 // Tranche de ressenti en titre, comme sur les guides par température : « Frais · 14 à 18 °C ».
@@ -300,16 +300,19 @@ function dressList(state, outfit, piece = null) {
     ${extras.length ? `<div class="extras">${extras.map((i) => `<span class="tag">${esc(capitalize(labels.items_short[i]))}</span>`).join('')}</div>` : ''}`;
 }
 
-// Les conseils sous une tenue : un repère officiel (le portage) dit sa source, une suggestion pratique non.
+// Les conseils sous une tenue, en une ligne chacun (leur version courte) ; le détail se déplie d'un toucher. Un repère
+// officiel (le portage) dit sa source, une suggestion pratique non.
 function noteList(state, notes, params) {
   const M = state.bundle.messages;
   return notes.map((n) => {
     const msg = M.messages[n];
     const official = msg?.kind === 'officiel';
+    const short = esc(typo(render(M, n, 'short', params)));
     const text = esc(typo(render(M, n, 'text', params)));
-    return official
-      ? `<li class="official-tip">${icon(NOTE_ICON[n] ?? 'shield', { size: 20 })}<span><strong>${esc(typo(render(M, n, 'short', params)))}.</strong> ${text}<span class="source">Source : ${sourceLinks(state, msg.sources ?? [])}</span></span></li>`
-      : `<li>${icon(NOTE_ICON[n] ?? 'info', { size: 20 })}<span>${text}</span></li>`;
+    const key = `note-${n}`;
+    return `<li${official ? ' class="official-tip"' : ''}><details data-details="${esc(key)}"${state.open.has(key) ? ' open' : ''}>
+      <summary>${icon(NOTE_ICON[n] ?? (official ? 'shield' : 'info'), { size: 20 })}<span>${official ? `<strong>${short}</strong>` : short}</span>${chev(16)}</summary>
+      <p>${text}${official ? `<span class="source">Source : ${sourceLinks(state, msg.sources ?? [])}</span>` : ''}</p></details></li>`;
   }).join('');
 }
 
@@ -343,7 +346,7 @@ function outfitCard(state, ctx) {
     ${bandTitle(state, outfit)}
     ${dressList(state, outfit, { where: 'dehors', date: o.date, swapped: outfit.swapped })}
     ${swapNote(state, outfit)}
-    ${tips ? `<ul class="tips">${tips}</ul>` : ''}
+    ${tips ? `<ul class="notes">${tips}</ul>` : ''}
   </section>`;
 }
 
@@ -563,8 +566,8 @@ function backWear(state, o) {
 
 function backBlock(state, back, piece, text) {
   const labels = state.bundle.messages.labels;
-  const head = 'En rentrant, à lui enlever, même s\'il faut le réveiller (NHS)';
-  const rest = back.same ? '' : 'Puis sa tenue de la maison : le dessous change aussi.';
+  const head = 'En rentrant, à enlever même s\'il dort (NHS)';
+  const rest = back.same ? '' : 'Puis sa tenue de la maison : le dessous change aussi';
   if (text) return `<p class="layer-items">${head} : ${esc(back.off.map((i) => labels.items[i]).join(', '))}.${rest ? ` ${rest}` : ''}</p>`;
   return `<div class="less homecoming"><p class="hint">${head}</p>
       <ul class="dress small">${back.off.map((i) => changeItem(state, i, '−', 28, piece)).join('')}</ul>
@@ -593,11 +596,11 @@ function outingCard(state, ctx) {
   const outfit = text
     ? `<p class="layer-items">${ordered.map((i) => `${extra.includes(i) ? '+ ' : ''}${pieceText(state, i, piece, labels.items[i])}`).join(', ')}</p>`
     : `<ul class="dress">${ordered.map((i) => pieceTile(state, i, { piece, sign: extra.includes(i) ? '+' : '', hint: labels.item_hints?.[i] })).join('')}</ul>`;
-  const legend = !over ? 'Sa tenue complète pour sortir : le dessous change aussi.'
-    : extra.length ? '+ : à ajouter à sa tenue de la maison.' : 'Sa tenue de la maison suffit : rien à ajouter.';
+  const legend = !over ? 'Tenue complète : le dessous change aussi'
+    : extra.length ? '+ à ajouter à sa tenue de la maison' : 'Sa tenue de la maison suffit';
   const removal = !less.length ? ''
     : text ? `<p class="layer-items">À lui enlever : ${esc(less.map((i) => labels.items[i]).join(', '))}</p>`
-      : `<div class="less"><p class="hint">À lui enlever pour sortir</p><ul class="dress small">${less.map((i) => changeItem(state, i, '−', 28, piece)).join('')}</ul></div>`;
+      : `<div class="less"><p class="hint">À enlever pour sortir</p><ul class="dress small">${less.map((i) => changeItem(state, i, '−', 28, piece)).join('')}</ul></div>`;
   const first = `${outfit}<p class="hint">${legend}</p>${removal}`;
   // L'heure et son temps sur une ligne ; « − à enlever · + à mettre » dessous.
   const head = (title, weather, legendText = '') => `<p class="tl-head"><strong>${title}</strong>${weather ? `<span class="tl-weather">${esc(nbsp(weather))}</span>` : ''}</p>
@@ -650,15 +653,16 @@ function outingCard(state, ctx) {
     ${swapNote(state, j)}
     ${bag}
     ${o.result.transport === 'voiture' ? carClimateLine(Boolean(j.car)) : ''}
-    ${tips ? `<ul class="tips">${tips}</ul>` : ''}
-    ${guide ? `<p class="hint guide-link"><a class="link" href="../${guide}">Pourquoi cette tenue ? Le guide, avec ses sources</a></p>` : ''}
+    ${tips ? `<ul class="notes">${tips}</ul>` : ''}
+    ${guide ? `<a class="guide-link" href="../${guide}">${icon('info', { size: 18 })}<span>Pourquoi cette tenue ?</span>${chev(16)}</a>` : ''}
   </section>`;
 }
 
 // La fiche de la journée, pour la nounou, la crèche ou les grands-parents : toute la plage horaire, pas seulement la sortie.
 const ficheCard = () => `<section class="card fiche-card">
-    <p class="hint">Pour la nounou, la crèche ou les grands-parents : sa tenue de toute la journée, les changements, le sac et la nuit.</p>
-    <button class="btn soft" data-action="share-fiche">${icon('share', { size: 18 })}Envoyer la fiche de la journée</button>
+    <div class="fiche-head"><span class="fiche-ico">${icon('users', { size: 22 })}</span>
+      <div><h2 class="fiche-title">Fiche de la journée</h2><p class="fiche-sub">Tenue, changements, sac et nuit, pour la nounou ou la crèche</p></div></div>
+    <button class="btn" data-action="share-fiche">${icon('send', { size: 18 })}Envoyer la fiche</button>
   </section>`;
 
 // Le geste pour savoir s'il a trop chaud, dedans comme dehors : sous les deux cartes.
@@ -753,8 +757,8 @@ function promoCard(state) {
   return state.widgetReady ? '' : promo('Ajoutez le widget', `La réponse du jour sur l'écran d'accueil, sans ouvrir l'app. <a class="link" href="#widget">Comment faire</a>`);
 }
 
-const foot = () => `<p class="foot"><span>Repères officiels relayés, pas d'avis médical. Urgence : 15 ou 112.</span>
-  <span><a href="#apropos">Charte et sources</a> · <a href="../">Le guide des tenues</a> · Météo Open-Meteo · v${VERSION}</span></p>`;
+const foot = () => `<p class="foot"><span>Repères officiels, pas d'avis médical · Urgence 15 ou 112</span>
+  <span><a href="#apropos">Charte et sources</a> · <a href="../">Guide des tenues</a> · Open-Meteo · v${VERSION}</span></p>`;
 
 // Les repères officiels de Dehors : ceux de la journée et ceux de la sortie choisie (une sortie le soir, hors de la plage
 // horaire, peut en ajouter), dans l'ordre de priorité des règles.
@@ -905,8 +909,7 @@ function nightWearCard(state, n) {
       <p class="band"><strong>≈ ${esc(n.tog)} TOG</strong><span>${room}</span></p>
       ${wear}
       ${choices}
-      <p class="hint">Repère des fabricants, à adapter à bébé : l'étiquette de la gigoteuse fait foi.${n.room_assumed ? ' Notez la température de sa chambre ci-dessus pour l\'ajuster.' : ''}</p>
-      ${chosen?.sources.length ? `<p class="source">Source : ${sourceLinks(state, chosen.sources)}</p>` : ''}
+      <p class="source">L'étiquette de la gigoteuse fait foi${n.room_assumed ? ' · notez sa chambre en haut pour ajuster' : ''}${chosen?.sources.length ? ` · Source : ${sourceLinks(state, chosen.sources)}` : ''}</p>
     </section>`;
 }
 
@@ -1022,15 +1025,15 @@ function prevoirContent(state, ctx) {
   const washPick = `<label class="wash"><span>Lessive tous les</span>
       <select data-action="wash" aria-label="Lessive tous les combien de jours" data-title="Une lessive tous les…">${P.quantities.wash_days_choices.map((d) =>
         `<option value="${d}"${d === wash ? ' selected' : ''}>${d} jours</option>`).join('')}</select></label>
-    <p class="hint">${esc(render(M, 'purchase.quantity_rule', 'text'))}</p>`;
-  return `${owned ? '' : `<section class="card"><p class="tip">${icon('hanger', { size: 20 })}<span>Indiquez d'abord ce que vous avez déjà dans « Ma garde-robe » : les suggestions seront plus justes.</span></p></section>`}
-    ${items ? `<section class="card">${items}</section>` : `<section class="card"><p class="hint">Rien à prévoir pour l'instant${state.climateReady ? '' : ' (calcul en cours)'}. On vous préviendra ici quand la saison ou la taille changent, ou s'il vous en manque.</p></section>`}
+    <p class="hint">${esc(render(M, 'purchase.quantity_rule', 'short'))}.</p>`;
+  return `${owned ? '' : `<section class="card"><p class="tip">${icon('hanger', { size: 20 })}<span>Notez d'abord ce qu'il a dans « Ma garde-robe » : des suggestions plus justes.</span></p></section>`}
+    ${items ? `<section class="card">${items}</section>` : `<section class="card"><p class="hint">Rien à prévoir pour l'instant${state.climateReady ? '' : ' (calcul en cours)'}. Ce qui manquera s'affichera ici.</p></section>`}
     <details class="card wardrobe" data-details="garde-robe"${state.open.has('garde-robe') ? ' open' : ''}>
       <summary>${icon('hanger', { size: 20 })}Ma garde-robe <span class="tag">${owned}</span>${chev()}</summary>
       ${washPick}
       ${cats}
     </details>
-    <p class="hint" style="padding:0 6px">Calcul sur 6 semaines : prévisions, puis moyennes des trois dernières années. Tailles indicatives selon l'âge.</p>
+    <p class="hint page-note">Sur 6 semaines : prévisions, puis moyennes des 3 dernières années. Tailles indicatives.</p>
     ${foot()}`;
 }
 
@@ -1076,10 +1079,9 @@ export function viewSettings(state) {
   const kids = state.household.children.map((c, i) => `<a class="row kid-row" href="#enfant/${esc(c.id)}">
       <span class="avatar" aria-hidden="true">${esc(childName(c, i).slice(0, 1).toUpperCase())}</span>
       <span class="kid-text"><strong>${esc(childName(c, i))}</strong><span class="hint">${esc(ageLabel(ageMonths(c.birth, state.today)))} · ${esc(label[c.transport] ?? '')}</span></span>${chev()}</a>`).join('');
-  return `<header class="hero hero--reglages">${heroArt('settings')}<div class="hero-top"><p class="hero-date">${esc(dayLong(state.today))}</p></div>
+  return `<header class="hero hero--reglages">${heroArt('settings')}
     <p class="hero-label">Préférences et sécurité</p>
     <p class="hero-big words">Réglages</p>
-    <p class="hero-sub"><span>Les calculs d'habillage, l'autre parent, les rappels et les widgets.</span></p>
   </header>
   <div class="page sheet-page">
     <section class="group"><h2 class="group-title">Enfants</h2>
@@ -1087,7 +1089,7 @@ export function viewSettings(state) {
         ${kids}
         <a class="row" href="#enfant/nouveau"><span>Ajouter un enfant</span>${icon('userPlus', { size: 20 })}</a>
       </div>
-      <p class="group-note">Mois de naissance, mode de sortie et tendance de chacun. Prénoms et réglages restent sur ce téléphone.</p>
+      <p class="group-note">Prénoms et réglages restent sur ce téléphone.</p>
     </section>
     ${parentsGroup(state)}
     <section class="group"><h2 class="group-title">Sorties</h2>
@@ -1117,7 +1119,7 @@ export function viewSettings(state) {
           <select data-action="bedtime" aria-label="Heure du coucher de bébé" data-title="Heure du coucher de bébé">${['18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'].map((h) => `<option value="${h}"${state.bedtime === h ? ' selected' : ''}>${hourFr(h)}</option>`).join('')}</select>
         </div>
       </div>
-      <p class="group-note">Dans l'app et le widget : un petit dessin par vêtement, ou la liste écrite. L'écran est clair le jour et passe en sombre après l'heure du coucher : la nuit, ou pour une sortie qui part après.</p>
+      <p class="group-note">Écran sombre après le coucher : la nuit, ou pour une sortie qui part après.</p>
     </section>
     ${homeScreenGroup(state)}
     ${reminderGroup(state)}
@@ -1146,7 +1148,7 @@ function parentsGroup(state) {
         <button class="row" data-action="share-profiles"><span>Envoyer les profils</span>${icon('share', { size: 20 })}</button>
         <a class="row" href="#recevoir"><span>Recevoir des profils</span>${chev()}</a>
       </div>
-      <p class="group-note">Un lien à envoyer par message : il contient les prénoms et les réglages, et ne passe par aucun serveur de Superbébé. Les changements faits ensuite ne se transmettent pas tout seuls.</p>
+      <p class="group-note">Un lien par message, sans serveur. Les changements faits ensuite ne suivent pas tout seuls.</p>
     </section>`;
   }
   if (!state.family) {
@@ -1155,7 +1157,7 @@ function parentsGroup(state) {
         <button class="row" data-action="family-create"><span>Partager les profils avec l'autre parent</span>${icon('share', { size: 20 })}</button>
         <a class="row" href="#recevoir"><span>Recevoir un lien</span>${chev()}</a>
       </div>
-      <p class="group-note">Les deux téléphones gardent les mêmes enfants, réglages, garde-robe et relevés de température, sans compte. Tout est chiffré sur le téléphone avant de partir : le serveur ne peut pas lire les prénoms.</p>
+      <p class="group-note">Les mêmes enfants, réglages et garde-robe sur vos deux téléphones, sans compte. Chiffré : le serveur ne lit pas les prénoms.</p>
     </section>`;
   }
   const at = state.family.synced_at ? new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(state.family.synced_at)).replace(':', ' h ') : '';
@@ -1165,7 +1167,7 @@ function parentsGroup(state) {
       <button class="row" data-action="family-share"><span>Renvoyer le lien à l'autre parent</span>${icon('share', { size: 20 })}</button>
       <button class="row" data-action="family-leave"><span>Ne plus partager sur ce téléphone</span>${icon('x', { size: 20 })}</button>
     </div>
-    <p class="group-note">Chiffré sur le téléphone : le serveur ne peut pas lire les prénoms. Le lien donne accès aux profils : gardez-le pour vous deux. L'affichage et le rappel du soir restent propres à chaque téléphone.</p>
+    <p class="group-note">Chiffré : le serveur ne lit pas les prénoms. Gardez le lien pour vous deux ; l'affichage et le rappel restent propres à chaque téléphone.</p>
   </section>`;
 }
 
@@ -1198,7 +1200,7 @@ export function viewChild(state) {
             `<button role="radio" aria-checked="${(d.dayStyle ?? state.bundle.rules.outfit.default_day_style) === v}" data-action="day-style" data-value="${v}">${l}</button>`).join('')}</div>
         </div>` : ''}
       </div>
-      <p class="group-note">« A chaud » allège toutes ses tenues d'un cran, « A froid » les réchauffe d'un cran. « À pied » apparaît à partir de 2 ans.${pyjamas ? ' « Sans pyjama » : son équivalent en vêtements de jour (un haut, un pantalon et des chaussettes), dedans comme dehors ; la nuit ne change pas.' : ''}</p>
+      <p class="group-note">« A chaud » allège ses tenues d'un cran, « A froid » les réchauffe. « À pied » dès 2 ans.${pyjamas ? ' « Sans pyjama » : haut, pantalon et chaussettes, dedans comme dehors ; la nuit ne change pas.' : ''}</p>
     </section>
     ${fresh ? '<button class="btn" data-action="child-add">Ajouter</button>' : remove}
   </div>`;
@@ -1301,14 +1303,14 @@ function reminderGroup(state) {
   const title = '<h2 class="group-title">Rappels</h2>';
   if (!state.reminderHost && !state.webPush) {
     return `<section class="group">${title}<div class="group-body"><a class="row" href="#widget"><span>Avec le widget</span>${chev()}</a></div>
-      <p class="group-note">La veille au soir, une notification avec la tenue et le sac de demain, et la nuit ; ${LEAD_MIN} minutes avant une sortie dont vous avez choisi l'heure, sa tenue et son sac. Elles passent par l'app Android ou par le widget iPhone (Scriptable)${state.api ? ' ; le soir, aussi par l\'app de l\'écran d\'accueil' : ''}.</p></section>`;
+      <p class="group-note">La veille au soir, la tenue et le sac de demain ; ${LEAD_MIN} minutes avant une sortie choisie. Par l'app Android ou le widget iPhone${state.api ? ' (le soir, aussi l\'app de l\'écran d\'accueil)' : ''}.</p></section>`;
   }
   const r = state.reminder;
   const times = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
   const seg = (action, on, label) => `<div class="seg" role="radiogroup" aria-label="${label}">${[['off', 'Non'], ['on', 'Oui']].map(([v, l]) =>
     `<button role="radio" aria-checked="${(on ? 'on' : 'off') === v}" data-action="${action}" data-value="${v}">${l}</button>`).join('')}</div>`;
   const before = state.outingReminderHost
-    ? `<div class="row column"><span>${LEAD_MIN} min avant une sortie dont vous avez choisi l'heure, sa tenue et son sac</span>${seg('reminder-before', r.before, 'Rappel avant une sortie')}</div>` : '';
+    ? `<div class="row column"><span>${LEAD_MIN} min avant une sortie choisie</span>${seg('reminder-before', r.before, 'Rappel avant une sortie')}</div>` : '';
   const refused = (r.on || r.before) && state.reminderState === 'refuse'
     ? `<p class="error group-note">Notifications refusées : ${state.host === 'android' ? 'Réglages d\'Android, Applications, Superbébé, Notifications' : 'autorisez-les dans les réglages du téléphone'}.</p>`
     : r.on && state.reminderState === 'indisponible' ? '<p class="error group-note">Serveur des notifications injoignable : réessayez plus tard.</p>' : '';
@@ -1319,7 +1321,7 @@ function reminderGroup(state) {
       ${before}
     </div>
     ${refused}
-    <p class="group-note">Le soir, une notification par jour au plus${before ? ' ; avant une sortie, seulement si vous avez choisi son heure' : ''}. Calculées sur ce téléphone${state.webPush ? ' : le serveur ne fait que le réveiller à l\'heure dite, sans rien lui envoyer d\'autre' : ', sans serveur'}.${state.host === 'scriptable' ? ' Scriptable demande l\'autorisation la première fois.' : ''}</p>
+    <p class="group-note">Une par soir au plus. Calculées sur ce téléphone${state.webPush ? ' (le serveur ne fait que le réveiller)' : ', sans serveur'}.${state.host === 'scriptable' ? ' Scriptable demande l\'autorisation la première fois.' : ''}</p>
   </section>`;
 }
 

@@ -14,6 +14,7 @@ const TYPES = {
   '.json': 'application/json; charset=utf-8',
   '.webmanifest': 'application/manifest+json',
   '.png': 'image/png',
+  '.woff2': 'font/woff2',
   '.svg': 'image/svg+xml',
   '.md': 'text/plain; charset=utf-8',
   '.apk': 'application/vnd.android.package-archive',

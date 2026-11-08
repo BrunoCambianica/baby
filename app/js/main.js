@@ -346,13 +346,44 @@ function newDraft(view) {
   };
 }
 
+// Animations : moins de mouvement si le téléphone le demande ; jamais de fondu d'écran sous un navigateur piloté (tests).
+const calm = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+// Changer d'onglet, de jour ou de moment : un fondu enchaîné de tout l'écran, là où le navigateur sait le faire.
+function transition(update) {
+  if (!document.startViewTransition || calm() || navigator.webdriver) return update();
+  return document.startViewTransition(update);
+}
+
+// Ce qu'on vient de toucher, redessiné, rebondit ; un nombre changé glisse vers le haut ou le bas ; une tenue qui change
+// réapparaît pièce par pièce. Noté au toucher, appliqué au dessin qui suit.
+const RESTYLE = new Set(['transport', 'slot', 'duration', 'swap', 'unswap', 'day-style', 'night-option', 'car-climate', 'pref', 'outfit-view']);
+function applyPulse() {
+  const p = state.pulse;
+  state.pulse = null;
+  if (!p || Date.now() - p.at > 1500) return;
+  const find = (attrs) => app.querySelector(Object.entries(attrs).filter(([, v]) => v != null)
+    .map(([k, v]) => `[data-${k}="${CSS.escape(String(v))}"]`).join(''));
+  const tick = (n) => (Number(n) < 0 ? 'tick-down' : Number(n) > 0 ? 'tick-up' : 'pop');
+  if (p.action === 'room') return app.querySelector('.stepper .hero-big')?.classList.add(tick(p.value));
+  if (p.action === 'count') return find({ action: 'count', cat: p.cat, size: p.size, value: p.value })?.closest('.counter')?.querySelector('.counter-n')?.classList.add(tick(p.value));
+  if (p.action === 'fold') app.querySelector('.hero-why')?.classList.add('reveal');
+  if (RESTYLE.has(p.action)) app.querySelectorAll('.card .dress').forEach((ul) => ul.classList.add('restyle'));
+  find({ action: p.action, value: p.value })?.classList.add('pop');
+}
+
 let lastKey = '';
+let lastTab = '';
+let lastHtml = '';
+let enteredAt = -Infinity;
+let tabbedAt = -Infinity;
+// Redessiné juste après une entrée (la météo, puis les normales, arrivent l'une derrière l'autre) : l'entrée se rejoue,
+// plutôt que de figer les cartes à mi-course.
+const REPLAY_MS = 150;
 function paint() {
   const view = currentView();
   if (['onboarding', 'reglages', 'enfant'].includes(view) && !state.draft) state.draft = newDraft(view);
   const key = `${view}|${route()}|${state.tab}|${state.day}|${state.inside}|${state.draft?.step ?? ''}`;
-  app.classList.toggle('anim', key !== lastKey);
-  lastKey = key;
+  const tab = view === 'app' ? state.tab : view;
   let html;
   if (!state.bundle) html = state.error ? V.fatal(state.error) : V.loading();
   else if (view === 'onboarding') html = V.viewOnboarding(state);
@@ -386,6 +417,25 @@ function paint() {
   if (state.updateReady) {
     html += '<div class="update" role="status">Nouvelle version prête<button class="btn small" data-action="apply-update">Recharger</button></div>';
   }
+  // Rien de changé (une réponse du réseau qui ne change pas l'écran) : il reste tel quel, ses animations continuent.
+  if (html === lastHtml && key === lastKey) {
+    state.pulse = null;
+    setThemeColor(view);
+    return;
+  }
+  // Un nouvel écran entre en cascade ; l'onglet qui change étire sa pastille. Un écran d'attente (« Chargement… »)
+  // laisse l'entrée au contenu qui le remplace.
+  const now = performance.now();
+  if (key !== lastKey) enteredAt = now;
+  if (lastTab && tab !== lastTab) tabbedAt = now;
+  app.classList.toggle('anim', now - enteredAt < REPLAY_MS);
+  app.classList.toggle('tabbed', now - tabbedAt < REPLAY_MS);
+  lastKey = html.includes('class="boot"') ? '' : key;
+  lastTab = tab;
+  lastHtml = html;
+  // Les animations d'ambiance (ciel, étoiles) reprennent où elles en étaient, l'écran a beau être redessiné : leur
+  // retard négatif suit l'horloge, sur un cycle de 36 s, multiple de toutes leurs durées.
+  app.style.setProperty('--t', `-${((now / 1000) % 36).toFixed(2)}s`);
   // La bande des heures garde sa position quand on y touche ; un autre jour, ou le créneau idéal choisi depuis le ciel,
   // elle s'ouvre sur la sortie choisie.
   const before = app.querySelector('.strip');
@@ -398,6 +448,7 @@ function paint() {
     else if (chosen) strip.scrollLeft = chosen.offsetLeft - (strip.clientWidth - chosen.offsetWidth) / 2;
   }
   state.centerStrip = false;
+  applyPulse();
   setThemeColor(view);
 }
 
@@ -891,16 +942,17 @@ const actions = {
   reload: () => location.reload(),
   'apply-update': () => location.reload(),
   refresh: () => loadData({ force: true }),
+  // Réglages est un onglet comme les autres : on y va, ou on en revient, dans le même fondu.
   tab(el) {
-    if (el.dataset.value === 'reglages') {
-      location.hash = '#reglages';
+    const value = el.dataset.value;
+    transition(() => {
+      if (value !== 'reglages') state.tab = value;
+      if (value === 'reglages') {
+        if (currentView() !== 'reglages') navigate('reglages');
+      } else if (currentView() !== 'app') navigate('');
+      else paint();
       window.scrollTo(0, 0);
-      return;
-    }
-    if (currentView() !== 'app') location.hash = '';
-    state.tab = el.dataset.value;
-    paint();
-    window.scrollTo(0, 0);
+    });
   },
   // Réglages repliés sous une tenue (la pièce de la carte « Dedans ») : ouverts ou fermés, gardés le temps de la session.
   fold(el) {
@@ -910,15 +962,19 @@ const actions = {
     paint();
   },
   day(el) {
-    state.day = el.dataset.value;
-    state.tab = 'dehors';
-    paint();
+    transition(() => {
+      state.day = el.dataset.value;
+      state.tab = 'dehors';
+      paint();
+    });
   },
   // Dedans : le jour (la pièce où il passe la journée) ou la nuit (sa chambre), chacun avec sa température gardée.
   inside(el) {
-    state.inside = el.dataset.value === 'nuit' ? 'nuit' : 'jour';
-    state.tab = 'dedans';
-    paint();
+    transition(() => {
+      state.inside = el.dataset.value === 'nuit' ? 'nuit' : 'jour';
+      state.tab = 'dedans';
+      paint();
+    });
   },
   // Votre sortie : l'heure de départ touchée dans la bande des heures, gardée pour ce jour-là sur ce téléphone.
   // L'heure en cours : on part maintenant (à 5 minutes près), et la sortie le reste jusqu'à sa fin.
@@ -1549,6 +1605,8 @@ document.addEventListener('click', (event) => {
   const handler = actions[el.dataset.action];
   if (!handler) return;
   event.preventDefault();
+  const { action, value, cat, size } = el.dataset;
+  state.pulse = { action, value, cat, size, at: Date.now() };
   handler(el);
 });
 
@@ -1558,6 +1616,8 @@ document.addEventListener('toggle', (event) => {
   // Une carte dépliée d'office (« Bien porter » avant 4 mois) reste repliée une fois que le parent l'a repliée.
   state.closed ??= new Set();
   if (event.target.open) {
+    // Déplié au toucher (pas redessiné ouvert) : son contenu apparaît en douceur.
+    event.target.classList.add('opened');
     state.open.add(name);
     state.closed.delete(name);
   } else {
@@ -1565,6 +1625,16 @@ document.addEventListener('toggle', (event) => {
     state.closed.add(name);
   }
 }, true);
+
+// Aller à une page (« reglages ») ou revenir à l'app (« ») tout de suite, sans attendre l'événement hashchange :
+// le fondu d'écran doit voir le nouvel écran dans son propre appel. Le retour du téléphone reste possible.
+function navigate(hash) {
+  history.pushState(null, '', hash ? `#${hash}` : location.pathname + location.search);
+  state.draft = null;
+  state.results = [];
+  state.confirmClear = false;
+  paint();
+}
 
 window.addEventListener('hashchange', () => {
   if (takeImport()) {

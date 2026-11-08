@@ -45,9 +45,12 @@ const withApi = `localStorage.setItem('sb.api', ${JSON.stringify(API)});`;
 
 // Un téléphone : 390 × 844, heure de Paris figée, météo et communes simulées, erreurs de la page relevées.
 // `android` : navigateur Android (notifications Web Push possibles dans un onglet) ; `worker` : service worker actif.
-async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, worker = false } = {}) {
+// Sans animations par défaut (le téléphone demande moins de mouvement) : les positions mesurées ne bougent pas pendant
+// une entrée d'écran ; `motion` les remet, pour le parcours des animations.
+async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, worker = false, motion = false } = {}) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'fr-FR', timezoneId: 'Europe/Paris',
+    reducedMotion: motion ? 'no-preference' : 'reduce',
     userAgent: android
       ? 'Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36'
       : 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
@@ -440,7 +443,7 @@ await test('Extérieur : maintenant par défaut, le créneau idéal d\'un touche
   assert((await page.textContent('#t-dehors')).trim() === 'De 8 h à 9 h', await page.textContent('#t-dehors'));
   const names = await page.locator('.day > .dress .dress-name').allTextContents();
   assert(names.includes('Combi pilote') && names.includes('Bonnet') && !(await page.locator('.day > .dress .plus').count()), names.join());
-  assert((await page.textContent('.day')).includes('Sa tenue complète pour sortir'), 'tenue complète non dite');
+  assert((await page.textContent('.day')).includes('Tenue complète : le dessous change aussi'), 'tenue complète non dite');
   // En rentrant : la combinaison et le bonnet, même s'il dort ; le dessous de la maison aussi.
   const back = await page.textContent('.day .homecoming');
   assert(back.includes('En rentrant') && back.includes('Combi pilote') && back.includes('Bonnet') && back.includes('le dessous change aussi'), back);
@@ -584,8 +587,8 @@ await test('Portage sûr : couverture jamais sur le visage, cinq repères dépli
   await page.waitForSelector('.day');
   // Une sortie au froid du matin : la couverture de portage est dans la tenue.
   await page.click('.strip [data-value="08:00"]');
-  const tip = (await page.textContent('.day .tips li.official-tip')).replace(/\u00a0/g, ' ');
-  assert(tip.startsWith('Couverture de portage : jamais sur son visage.') && tip.includes('Santé Canada') && tip.includes('INSPQ'), tip);
+  const tip = (await page.textContent('.day .notes li.official-tip')).replace(/\u00a0/g, ' ').trim();
+  assert(tip.startsWith('Couverture de portage : jamais sur son visage') && tip.includes('Santé Canada') && tip.includes('INSPQ'), tip);
   // Avant 4 mois, les cinq repères de Santé Canada sont dépliés ; repliés par le parent, ils le restent.
   assert(await page.isVisible('.carrier-guide[open]') && (await page.locator('.carrier-guide .principles li').count()) === 5, 'repères non dépliés');
   await page.click('.carrier-guide summary');
@@ -724,6 +727,8 @@ await test('Rappels : expliqués dans le navigateur, demandés à l\'app Android
   await android25.waitForSelector('.day');
   await android25.goto(`${APP}#reglages`);
   await android25.click('[data-action="reminder-before"][data-value="on"]');
+  // Les sorties partent au widget 300 ms après avoir été notées (envois regroupés) : on les attend.
+  await android25.waitForFunction(() => window.SuperbebeAndroid.outings.some((j) => j.includes('07:30')), null, { timeout: 3000 }).catch(() => {});
   const sent = await android25.evaluate(() => ({ outings: window.SuperbebeAndroid.outings, before: window.SuperbebeAndroid.before }));
   assert(JSON.stringify(sent.before) === '[true]', JSON.stringify(sent.before));
   assert(sent.outings.some((j) => JSON.parse(j)['2026-10-21']?.[0]?.s === '07:30'), JSON.stringify(sent.outings));
@@ -774,7 +779,7 @@ await test('Intérieur : le jour et la nuit, chacun sa température, gardée com
   assert(h.children[0].room_day?.value === 28 && h.children[0].room?.value === 18.5, JSON.stringify(h.children[0]));
   // Dehors, plus froid que la pièce : le dessous change aussi, la tenue complète.
   await page.click('.tabbar [data-value="dehors"]');
-  assert((await page.textContent('.day')).includes('Sa tenue complète pour sortir'), 'tenue complète non dite');
+  assert((await page.textContent('.day')).includes('Tenue complète : le dessous change aussi'), 'tenue complète non dite');
   await page.context().close();
   // Le lendemain, les températures sont gardées, sans rien redemander ; notée il y a plus d'une semaine, elle se confirme d'un toucher.
   const old = Date.parse('2026-10-12T21:00:00+02:00');
@@ -868,6 +873,34 @@ await test('Pièces au choix : une pièce touchée dit son rôle et propose ses 
   assert((await page.textContent('.sheet-content .tip')).includes('ce que le ressenti demande reste'), await page.textContent('.sheet-content'));
 });
 
+await test('Animations : l\'écran arrive en cascade, ce qu\'on touche rebondit, la tenue se repose, les nombres glissent', async (use) => {
+  const page = use(await phone({ motion: true, at: '2026-10-27T07:30:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO]))} }` }));
+  const app = (cls) => page.evaluate((c) => document.getElementById('app').classList.contains(c), cls);
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  assert(await app('anim'), 'écran sans entrée animée');
+  assert((await page.evaluate(() => document.getElementById('app').style.getPropertyValue('--t'))).startsWith('-'), 'ciel sans élan (--t)');
+  // Une heure touchée dans la bande : elle rebondit, la tenue de la sortie se repose pièce par pièce.
+  await page.click('.strip [data-value="10:00"]');
+  assert(await page.locator('.strip [data-value="10:00"].pop').count() === 1, 'heure touchée sans rebond');
+  assert(await page.locator('.day > .dress.restyle, .day .tl-step > .dress.restyle').count() >= 1, 'tenue sans nouvelle pose');
+  assert(!(await app('anim')), 'tout l\'écran rejoué pour une heure touchée');
+  // Un conseil déplié apparaît en douceur.
+  const note = page.locator('.notes summary').first();
+  if (await note.count()) {
+    await note.click();
+    // L'événement toggle arrive un peu après le toucher.
+    assert(await page.waitForSelector('.notes details.opened', { timeout: 2000 }).then(() => true, () => false), 'conseil déplié sans animation');
+  }
+  // Intérieur : la pastille de l'onglet s'étire ; la température notée glisse vers le haut.
+  await page.click('.tabbar [data-value="dedans"]');
+  assert(await app('tabbed') && await app('anim'), 'changement d\'onglet sans animation');
+  await page.waitForTimeout(300);
+  await page.click('.stepper [data-value="0.5"]');
+  assert(await page.locator('.stepper .hero-big.tick-up').count() === 1, 'température sans glissement');
+  assert(!(await app('tabbed')), 'pastille rejouée sans changer d\'onglet');
+});
+
 await test('Paysage : le ciel à gauche, les onglets à son pied, les cartes à droite, visibles sans défiler', async (use) => {
   const page = use(await phone({ at: '2026-10-21T10:00:00+02:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.setViewportSize({ width: 915, height: 412 });
@@ -908,7 +941,7 @@ await test('Tenues au choix : sans pyjama par défaut la journée (maison et sor
   // Avec pyjama dedans, dehors aussi : la tenue de la sortie le garde, « + » sur ce qu'on ajoute par-dessus.
   await page.click('.tabbar [data-value="dehors"]');
   const outside = await page.locator('.day > .dress .dress-name').allTextContents();
-  assert(outside.includes('Pyjama') && (await page.locator('.day > .dress .plus').count()) >= 1 && (await page.textContent('.day')).includes('+ : à ajouter à sa tenue de la maison'), outside.join());
+  assert(outside.includes('Pyjama') && (await page.locator('.day > .dress .plus').count()) >= 1 && (await page.textContent('.day')).includes('+ à ajouter à sa tenue de la maison'), outside.join());
   await page.click('.tabbar [data-value="dedans"]');
   await page.selectOption('select[data-action="day-style"]', 'sans_pyjama');
   await page.click('.tabbar [data-value="dehors"]');
