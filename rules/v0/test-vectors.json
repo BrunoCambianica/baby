@@ -159,8 +159,91 @@
       "expect": {
         "outing.window": { "start": "09:00", "end": "10:00" },
         "relays.include": ["relay.air.ozone", "relay.sun.under_1y"],
-        "relays.exclude": ["relay.air.particles"]
+        "relays.exclude": ["relay.air.particles"],
+        "params.air_intro": "Épisode d'ozone",
+        "air.source": "episode"
       }
+    },
+    {
+      "id": "air-prevision-ozone-apres-midi",
+      "description": "Ozone prévu à 195 µg/m³ l'après-midi, sans épisode signalé : même créneau qu'un épisode, message « prévision Copernicus »",
+      "input": {
+        "date": "2026-06-20",
+        "forecast": {
+          "daylight": { "sunrise": "05:50", "sunset": "21:55" },
+          "hourly": {
+            "from": "06:00", "to": "22:00",
+            "base": { "feels_c": 22, "uv": 2, "o3": 90, "aqi": 30 },
+            "overrides": {
+              "10:00": { "feels_c": 23, "uv": 3 },
+              "11:00": { "feels_c": 25, "uv": 4 },
+              "12:00-16:00": { "feels_c": 27, "uv": 6 },
+              "16:00-18:00": { "feels_c": 26, "uv": 3 },
+              "14:00-17:00": { "o3": 195, "aqi": 85 }
+            }
+          }
+        }
+      },
+      "expect": {
+        "outing.window": { "start": "09:00", "end": "10:00" },
+        "relays.include": ["relay.air.ozone"],
+        "relays.exclude": ["relay.air.particles"],
+        "air": { "pollutant": "ozone", "source": "prevision", "value": 195, "threshold": 180 },
+        "params.air_intro.contains": "Ozone prévu à 195 µg/m³, au-dessus du seuil d'information de 180 µg/m³ (prévision Copernicus",
+        "outing.slots.*.aqi.include": [30, 85]
+      }
+    },
+    {
+      "id": "air-prevision-pm10-journee",
+      "description": "PM10 prévues à 60 µg/m³ en moyenne sur la journée : sortie maintenue, relais du ministère avec la valeur prévue",
+      "input": {
+        "forecast": {
+          "hourly": {
+            "from": "00:00", "to": "23:00",
+            "base": { "feels_c": 4, "pm10": 60, "no2": 80, "o3": 20 },
+            "overrides": { "12:00-15:00": { "feels_c": 7 }, "13:00": { "feels_c": 8 } }
+          }
+        }
+      },
+      "expect": {
+        "outing.window": { "start": "13:00", "end": "14:00" },
+        "relays.include": ["relay.air.particles"],
+        "relays.exclude": ["relay.air.ozone"],
+        "air": { "pollutant": "pm10", "source": "prevision", "value": 60, "threshold": 50 },
+        "params.air_intro.contains": "Particules PM10 prévues à 60 µg/m³ en moyenne sur la journée"
+      }
+    },
+    {
+      "id": "air-prevision-dioxyde-azote",
+      "description": "Dioxyde d'azote prévu à 210 µg/m³ à 8 h : relais des sorties plus courtes près du trafic",
+      "input": {
+        "forecast": { "hourly": { "base": { "no2": 60 }, "overrides": { "08:00": { "no2": 210 } } } }
+      },
+      "expect": {
+        "relays.include": ["relay.air.particles"],
+        "air": { "pollutant": "no2", "value": 210 },
+        "params.air_intro.contains": "Dioxyde d'azote prévu à 210 µg/m³"
+      }
+    },
+    {
+      "id": "air-prevision-sous-les-seuils",
+      "description": "Ozone à 175, dioxyde d'azote à 190, PM10 à 45 en moyenne : sous les seuils, aucun relais pollution",
+      "input": {
+        "forecast": { "hourly": { "from": "00:00", "to": "23:00", "base": { "o3": 175, "no2": 190, "pm10": 45, "aqi": 55 } } }
+      },
+      "expect": {
+        "air": null,
+        "relays.exclude": ["relay.air.ozone", "relay.air.particles"],
+        "outing.slots.*.aqi.include": [55]
+      }
+    },
+    {
+      "id": "air-prevision-pm10-journee-incomplete",
+      "description": "PM10 à 80 µg/m³ mais seulement 15 heures prévues : pas de moyenne de la journée, pas de relais",
+      "input": {
+        "forecast": { "hourly": { "base": { "pm10": 80 } } }
+      },
+      "expect": { "air": null, "relays.exclude": ["relay.air.particles"] }
     },
     {
       "id": "creneau-pollution-particules",
@@ -172,7 +255,8 @@
       "expect": {
         "outing.window": { "start": "13:00", "end": "14:00" },
         "relays.include": ["relay.air.particles"],
-        "relays.exclude": ["relay.air.ozone"]
+        "relays.exclude": ["relay.air.ozone"],
+        "params.air_intro": "Épisode de pollution"
       }
     },
     {

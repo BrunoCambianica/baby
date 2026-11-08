@@ -88,6 +88,17 @@
       "verification": "lu"
     },
     {
+      "id": "ineris-aida-r221-1",
+      "publisher": "INERIS (AIDA), texte du Code de l'environnement",
+      "short": "Code de l'environnement",
+      "title": "Code de l'environnement, partie réglementaire, livre II, titre II (air), article R221-1",
+      "url": "https://aida.ineris.fr/reglementation/livre-ii-milieux-physiques-titre-ii-air-atmosphere-partie-reglementaire",
+      "published": "2010-10-21",
+      "level": "A",
+      "verification": "lu",
+      "notes": "Lu le 08/11/2026 (texte reproduit par l'INERIS ; dernière modification de l'article : décret n° 2010-1250 du 21 octobre 2010). Seuils d'information et de recommandation : dioxyde d'azote « 200 µg / m³ en moyenne horaire » ; ozone « 180 µg/m³ en moyenne horaire » ; particules PM10 « 50 µg/m³ en moyenne journalière ». Sert uniquement de seuil technique pour déclencher, sur la prévision CAMS, les relais Santé.fr en cas d'épisode de pollution. Un avis du Conseil national de l'air de 2026 recommande de réviser ces seuils : à relire à chaque mise à jour."
+    },
+    {
       "id": "spf-canicule-precautions",
       "publisher": "Santé publique France",
       "title": "Canicule : les précautions à prendre",

@@ -4,6 +4,8 @@ const KEYS = {
   profile: 'sb.profil',
   child: 'sb.enfant',
   forecast: 'sb.meteo',
+  // Qualité de l'air prévue (Open-Meteo, CAMS) : { code, at, data }.
+  air: 'sb.air',
   climate: 'sb.normales',
   days: 'sb.jours',
   hidden: 'sb.masques',
@@ -42,6 +44,8 @@ export const store = {
   saveProfile: (profile) => write(KEYS.profile, profile),
   forecast: () => read(KEYS.forecast, null),
   saveForecast: (entry) => write(KEYS.forecast, entry),
+  air: () => read(KEYS.air, null),
+  saveAir: (entry) => write(KEYS.air, entry),
   climate: () => read(KEYS.climate, null),
   saveClimate: (entry) => write(KEYS.climate, entry),
   days: () => read(KEYS.days, []),

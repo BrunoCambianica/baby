@@ -104,6 +104,38 @@ function bestWhy(run, others, R) {
   }).sort((a, b) => WHY_FIRST.includes(b.id) - WHY_FIRST.includes(a.id));
 }
 
+// Pollution du jour : l'épisode signalé (alerts.air), sinon la prévision horaire (forecast.hourly : o3, no2, pm10, en
+// µg/m³) au-dessus d'un seuil d'information et de recommandation (air.information_thresholds, Code de l'environnement,
+// art. R221-1) : ozone ou dioxyde d'azote en moyenne horaire, PM10 en moyenne de la journée. L'ozone d'abord : il change
+// le créneau. { pollutant, source : 'episode' | 'prevision', value, threshold } ou null.
+export function airEpisode(input, R) {
+  const official = input.alerts?.air;
+  if (official?.episode) return { pollutant: official.pollutant ?? null, source: 'episode' };
+  const T = R.air?.information_thresholds;
+  if (!T) return null;
+  const values = (key) => (input.forecast.hourly ?? []).map((h) => h[key]).filter(Number.isFinite);
+  for (const [pollutant, key] of [['ozone', 'o3'], ['no2', 'no2']]) {
+    const v = values(key);
+    const top = v.length ? Math.max(...v) : null;
+    if (top !== null && top >= T[pollutant].hourly_ug_m3) {
+      return { pollutant, source: 'prevision', value: Math.round(top), threshold: T[pollutant].hourly_ug_m3 };
+    }
+  }
+  const pm = values('pm10');
+  if (pm.length >= T.pm10.min_hours && mean(pm) >= T.pm10.daily_mean_ug_m3) {
+    return { pollutant: 'pm10', source: 'prevision', value: Math.round(mean(pm)), threshold: T.pm10.daily_mean_ug_m3 };
+  }
+  return null;
+}
+
+// Niveau de l'indice européen de la qualité de l'air (european_aqi d'Open-Meteo, prévision CAMS) : 0 (bon) à 5
+// (extrêmement mauvais), bornes dans air.index.bands ; null sans valeur.
+export function airLevel(aqi, R) {
+  if (!Number.isFinite(aqi)) return null;
+  const k = R.air.index.bands.findIndex((max) => aqi < max);
+  return k < 0 ? R.air.index.bands.length : k;
+}
+
 function planOuting(input, R, age) {
   const cfg = R.outing;
   const s = cfg.scoring;
@@ -121,7 +153,8 @@ function planOuting(input, R, age) {
       (v.color === 'orange' && cfg.vigilance.block_all_if_orange_for.includes(v.phenomenon)),
   );
   const heat = heatActive(input, R);
-  const ozone = Boolean(input.alerts?.air?.episode && input.alerts.air.pollutant === 'ozone');
+  const air = airEpisode(input, R);
+  const ozone = air?.pollutant === 'ozone';
   const { sunrise, sunset } = input.forecast.daylight;
   const within = (start, range) => start >= toMin(range.from) && start < toMin(range.to);
   const uvWeight = age < R.relay_triggers.under_1y_months ? s.uv_weight_under_12m : s.uv_weight;
@@ -201,7 +234,7 @@ function planOuting(input, R, age) {
   const windows = picked.map((r) => ({ ...describe(r), best: r === best, ...(r === best ? { why } : {}) })).sort((a, b) => toMin(a.start) - toMin(b.start));
   const inPlage = slots.filter((sl) => !sl.reasons.includes('hors_plage'));
   const refSlots = best ? best.run : inPlage.slice(0, 1);
-  return { window, windows, reason, blocking, heat, ozone, slots, inPlage, daySlots, refSlots, plage };
+  return { window, windows, reason, blocking, heat, ozone, air, slots, inPlage, daySlots, refSlots, plage };
 }
 
 // Mode de sortie retenu : un mode réservé aux plus grands (à pied) redevient la poussette avant l'âge prévu.
@@ -371,7 +404,7 @@ function dayRelays(input, R, age, plan, outfit, params) {
     if (age < rt.under_1y_months) relays.push('relay.sun.under_1y', 'relay.sun.hours');
     else relays.push('relay.sun.hours', 'relay.sun.protect');
   }
-  if (input.alerts?.air?.episode) relays.push(plan.ozone ? 'relay.air.ozone' : 'relay.air.particles');
+  if (plan.air) relays.push(plan.ozone ? 'relay.air.ozone' : 'relay.air.particles');
   return sortByPriority(relays, R.relay_priority);
 }
 
@@ -1189,6 +1222,12 @@ export function evaluate(input, bundle) {
     ? null
     : chooseOutfit(round1(mean(ref.map((sl) => sl.feels_c))), input.profile, R, age);
   if (outfit) addOverlays(outfit, plan, ref, R, params, bundle.messages.labels);
+  // Le début du relais pollution : l'épisode signalé, ou le polluant prévu au-dessus de son seuil (prévision Copernicus).
+  if (plan.air) {
+    const a = plan.air;
+    const id = a.source === 'prevision' ? `air.intro.prevision.${a.pollutant}` : a.pollutant === 'ozone' ? 'air.intro.episode.ozone' : 'air.intro.episode';
+    params.air_intro = render(bundle.messages, bundle.messages.messages[id] ? id : 'air.intro.episode', 'text', a);
+  }
   const result = {
     date: input.date,
     now: input.now ?? null,
@@ -1206,10 +1245,12 @@ export function evaluate(input, bundle) {
         uv: sl.uv,
         gust_kmh: sl.gust_kmh,
         weather_code: sl.weather_code ?? null,
+        aqi: Number.isFinite(sl.aqi) ? sl.aqi : null,
         reasons: sl.reasons.filter((r) => r !== 'hors_plage'),
         score: sl.score,
       })),
     },
+    air: plan.air,
     outfit,
     relays: dayRelays(input, R, age, plan, outfit, params),
     params,

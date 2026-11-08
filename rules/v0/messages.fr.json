@@ -183,7 +183,7 @@
       "sources": [
         "santefr-pollution"
       ],
-      "text": "Épisode de pollution : « Les sorties à l'extérieur des nourrissons peuvent être maintenues » ; il est recommandé de les limiter dans la durée à proximité des sources majeures de pollution.",
+      "text": "{air_intro} : « Les sorties à l'extérieur des nourrissons peuvent être maintenues » ; il est recommandé de les limiter dans la durée à proximité des sources majeures de pollution.",
       "short": "Pollution : sorties plus courtes près du trafic"
     },
     "relay.air.ozone": {
@@ -192,8 +192,28 @@
       "sources": [
         "santefr-pollution"
       ],
-      "text": "Épisode d'ozone : limiter la durée des sorties des nourrissons « aux moments de la journée où le niveau de pollution est le plus élevé », souvent le milieu ou la fin d'après-midi.",
+      "text": "{air_intro} : limiter la durée des sorties des nourrissons « aux moments de la journée où le niveau de pollution est le plus élevé », souvent le milieu ou la fin d'après-midi.",
       "short": "Ozone : pas de sortie l'après-midi"
+    },
+    "air.intro.episode": {
+      "kind": "meteo",
+      "text": "Épisode de pollution"
+    },
+    "air.intro.episode.ozone": {
+      "kind": "meteo",
+      "text": "Épisode d'ozone"
+    },
+    "air.intro.prevision.ozone": {
+      "kind": "meteo",
+      "text": "Ozone prévu à {value} µg/m³, au-dessus du seuil d'information de {threshold} µg/m³ (prévision Copernicus, pas un épisode déclaré)"
+    },
+    "air.intro.prevision.no2": {
+      "kind": "meteo",
+      "text": "Dioxyde d'azote prévu à {value} µg/m³, au-dessus du seuil d'information de {threshold} µg/m³ (prévision Copernicus, pas un épisode déclaré)"
+    },
+    "air.intro.prevision.pm10": {
+      "kind": "meteo",
+      "text": "Particules PM10 prévues à {value} µg/m³ en moyenne sur la journée, au-dessus du seuil d'information de {threshold} µg/m³ (prévision Copernicus, pas un épisode déclaré)"
     },
     "relay.car.coat": {
       "kind": "officiel",
@@ -725,6 +745,7 @@
     }
   },
   "labels": {
+    "air_levels": ["bon", "moyen", "dégradé", "mauvais", "très mauvais", "extrêmement mauvais"],
     "items": {
       "couche": "couche seule",
       "body_leger": "body léger",

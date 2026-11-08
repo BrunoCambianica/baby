@@ -47,7 +47,8 @@ const withApi = `localStorage.setItem('sb.api', ${JSON.stringify(API)});`;
 // `android` : navigateur Android (notifications Web Push possibles dans un onglet) ; `worker` : service worker actif.
 // Sans animations par défaut (le téléphone demande moins de mouvement) : les positions mesurées ne bougent pas pendant
 // une entrée d'écran ; `motion` les remet, pour le parcours des animations.
-async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, worker = false, motion = false } = {}) {
+// `air` : la réponse qualité de l'air (Open-Meteo), une réponse vide par défaut : l'app répond alors sans indice.
+async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, worker = false, motion = false, air = {} } = {}) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'fr-FR', timezoneId: 'Europe/Paris',
     reducedMotion: motion ? 'no-preference' : 'reduce',
@@ -60,6 +61,7 @@ async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, 
   let year = 0;
   await context.route('https://archive-api.open-meteo.com/**', (route) => route.fulfill({ json: archives[year++ % 3] }));
   await context.route('https://geo.api.gouv.fr/**', (route) => route.fulfill({ json: [LYON] }));
+  await context.route('https://air-quality-api.open-meteo.com/**', (route) => route.fulfill({ json: air }));
   const page = await context.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));
@@ -599,6 +601,52 @@ await test('Portage sûr : couverture jamais sur le visage, cinq repères dépli
   // En poussette : ni repère du portage, ni carte.
   await page.click('.modes [data-value="poussette"]');
   assert(!(await page.locator('.carrier-guide').count()) && !(await page.locator('.official-tip').count()), 'repères du portage en poussette');
+});
+
+// Une prévision de l'air aux heures de la météo enregistrée : indice `aqi` partout, ozone `o3` le 27 octobre de 14 h à 17 h.
+const airAt = ({ aqi, o3 = 40, day = '2026-10-27' }) => ({
+  hourly: {
+    time: forecast.hourly.time,
+    european_aqi: forecast.hourly.time.map(() => aqi),
+    ozone: forecast.hourly.time.map((t) => (t.startsWith(day) && t.slice(11, 13) >= '14' && t.slice(11, 13) < '17' ? o3 : 40)),
+    nitrogen_dioxide: forecast.hourly.time.map(() => 30),
+    pm10: forecast.hourly.time.map(() => 20),
+  },
+});
+
+await test('Qualité de l\'air : l\'indice de la prévision dans le ciel ; un pic d\'ozone prévu écarte l\'après-midi, avec le repère Santé.fr ; sans réponse, rien', async (use) => {
+  const init = `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }`;
+  // Air dégradé (indice européen 45), sans pic : l'indice dans le ciel, aucun repère pollution.
+  let page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init, air: airAt({ aqi: 45 }) }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  let sub = (await page.textContent('.hero-sub')).replace(/\u00a0/g, ' ');
+  assert(sub.includes('air dégradé'), sub);
+  assert((await page.textContent('.hero-big')).replace(/\s/g, '') === '17–18h', await page.textContent('.hero-big'));
+  assert(!(await page.locator('.card.official').allTextContents()).join().includes('Ozone'), 'repère ozone sans pic');
+  await page.context().close();
+  // Ozone prévu à 200 µg/m³ l'après-midi : plus de créneau de 12 h à 18 h, et le repère Santé.fr dit que c'est une prévision.
+  page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init, air: airAt({ aqi: 85, o3: 200 }) }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  sub = (await page.textContent('.hero-sub')).replace(/\u00a0/g, ' ');
+  assert(sub.includes('air très mauvais'), sub);
+  const big = (await page.textContent('.hero-big')).replace(/\s/g, '');
+  const startHour = Number(big.match(/^(\d+)/)?.[1]);
+  assert(startHour < 12, `créneau ${big} dans l'après-midi d'ozone`);
+  const official = page.locator('.card.official', { hasText: 'Ozone' });
+  assert(await official.count() === 1, 'repère ozone absent');
+  await official.locator('summary').click();
+  const body = (await official.textContent()).replace(/\u00a0/g, ' ');
+  assert(body.includes('Ozone prévu à 200 µg/m³') && body.includes('prévision Copernicus') && body.includes('Santé.fr'), body);
+  await shot(page, 'l2-air-ozone-prevu');
+  await page.context().close();
+  // Réponse d'air vide (service en panne) : l'app répond comme avant, sans indice.
+  page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  sub = await page.textContent('.hero-sub');
+  assert(!sub.includes('air '), sub);
 });
 
 await test('Garde-robe réelle : le gilet chaud qu\'il a plutôt que le pull qu\'il n\'a pas, et la pièce qui manque', async (use) => {

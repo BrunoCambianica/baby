@@ -1,8 +1,10 @@
-// Accès aux données : règles (servies avec l'app), communes (geo.api.gouv.fr) et météo (Open-Meteo).
-import { climateUrls, forecastUrl } from '../../engine/adapter.js';
+// Accès aux données : règles (servies avec l'app), communes (geo.api.gouv.fr), météo et qualité de l'air (Open-Meteo).
+import { airQualityUrl, climateUrls, forecastUrl } from '../../engine/adapter.js';
 import { store } from './storage.js';
 
 const FORECAST_TTL_MS = 30 * 60 * 1000;
+// La prévision de l'air (CAMS) n'est recalculée qu'une fois par jour : une heure suffit.
+const AIR_TTL_MS = 60 * 60 * 1000;
 const GEO = 'https://geo.api.gouv.fr/communes';
 const GEO_FIELDS = 'fields=nom,code,codeDepartement,centre,codesPostaux,population';
 
@@ -63,6 +65,22 @@ export async function getForecast(commune, { force = false } = {}) {
   } catch (e) {
     if (same) return { ...cached, offline: true };
     throw e;
+  }
+}
+
+// Qualité de l'air prévue, aux mêmes coordonnées que la météo. Facultative : sans elle (réseau, service en panne),
+// l'app répond comme avant, sans indice ni relais pollution ; la dernière réponse sert hors ligne.
+export async function getAir(commune, { force = false } = {}) {
+  const cached = store.air();
+  const same = cached && cached.code === commune.code;
+  if (same && !force && Date.now() - cached.at < AIR_TTL_MS) return cached.data;
+  try {
+    const data = await getJSON(airQualityUrl(commune));
+    if (!Array.isArray(data?.hourly?.time)) throw new Error('Réponse air incomplète');
+    store.saveAir({ code: commune.code, at: Date.now(), data });
+    return data;
+  } catch (e) {
+    return same ? cached.data : null;
   }
 }
 

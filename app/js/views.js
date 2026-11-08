@@ -1,5 +1,5 @@
 // Vues de l'app : des fonctions qui renvoient du HTML. Tout texte variable passe par esc().
-import { addDays, ageMonths, baseTransport, homeStatus, hourFr, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin } from '../../engine/engine.js';
+import { addDays, ageMonths, airLevel, baseTransport, homeStatus, hourFr, needMet, ownedCount, pieceChoices, quantityFor, render, skyTheme, sleepbagCount, toMin } from '../../engine/engine.js';
 import { configChildren, parisNow } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, guideBandPath, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
@@ -7,7 +7,7 @@ import { ageLabel, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.26.1';
+export const VERSION = '0.27.0';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -174,12 +174,21 @@ function windowSlots(result) {
 
 export const sortirTheme = (ctx) => skyTheme(ctx.result, ctx.moment);
 
-function conditions(slots) {
+// L'air des heures de la sortie : le niveau de l'indice européen le plus haut (prévision CAMS), ou null sans valeur.
+function airLabel(slots, state) {
+  const values = slots.map((s) => s.aqi).filter(Number.isFinite);
+  if (!values.length) return null;
+  return state.bundle.messages.labels.air_levels[airLevel(Math.max(...values), state.bundle.rules)];
+}
+
+function conditions(slots, state) {
   const rain = Math.max(...slots.map((s) => s.precip_prob));
   const parts = [rain >= 50 ? 'pluie probable' : rain >= 20 ? `averse possible (${rain} %)` : 'sec'];
   if (Math.max(...slots.map((s) => s.gust_kmh)) >= 40) parts.push('venteux');
   const uv = Math.max(...slots.map((s) => s.uv));
   if (uv >= 3) parts.push(`UV ${Math.round(uv)}`);
+  const air = airLabel(slots, state);
+  if (air) parts.push(`air ${air}`);
   return parts.join(' · ');
 }
 
@@ -213,7 +222,7 @@ function heroDehors(state, ctx) {
     main = `<div class="cockpit glass">
       <p class="hero-label">${who}Idéal pour sortir</p>
       <div class="when-row"><p class="hero-big when">${span(w)}</p>${pick}</div>
-      <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}<span>${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots))}</span>${w.why ? whyBtn : ''}</p>
+      <p class="hero-sub">${icon(weatherIcon(slots[0].weather_code, { night, precipProb: slots[0].precip_prob }), { size: 22 })}<span>${Math.round(w.feels_c)}° ressentis · ${esc(conditions(slots, state))}</span>${w.why ? whyBtn : ''}</p>
       ${open && w.why ? `<p class="hero-why">${esc(nbsp(whyText(M, w)))}</p>` : ''}</div>`;
   } else {
     const reason = result.outing.reason;
@@ -1464,9 +1473,9 @@ export function viewAbout(state) {
         <li>Pas de compte : vos réglages et les prénoms restent sur ce téléphone${state.api ? ', sauf si vous les partagez avec l\'autre parent, chiffrés (voir plus bas)' : ''}.</li>
         <li>« Envoyer les profils » crée un lien qui contient les prénoms et les réglages : il passe par la messagerie que vous choisissez, jamais par un serveur de Superbébé.</li>
         <li>Widget iPhone : le script copié dans Scriptable contient les réglages et les prénoms ; selon vos réglages iCloud, Scriptable peut le ranger dans iCloud Drive.</li>
-        <li>La météo est demandée à Open-Meteo avec les coordonnées du centre de la commune, rien d'autre.</li>
+        <li>La météo et la qualité de l'air sont demandées à Open-Meteo avec les coordonnées du centre de la commune, rien d'autre.</li>
         <li>« Ma position » envoie une position arrondie à environ 1 km à geo.api.gouv.fr, sans la conserver.</li>
-        <li>Ni publicité, ni mesure d'audience.</li>
+        <li>Ni publicité, ni cookie. Une mesure d'audience sans cookie (GoatCounter) compte les ouvertures de l'app : la page, le navigateur, la taille de l'écran et le pays, sans identifiant, ni prénom, ni réglage.</li>
       </ul></div></div>
     </section>
     ${state.api ? `<section class="group"><h2 class="group-title">Serveur de Superbébé</h2>
@@ -1480,7 +1489,7 @@ export function viewAbout(state) {
     </section>` : ''}
     <section class="group"><h2 class="group-title">Sources</h2><div class="group-body">${sources}</div></section>
     <section class="group"><h2 class="group-title">Crédits</h2>
-      <div class="group-body"><div class="row column prose"><p>Météo : Open-Meteo (CC BY 4.0), modèles de Météo-France et du CEPMMT. Communes : geo.api.gouv.fr. Icônes : Tabler Icons (licence MIT).</p></div></div>
+      <div class="group-body"><div class="row column prose"><p>Météo : Open-Meteo (CC BY 4.0), modèles de Météo-France et du CEPMMT. Qualité de l'air : Open-Meteo, prévisions du service Copernicus de surveillance de l'atmosphère (CAMS), indice européen ; les repères pollution s'affichent quand un polluant est prévu au-dessus de son seuil d'information (Code de l'environnement), ce qui n'est pas un épisode déclaré par la préfecture. Communes : geo.api.gouv.fr. Icônes : Tabler Icons (licence MIT).</p></div></div>
     </section>
   </div>`;
 }

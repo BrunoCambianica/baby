@@ -28,6 +28,30 @@ export function forecastUrl({ lat, lon }) {
     `&timezone=${encodeURIComponent(PARIS_TZ)}&forecast_days=${FORECAST_DAYS}`;
 }
 
+// Qualité de l'air : prévision horaire du modèle européen CAMS (Copernicus), servie par Open-Meteo, sur 4 jours.
+// Indice européen (european_aqi) et les trois polluants des seuils d'information (rules : air), en µg/m³.
+export const AIR_DAYS = 4;
+const AIR_HOURLY = 'european_aqi,ozone,nitrogen_dioxide,pm10';
+
+export function airQualityUrl({ lat, lon }) {
+  return 'https://air-quality-api.open-meteo.com/v1/air-quality' +
+    `?latitude=${coord(lat)}&longitude=${coord(lon)}&hourly=${AIR_HOURLY}&domains=cams_europe` +
+    `&timezone=${encodeURIComponent(PARIS_TZ)}&forecast_days=${AIR_DAYS}`;
+}
+
+// Les valeurs d'air d'une heure (« AAAA-MM-JJTHH:MM »), ou des null : sans réponse, l'air ne change rien.
+function airIndex(air) {
+  const h = air?.hourly;
+  const map = new Map();
+  if (!Array.isArray(h?.time)) return map;
+  const num = (list, i) => (Number.isFinite(list?.[i]) ? list[i] : null);
+  h.time.forEach((time, i) => map.set(time, {
+    aqi: num(h.european_aqi, i), o3: num(h.ozone, i), no2: num(h.nitrogen_dioxide, i), pm10: num(h.pm10, i),
+  }));
+  return map;
+}
+const NO_AIR = { aqi: null, o3: null, no2: null, pm10: null };
+
 const isLeap = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 function yearsBefore(day, n) {
   const y = Number(day.slice(0, 4)) - n;
@@ -54,8 +78,9 @@ export function parisNow(at = new Date()) {
   return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
 }
 
-export function hourlyForDate(forecast, date) {
+export function hourlyForDate(forecast, date, air = null) {
   const h = forecast.hourly;
+  const airAt = airIndex(air);
   const hours = [];
   h.time.forEach((time, i) => {
     if (!time.startsWith(date)) return;
@@ -72,6 +97,7 @@ export function hourlyForDate(forecast, date) {
       gust_kmh: h.wind_gusts_10m[i] ?? 0,
       uv: h.uv_index[i] ?? 0,
       weather_code: h.weather_code?.[i] ?? null,
+      ...(airAt.get(time) ?? NO_AIR),
     });
   });
   return hours;
@@ -144,7 +170,8 @@ export function weeklyOutlook({ forecast, climate = [], date, lat }) {
   return weeks;
 }
 
-export function buildInput({ forecast, climate = [], profile, date, now, lat }) {
+// `air` : la réponse qualité de l'air d'Open-Meteo (airQualityUrl), facultative.
+export function buildInput({ forecast, climate = [], profile, date, now, lat, air = null }) {
   const i = forecast.daily.time.indexOf(date);
   return {
     date,
@@ -152,10 +179,11 @@ export function buildInput({ forecast, climate = [], profile, date, now, lat }) 
     profile,
     forecast: {
       daylight: daylightForDate(forecast, date),
-      hourly: hourlyForDate(forecast, date),
+      hourly: hourlyForDate(forecast, date, air),
       daily: { tmax_c: i >= 0 ? forecast.daily.temperature_2m_max[i] : null },
     },
-    // La vigilance Météo-France et les épisodes de pollution ne sont pas encore branchés (v0.1).
+    // La vigilance Météo-France et les épisodes déclarés par les préfectures ne sont pas encore branchés : la pollution
+    // vient de la prévision horaire (forecast.hourly), voir airEpisode dans le moteur.
     alerts: { vigilance: [], air: null },
     outlook: weeklyOutlook({ forecast, climate, date, lat: lat ?? forecast.latitude }),
   };
@@ -197,11 +225,11 @@ export function widgetOuting({ date, time, outings = null, hours = 1, window }, 
 // Ce qu'affiche un widget pour un enfant, à une heure donnée. Le jour : la sortie (voir widgetOuting), sa tenue, son
 // sac et ses changements. Le soir : la sortie de demain, sa tenue et son sac, à préparer, avec la nuit. `outings` :
 // les sorties transmises par l'app. `reminder` : calcule aussi le rappel du soir (la sortie de demain).
-export function widgetView({ forecast, profile, date, time, lat, outings = null }, bundle, { drawings = true, reminder = false } = {}) {
-  const today = evaluate(buildInput({ forecast, profile, date, now: time, lat }), bundle);
+export function widgetView({ forecast, profile, date, time, lat, outings = null, air = null }, bundle, { drawings = true, reminder = false } = {}) {
+  const today = evaluate(buildInput({ forecast, profile, date, now: time, lat, air }), bundle);
   const moment = displayMoment(today, time);
   const hours = outingHours(profile);
-  const run = (day, now, o, extra = {}) => evaluate(buildInput({ forecast, profile: { ...profile, ...extra, outing_window: o.window }, date: day, now, lat }), bundle);
+  const run = (day, now, o, extra = {}) => evaluate(buildInput({ forecast, profile: { ...profile, ...extra, outing_window: o.window }, date: day, now, lat, air }), bundle);
   const outing = moment === 'jour' ? widgetOuting({ date, time, outings, hours, window: profile.outing_window }) : null;
   const outingResult = outing ? run(date, time, outing) : null;
   const shown = outingResult?.journee ? outingResult : today;
@@ -246,17 +274,17 @@ export function nextOutingReminder(outings, date, time, lead = OUTING_REMINDER_L
 }
 
 // Rappel avant une sortie choisie (`outing` : { s, d } de l'app), pour un enfant : { title, text }, ou null.
-export function outingReminder({ forecast, profile, date, time, lat, outing }, bundle) {
+export function outingReminder({ forecast, profile, date, time, lat, outing, air = null }, bundle) {
   const hours = Number(outing.d) > 0 ? Number(outing.d) : outingHours(profile);
   const end = toMin(outing.s) + hours * 60;
-  const result = evaluate(buildInput({ forecast, profile: { ...profile, outing_window: outingWindow(outing.s, end) }, date, now: time, lat }), bundle);
+  const result = evaluate(buildInput({ forecast, profile: { ...profile, outing_window: outingWindow(outing.s, end) }, date, now: time, lat, air }), bundle);
   return result.journee ? outingReminderText(result, { start: outing.s }, bundle.messages) : null;
 }
 
 // Ce qu'affiche le widget Maison pour un enfant : de 6 h à 18 h la journée chez vous, ensuite la nuit dans sa chambre.
 // Le relevé du moment, la tenue, l'état par rapport au repère ; `short` pour le widget rond de l'écran verrouillé.
-export function homeWidgetView({ forecast, profile, date, time, lat }, bundle, { drawings = true } = {}) {
-  const today = evaluate(buildInput({ forecast, profile, date, now: time, lat }), bundle);
+export function homeWidgetView({ forecast, profile, date, time, lat, air = null }, bundle, { drawings = true } = {}) {
+  const today = evaluate(buildInput({ forecast, profile, date, now: time, lat, air }), bundle);
   const kind = homeMoment(time);
   const plan = kind === 'nuit' ? today.night : today.indoor;
   return {

@@ -519,6 +519,19 @@
       { "id": "reducteur_de_lit", "relay": "relay.sleep.no_positioners" }
     ]
   },
+  "air": {
+    "note": "Prévision horaire de la qualité de l'air (Open-Meteo, modèle européen CAMS de Copernicus, maille d'environ 11 km). Un polluant prévu au-dessus de son seuil d'information et de recommandation déclenche les relais pollution, comme un épisode ; l'ozone écarte aussi l'après-midi (outing.ozone_episode_blocked_hours). Ce n'est pas un épisode déclaré par la préfecture : le message le dit.",
+    "information_thresholds": {
+      "ozone": { "hourly_ug_m3": 180 },
+      "no2": { "hourly_ug_m3": 200 },
+      "pm10": { "daily_mean_ug_m3": 50, "min_hours": 18 },
+      "source": "ineris-aida-r221-1"
+    },
+    "index": {
+      "note": "Indice européen de la qualité de l'air (european_aqi d'Open-Meteo, bornes révisées en 2024) : maximum des sous-indices de chaque polluant. Six niveaux, du bon à l'extrêmement mauvais ; affiché comme une prévision, sans message de santé.",
+      "bands": [20, 40, 60, 80, 100]
+    }
+  },
   "relay_priority": [
     "relay.vigilance.active",
     "relay.cold.avoid_outings",

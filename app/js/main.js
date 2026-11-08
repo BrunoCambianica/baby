@@ -1,7 +1,7 @@
 // Point d'entrée de l'app web Superbébé : état, actions, chargement des données et mises à jour.
 import { addDays, ageMonths, baseTransport, clamp, displayMoment, evaluate, fmtMin, homeMoment, hourFr, render, toMin } from '../../engine/engine.js';
 import { buildInput, decodeConfig, encodeConfig, householdToConfig, outingWindow, parisNow, profileToConfig, widgetView } from '../../engine/adapter.js';
-import { communeAt, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
+import { communeAt, getAir, getClimate, getForecast, loadBundle, loadText, searchCommunes } from './data.js';
 import { ficheCanvas, ficheData, ficheText, encodeFiche } from './fiche.js';
 import {
   api, apiBase, familyKeys, fromB64url, mergeHousehold, newSecret, seal, sharedPart, shortFicheLink, unseal,
@@ -179,6 +179,7 @@ function compute(day, window = null) {
     date,
     now: time,
     lat: p.commune.lat,
+    air: state.air ?? null,
   });
   const result = evaluate(input, state.bundle);
   const hidden = store.hidden();
@@ -633,7 +634,7 @@ async function pushSubscription(reminder) {
 // Ce dont le service worker a besoin pour calculer le rappel sans l'app : le foyer et la dernière météo.
 function writeSwData() {
   if (!webPush || !state.household || !('caches' in window)) return;
-  const data = { household: state.household, reminder: state.reminder, forecast: state.forecast?.data ?? null, outings: widgetOutings() };
+  const data = { household: state.household, reminder: state.reminder, forecast: state.forecast?.data ?? null, air: state.air ?? null, outings: widgetOutings() };
   caches.open('superbebe-donnees').then((cache) => cache.put('donnees.json', new Response(JSON.stringify(data)))).catch(() => {});
 }
 
@@ -733,6 +734,7 @@ function replaceHousehold(household) {
   refreshProfile();
   if (!before || before.commune.lat !== household.commune.lat || before.commune.lon !== household.commune.lon) {
     state.forecast = null;
+    state.air = null;
     state.climate = [];
     state.climateReady = false;
   }
@@ -906,7 +908,10 @@ async function loadData({ force = false } = {}) {
   const commune = state.profile.commune;
   state.loading = true;
   try {
-    state.forecast = await getForecast(commune, { force });
+    // L'air en même temps que la météo ; sans réponse, l'app répond sans lui (getAir ne lève pas d'erreur).
+    const [forecast, air] = await Promise.all([getForecast(commune, { force }), getAir(commune, { force })]);
+    state.forecast = forecast;
+    state.air = air;
     state.updatedAt = clock(state.forecast.at);
     state.error = null;
   } catch (e) {
@@ -932,6 +937,7 @@ function changeCommune(commune) {
   if (currentView() !== 'reglages') return;
   updateHousehold({ commune });
   state.forecast = null;
+  state.air = null;
   state.climate = [];
   state.climateReady = false;
   toast(`Commune : ${commune.nom}`);

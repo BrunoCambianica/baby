@@ -35,11 +35,15 @@ node tools/run-vectors.js --show creneau-fortes-chaleurs   # résultat complet d
 |---|---|
 | `date`, `now` | Jour (`AAAA-MM-JJ`) et heure locale (`HH:MM`) |
 | `profile` | Un enfant : `birth` (`AAAA-MM-JJ` ou `AAAA-MM`), `transport` (`poussette`, `porte_bebe`, `a_pied` à partir de 2 ans, `voiture`), `outing_window`, `outing_duration_h`, `outfit_offset` (de -2 à +2, réglage « Tendance »), `room_temp_c` (sa chambre, pour la nuit), `day_room_temp_c` (la pièce où il passe la journée, pour la tenue à la maison), `day_style` (`sans_pyjama` ou rien), `night_options` (tenue de nuit choisie par tranche : `{ n20: 'tog-1' }`), `inventory` (`{ catégorie: [tailles] }`, une taille par pièce possédée : `['6m', '6m', '6m']`, trois en 6 mois), `wash_days` (jours entre deux lessives, commun au foyer ; sinon `purchases.quantities.wash_days_default`). Plusieurs enfants : un appel par enfant |
-| `forecast` | `daylight` (`sunrise`, `sunset`), `hourly` (`time`, `temp_c`, `feels_c`, `precip_prob`, `precip_mm`, `gust_kmh`, `uv`), `daily.tmax_c` facultatif |
-| `alerts` | `vigilance` (`[{ phenomenon, color }]`, couleurs Météo-France), `air` (`{ episode, pollutant }`) |
+| `forecast` | `daylight` (`sunrise`, `sunset`), `hourly` (`time`, `temp_c`, `feels_c`, `precip_prob`, `precip_mm`, `gust_kmh`, `uv`, et pour l'air, facultatifs : `aqi`, indice européen, `o3`, `no2`, `pm10` en µg/m³), `daily.tmax_c` facultatif |
+| `alerts` | `vigilance` (`[{ phenomenon, color }]`, couleurs Météo-France), `air` (`{ episode, pollutant }`, un épisode déclaré ; pas encore branché) |
 | `outlook` | Semaines à venir : `week_start`, `tmax_mean`, `tmean`, `rainy_days`, `uv_max_mean` |
 
 Le profil ne quitte jamais le téléphone.
+
+## Qualité de l'air (`air`)
+
+L'app demande à Open-Meteo la prévision horaire du modèle européen CAMS (Copernicus) : l'indice européen (`european_aqi`) et l'ozone, le dioxyde d'azote et les PM10. Le moteur (`airEpisode`) retient un épisode signalé (`alerts.air`), sinon un polluant prévu au-dessus de son seuil d'information et de recommandation (`air.information_thresholds`, Code de l'environnement, art. R221-1) : ozone ou dioxyde d'azote en moyenne horaire, PM10 en moyenne de la journée (au moins `min_hours` heures prévues). L'ozone passe d'abord : il écarte l'après-midi (`outing.ozone_episode_blocked_hours`). Les relais Santé.fr commencent alors par la valeur prévue et le seuil (`air.intro.prevision.*`), « prévision Copernicus, pas un épisode déclaré ». L'indice s'affiche dans le ciel (`air.index.bands`, libellés `labels.air_levels`), sans message de santé. Sans réponse d'air, rien ne change.
 
 ## Âges et modes de sortie
 

@@ -2,7 +2,7 @@
 // Changer VERSION à chaque mise en ligne pour que les téléphones récupèrent la nouvelle version.
 // sw-moteur.js (généré par tools/build-widget.js) : le moteur et les règles, pour calculer le rappel sans l'app.
 importScripts('sw-moteur.js');
-const VERSION = '0.26.1';
+const VERSION = '0.27.0';
 const CACHE = `superbebe-${VERSION}`;
 const ASSETS = [
   './',
@@ -85,12 +85,19 @@ async function eveningReminder() {
     const data = cached ? await cached.json() : null;
     const h = data?.household;
     let forecast = data?.forecast ?? null;
+    let air = data?.air ?? null;
     if (h) {
       try {
         const res = await fetch(forecastUrl(h.commune));
         if (res.ok) forecast = await res.json();
       } catch (e) {
         // Sans réseau : la dernière météo de l'app.
+      }
+      try {
+        const res = await fetch(airQualityUrl(h.commune));
+        if (res.ok) air = await res.json();
+      } catch (e) {
+        // Sans réseau : le dernier air de l'app, sinon sans lui.
       }
     }
     if (h && forecast) {
@@ -104,7 +111,7 @@ async function eveningReminder() {
           swaps: child.swaps ?? {},
           room_temp_c: child.room?.value ?? null, inventory: child.inventory ?? {},
         };
-        const view = widgetView({ forecast, profile, date, time, lat: h.commune.lat, outings: data.outings ?? null }, SB_RULES, { drawings: false, reminder: true });
+        const view = widgetView({ forecast, profile, date, time, lat: h.commune.lat, outings: data.outings ?? null, air }, SB_RULES, { drawings: false, reminder: true });
         return view.reminder && `${h.children.length > 1 ? `${child.name || `Enfant ${k + 1}`} : ` : ''}${view.reminder}`;
       }).filter(Boolean);
       if (lines.length) body = lines.join('\n');

@@ -1,8 +1,8 @@
 // Tests de l'adaptateur Open-Meteo sur des réponses réelles enregistrées (Lyon, 21 octobre 2026).
 import { join } from 'node:path';
-import { evaluate, lint, pieceChoices } from '../engine/engine.js';
+import { airLevel, evaluate, lint, pieceChoices } from '../engine/engine.js';
 import {
-  buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
+  airQualityUrl, buildInput, climateUrls, configChildren, configToProfile, daylightForDate, decodeConfig, encodeConfig, forecastUrl,
   householdToConfig, hourlyForDate, outingReminder, parisNow, pickChild, profileToConfig, WARDROBE_CATEGORIES, weeklyOutlook, widgetView,
 } from '../engine/adapter.js';
 import { loadRules, readJSON, ROOT } from './load-rules.js';
@@ -334,6 +334,76 @@ test('Pièces au choix : équivalents, presque équivalents et raisons', () => {
   assert(pieceChoices('bonnet', R, 'poussette').reason === 'swap.locked.extremity', 'bonnet remplaçable');
   assert(!pieceChoices('combi_pilote_doublee', R, 'voiture').options.length, 'combinaison de ski proposée en voiture');
   assert(pieceChoices('combi_pilote_doublee', R, 'poussette').options[0]?.item === 'combi_ski', 'combinaison de ski absente en poussette');
+});
+
+// Qualité de l'air : réponse réelle d'Open-Meteo (Lyon, 8 novembre 2026, modèle CAMS Europe).
+const air = readJSON(join(FIX, 'air-lyon-2026-11-08.json'));
+// Une météo calme aux mêmes heures que la réponse d'air, pour lire l'air seul.
+const calm = (times) => ({
+  latitude: 45.8,
+  hourly: Object.fromEntries([['time', times], ...['temperature_2m', 'apparent_temperature', 'precipitation_probability', 'precipitation', 'wind_gusts_10m', 'uv_index', 'weather_code']
+    .map((k) => [k, times.map(() => (k.startsWith('temp') || k === 'apparent_temperature' ? 12 : 0))])]),
+  daily: { time: ['2026-11-08'], sunrise: ['2026-11-08T07:40'], sunset: ['2026-11-08T17:20'], temperature_2m_max: [14], temperature_2m_mean: [10], precipitation_sum: [0], uv_index_max: [1] },
+});
+// La réponse d'air, avec l'ozone remplacé de hour1 à hour2 (exclu) : un pic d'été.
+const withOzone = (from, to, value) => ({
+  ...air,
+  hourly: { ...air.hourly, ozone: air.hourly.ozone.map((v, i) => (i >= from && i < to ? value : v)) },
+});
+
+test('URL de la qualité de l\'air : CAMS Europe, 4 jours, heure de Paris, indice et trois polluants', () => {
+  const url = airQualityUrl({ lat: 45.758, lon: 4.8351 });
+  for (const part of ['air-quality-api.open-meteo.com', 'latitude=45.7580', 'longitude=4.8351', 'forecast_days=4', 'domains=cams_europe',
+    'timezone=Europe%2FParis', 'european_aqi', 'ozone', 'nitrogen_dioxide', 'pm10']) {
+    assert(url.includes(part), `manque ${part} dans ${url}`);
+  }
+});
+
+test('Air : chaque heure reçoit l\'indice et les polluants de la même heure', () => {
+  const hours = hourlyForDate(calm(air.hourly.time), '2026-11-08', air);
+  assert(hours.length === 24, `${hours.length} heures`);
+  const h0 = hours[0];
+  assert(h0.aqi === 56 && h0.pm10 === 37.5 && h0.no2 === 53.4 && h0.o3 === 4, JSON.stringify(h0));
+  const h15 = hours.find((h) => h.time.endsWith('15:00'));
+  assert(h15.aqi === 25 && h15.o3 === 70, JSON.stringify(h15));
+});
+
+test('Air : heures sans valeur (fin de prévision) et sans réponse d\'air laissées à null', () => {
+  const late = hourlyForDate(calm(air.hourly.time), '2026-11-11', air).find((h) => h.time.endsWith('23:00'));
+  assert(late.aqi === null && late.o3 === null, JSON.stringify(late));
+  const none = hourlyForDate(forecast, '2026-10-21');
+  assert(none.every((h) => h.aqi === null && h.o3 === null && h.no2 === null && h.pm10 === null), 'valeurs d\'air sans réponse');
+  const other = hourlyForDate(forecast, '2026-10-21', air);
+  assert(other.every((h) => h.aqi === null), 'air d\'un autre jour appliqué');
+});
+
+test('Air réel de Lyon le 8 novembre : sous les seuils, aucun relais pollution, indice sur les heures de la plage', () => {
+  const profile = { birth: '2026-05-10', transport: 'poussette', outing_window: { from: '09:00', to: '18:00' }, outing_duration_h: 1 };
+  const result = evaluate(buildInput({ forecast: calm(air.hourly.time), profile, date: '2026-11-08', now: '08:00', air }), bundle);
+  assert(result.air === null, JSON.stringify(result.air));
+  assert(!result.relays.some((id) => id.startsWith('relay.air')), result.relays.join(', '));
+  assert(result.outing.slots.find((s) => s.time === '09:00')?.aqi === 47, JSON.stringify(result.outing.slots[0]));
+});
+
+test('Air : un pic d\'ozone prévu écarte l\'après-midi, dans l\'app comme dans le widget', () => {
+  const profile = { birth: '2026-05-10', transport: 'poussette', outing_window: { from: '09:00', to: '18:00' }, outing_duration_h: 1 };
+  const peak = withOzone(14, 17, 190);
+  const result = evaluate(buildInput({ forecast: calm(air.hourly.time), profile, date: '2026-11-08', now: '08:00', air: peak }), bundle);
+  assert(result.air?.pollutant === 'ozone' && result.air.value === 190, JSON.stringify(result.air));
+  assert(result.relays.includes('relay.air.ozone'), result.relays.join(', '));
+  assert(result.outing.slots.filter((s) => s.time >= '12:00' && s.time < '18:00').every((s) => s.reasons.includes('ozone_apres_midi')), 'après-midi gardé');
+  const view = widgetView({ forecast: calm(air.hourly.time), profile, date: '2026-11-08', time: '08:00', lat: 45.8, air: peak }, bundle);
+  assert(view.today.air?.pollutant === 'ozone', JSON.stringify(view.today.air));
+  const without = widgetView({ forecast: calm(air.hourly.time), profile, date: '2026-11-08', time: '08:00', lat: 45.8 }, bundle);
+  assert(without.today.air === null, 'pic d\'ozone sans réponse d\'air');
+});
+
+test('Air : niveau de l\'indice européen, du bon à l\'extrêmement mauvais', () => {
+  const R = bundle.rules;
+  const levels = [0, 19.9, 20, 39, 40, 60, 79, 80, 100, 250].map((v) => airLevel(v, R));
+  assert(JSON.stringify(levels) === '[0,0,1,1,2,3,3,4,5,5]', JSON.stringify(levels));
+  assert(airLevel(null, R) === null && airLevel(undefined, R) === null, 'niveau sans valeur');
+  assert(bundle.messages.labels.air_levels.length === R.air.index.bands.length + 1, 'libellés des niveaux');
 });
 
 test('Configuration du widget : texte invalide refusé', () => {
