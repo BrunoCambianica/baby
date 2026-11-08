@@ -48,7 +48,8 @@ const withApi = `localStorage.setItem('sb.api', ${JSON.stringify(API)});`;
 // Sans animations par défaut (le téléphone demande moins de mouvement) : les positions mesurées ne bougent pas pendant
 // une entrée d'écran ; `motion` les remet, pour le parcours des animations.
 // `air` : la réponse qualité de l'air (Open-Meteo), une réponse vide par défaut : l'app répond alors sans indice.
-async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, worker = false, motion = false, air = {} } = {}) {
+// `meteo` : la réponse météo, celle de Lyon enregistrée par défaut.
+async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, worker = false, motion = false, air = {}, meteo = forecast } = {}) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'fr-FR', timezoneId: 'Europe/Paris',
     reducedMotion: motion ? 'no-preference' : 'reduce',
@@ -57,7 +58,7 @@ async function phone({ at = '2026-10-21T07:30:00+02:00', init, android = false, 
       : 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
     serviceWorkers: worker ? 'allow' : 'block',
   });
-  await context.route('https://api.open-meteo.com/**', (route) => route.fulfill({ json: forecast }));
+  await context.route('https://api.open-meteo.com/**', (route) => route.fulfill({ json: meteo }));
   let year = 0;
   await context.route('https://archive-api.open-meteo.com/**', (route) => route.fulfill({ json: archives[year++ % 3] }));
   await context.route('https://geo.api.gouv.fr/**', (route) => route.fulfill({ json: [LYON] }));
@@ -647,6 +648,34 @@ await test('Qualité de l\'air : l\'indice de la prévision dans le ciel ; un pi
   await page.waitForSelector('.day');
   sub = await page.textContent('.hero-sub');
   assert(!sub.includes('air '), sub);
+});
+
+await test('Soleil : en poussette, le pare-soleil dans le sac et jamais de linge dessus ; en porte-bébé, le chapeau, nuque couverte', async (use) => {
+  // La météo de Lyon, indice UV 5 toute la journée.
+  const sunny = { ...forecast, hourly: { ...forecast.hourly, uv_index: forecast.hourly.uv_index.map(() => 5) } };
+  const init = `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }`;
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init, meteo: sunny }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  const bag = (await page.textContent('.day .bag')).replace(/\s+/g, ' ');
+  assert(bag.includes('Pare-soleil') && bag.includes('soleil'), bag);
+  const official = (await page.locator('.card.official').allTextContents()).join(' ').replace(/\u00a0/g, ' ');
+  assert(official.includes('Jamais de linge ni de couverture sur la poussette') && official.includes('Luxembourg'), official);
+  assert(official.includes('À l\'abri du soleil direct') || official.includes('Pas de soleil direct'), official);
+  await shot(page, 'l2-soleil-poussette');
+  // En porte-bébé, une sortie à 14 h (17° ressentis) : pas de pare-soleil, le conseil du chapeau (nuque couverte), plus
+  // de linge sur la poussette. Le matin (4° ressentis, bonnet), pas de conseil du chapeau.
+  await page.click('.modes [data-value="porte_bebe"]');
+  const cold = (await page.locator('.day .notes li').allTextContents()).join(' | ');
+  assert(!cold.includes('nuque couverte'), cold);
+  await page.click('.strip [data-value="14:00"]');
+  const bag2 = (await page.locator('.day .bag').allTextContents()).join(' ');
+  assert(!bag2.includes('Pare-soleil'), bag2);
+  const tips = (await page.locator('.day .notes li').allTextContents()).join(' | ').replace(/\u00a0/g, ' ');
+  assert(tips.includes('nuque couverte'), tips);
+  const official2 = (await page.locator('.card.official').allTextContents()).join(' ');
+  assert(!official2.includes('Jamais de linge'), official2);
+  await shot(page, 'l2-soleil-porte-bebe');
 });
 
 await test('Garde-robe réelle : le gilet chaud qu\'il a plutôt que le pull qu\'il n\'a pas, et la pièce qui manque', async (use) => {

@@ -74,7 +74,7 @@
       { "id": "tres_froid", "min_feels_c": null, "items": ["body_ml", "pyjama_chaud", "pull", "combi_pilote_doublee", "bonnet", "moufles", "chaussons", "chanceliere"] }
     ],
     "transport": {
-      "poussette": { "band_shift": 0, "remove_items": [], "notes": [], "rain_gear": "habillage_pluie" },
+      "poussette": { "band_shift": 0, "remove_items": [], "notes": [], "rain_gear": "habillage_pluie", "sun_gear": "pare_soleil" },
       "poussette_chanceliere": {
         "base": "poussette",
         "max_age_m": 24,
@@ -88,7 +88,8 @@
         "carry_reason": "hors_poussette",
         "notes": ["practical.stroller_muff"],
         "option_note": "practical.stroller_muff_option",
-        "rain_gear": "habillage_pluie"
+        "rain_gear": "habillage_pluie",
+        "sun_gear": "pare_soleil"
       },
       "porte_bebe": {
         "band_shift": -1,
@@ -103,6 +104,9 @@
         },
         "notes": ["practical.carrier.body_heat", "practical.carrier.no_footed"],
         "rain_gear": "cape_pluie",
+        "sun_hat_feels_c_at_least": 14,
+        "sun_note": "practical.carrier.sun_hat",
+        "sun_note_doc": "En porte-bébé, aucune capote ne lui fait d'ombre : au soleil (indice UV des repères), le chapeau entre dans le sac dès sun_hat_feels_c_at_least °C ressentis (22 °C dans les autres modes, journee.bag.sun_feels_c_at_least), et le conseil du chapeau à larges bords ou à bavolet s'affiche. Le bavolet (nuque et oreilles couvertes) est une suggestion pratique : aucune source officielle trouvée ne le cite.",
         "safety": {
           "note": "Repères de sécurité du portage, dans la carte Dehors : la couverture ou le manteau de portage jamais sur son visage (dès qu'il est dans la tenue) ; par forte chaleur avant heat_under_months mois, nez et bouche dégagés ; verglas ou neige annoncés dans la suite de la plage (codes météo WMO d'Open-Meteo : bruine ou pluie verglaçante, neige), pas de porte-bébé sur sol glissant. Puis les cinq principes de position (principles), dépliés d'office avant guide_open_under_months mois.",
           "cover_items": ["couverture_portage", "manteau_portage"],
@@ -458,6 +462,12 @@
         "relays": []
       },
       {
+        "id": "pare_soleil", "size_system": "unique", "priority": 5, "optional": true,
+        "need_if": { "week_uv_max_at_least": 3, "transport_in": ["poussette"] },
+        "reason": "soleil",
+        "relays": ["relay.sun.stroller_no_cover"]
+      },
+      {
         "id": "chapeau_soleil", "size_system": "accessoire", "priority": 1,
         "need_if": { "week_uv_max_at_least": 3, "week_tmax_at_least": 18 },
         "reason": "soleil",
@@ -542,6 +552,8 @@
     "relay.sun.under_1y",
     "relay.sun.hours",
     "relay.sun.protect",
+    "relay.sun.shade",
+    "relay.sun.stroller_no_cover",
     "relay.air.ozone",
     "relay.air.particles",
     "relay.cold.stroller_rather_than_carrier",

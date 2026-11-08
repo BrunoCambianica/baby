@@ -288,6 +288,51 @@
       }
     },
     {
+      "id": "soleil-poussette-ombrelle",
+      "description": "Printemps ensoleillé (UV 4, 18 °C ressentis) en poussette : l'ombrelle dans le sac dès 9 h, à l'abri du soleil direct, jamais de linge sur la poussette ; pas encore de chapeau",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 18, "uv": 4 } } } },
+      "expect": {
+        "journee.bag.*.item.include": ["pare_soleil"],
+        "journee.bag.*.item.exclude": ["chapeau"],
+        "journee.bag.*.reason.include": ["soleil"],
+        "relays.include": ["relay.sun.shade", "relay.sun.stroller_no_cover", "relay.sun.under_1y"],
+        "journee.notes.exclude": ["practical.carrier.sun_hat"]
+      }
+    },
+    {
+      "id": "soleil-porte-bebe-chapeau",
+      "description": "Porte-bébé au soleil (UV 4, 15 °C ressentis) : pas d'ombrelle, le chapeau dans le sac dès 14 °C (22 °C en poussette), nuque couverte (bavolet), à l'abri du soleil direct",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 15, "uv": 4 } } } },
+      "expect": {
+        "journee.bag.*.item.include": ["chapeau"],
+        "journee.bag.*.item.exclude": ["pare_soleil"],
+        "journee.notes.include": ["practical.carrier.sun_hat"],
+        "outfit.notes.include": ["practical.carrier.sun_hat"],
+        "relays.include": ["relay.sun.shade"],
+        "relays.exclude": ["relay.sun.stroller_no_cover"]
+      }
+    },
+    {
+      "id": "soleil-porte-bebe-frais",
+      "description": "Porte-bébé, UV 3 mais 11 °C ressentis : sous le seuil du chapeau, ni chapeau dans le sac ni conseil du chapeau ; toujours à l'abri du soleil direct",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 11, "uv": 3 } } } },
+      "expect": {
+        "journee.bag.*.item.exclude": ["chapeau"],
+        "journee.notes.exclude": ["practical.carrier.sun_hat"],
+        "outfit.notes.exclude": ["practical.carrier.sun_hat"],
+        "relays.include": ["relay.sun.shade"]
+      }
+    },
+    {
+      "id": "soleil-faible-poussette",
+      "description": "UV 2 en poussette : ni ombrelle, ni repère du soleil direct",
+      "input": { "forecast": { "hourly": { "base": { "feels_c": 18, "uv": 2 } } } },
+      "expect": {
+        "journee.bag.*.item.exclude": ["pare_soleil"],
+        "relays.exclude": ["relay.sun.shade", "relay.sun.stroller_no_cover"]
+      }
+    },
+    {
       "id": "creneau-uv-enfant-20-mois",
       "description": "Même journée, enfant de 20 mois : repères de protection solaire des enfants",
       "input": {
@@ -759,7 +804,7 @@
     },
     {
       "id": "achats-printemps-7-mois",
-      "description": "Même printemps, bébé de 7 mois : chapeau seulement, rappel pas de soleil direct",
+      "description": "Même printemps, bébé de 7 mois en poussette : chapeau, rappel pas de soleil direct ; puis le pare-soleil, facultatif, avec le repère « jamais de linge sur la poussette »",
       "input": {
         "date": "2026-04-06",
         "profile": { "birth": "2025-09-01", "inventory": { "gigoteuse_hiver": ["6-18m", "6-18m"] } },
@@ -773,8 +818,10 @@
         ]
       },
       "expect": {
-        "purchases.*.key": ["chapeau_soleil:6-12m"],
-        "purchases.0.relays.include": ["relay.sun.under_1y"]
+        "purchases.*.key": ["chapeau_soleil:6-12m", "pare_soleil:unique"],
+        "purchases.0.relays.include": ["relay.sun.under_1y"],
+        "purchases.1.reasons": ["soleil", "facultatif"],
+        "purchases.1.relays": ["relay.sun.stroller_no_cover"]
       }
     },
     {
@@ -999,6 +1046,19 @@
       "expect": { "purchases.*.key": ["habillage_pluie:unique"], "purchases.0.order_by": "2026-10-26" }
     },
     {
+      "id": "achats-pare-soleil-porte-bebe",
+      "description": "Printemps ensoleillé en porte-bébé, bébé de 7 mois : le chapeau, pas de pare-soleil de poussette",
+      "input": {
+        "date": "2026-04-06",
+        "profile": { "birth": "2025-09-01", "transport": "porte_bebe", "inventory": { "gigoteuse_hiver": ["6-18m", "6-18m"] } },
+        "outlook": [
+          { "week_start": "2026-04-06", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 },
+          { "week_start": "2026-04-13", "tmax_mean": 19, "tmean": 13, "rainy_days": 1, "uv_max_mean": 4 }
+        ]
+      },
+      "expect": { "purchases.*.key": ["chapeau_soleil:6-12m"] }
+    },
+    {
       "id": "achats-pluie-porte-bebe",
       "description": "Mêmes semaines en porte-bébé : pas d'habillage poussette",
       "input": {
@@ -1202,7 +1262,7 @@
         "journee.changes.0.time": "11:00",
         "journee.changes.0.add": ["chapeau_si_soleil"],
         "journee.changes.0.remove.include": ["bonnet_fin", "combi_legere"],
-        "journee.bag.*.item": ["chapeau_si_soleil"]
+        "journee.bag.*.item": ["chapeau_si_soleil", "pare_soleil"]
       }
     },
     {
@@ -1273,7 +1333,10 @@
         "profile": { "birth": "2025-09-10" },
         "forecast": { "daylight": { "sunrise": "06:00", "sunset": "21:20" }, "hourly": { "base": { "feels_c": 20, "uv": 4 }, "overrides": { "14:00": { "feels_c": 23 } } } }
       },
-      "expect": { "journee.changes": [], "journee.bag": [{ "item": "chapeau", "reason": "soleil", "time": "14:00" }] }
+      "expect": {
+        "journee.changes": [],
+        "journee.bag": [{ "item": "pare_soleil", "reason": "soleil", "time": "09:00" }, { "item": "chapeau", "reason": "soleil", "time": "14:00" }]
+      }
     },
     {
       "id": "journee-a-pied",

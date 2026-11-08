@@ -88,6 +88,28 @@
       "verification": "lu"
     },
     {
+      "id": "lu-sante-chaleur-bebes",
+      "publisher": "Ministère de la Santé et de la Sécurité sociale, Direction de la santé (Luxembourg)",
+      "short": "Direction de la santé (Luxembourg)",
+      "title": "Fortes chaleurs : les bons gestes pour protéger les bébés",
+      "url": "https://gouvernement.lu/fr/actualites/toutes_actualites/communiques/2026/06-juin/26-sante-chaleur-bebe.html",
+      "published": "2026-06-26",
+      "level": "A-etranger",
+      "verification": "lu",
+      "notes": "Lu le 08/11/2026 (communiqué du 26 juin 2026), utilisé faute de source française sur la poussette couverte : « ne jamais laisser un enfant exposé au soleil dans une poussette ou un siège auto » ; « ne jamais couvrir une poussette avec une couverture ou un linge car cela bloque la circulation de l'air et peut provoquer une accumulation de chaleur. » Ne cite ni ombrelle, ni pare-soleil, ni chapeau."
+    },
+    {
+      "id": "inspq-chaleur-froid",
+      "publisher": "Institut national de santé publique du Québec (Mieux vivre avec notre enfant)",
+      "short": "INSPQ (Québec)",
+      "title": "Protéger votre bébé de la grande chaleur et du froid",
+      "url": "https://www.inspq.qc.ca/mieux-vivre/enfant/securite/proteger-bebe-chaleur-et-froid",
+      "published": "2026-02-17",
+      "level": "A-etranger",
+      "verification": "lu",
+      "notes": "Lu le 08/11/2026 (mise à jour du 17 février 2026) : « ne recouvrez pas la poussette d'une couverture même si c'est pour protéger votre bébé du soleil » ; la température dans la poussette augmente rapidement. La page sœur « Protéger votre bébé du soleil » (même date) dit : « tenir votre bébé à l'ombre » avant 6 mois, « un chapeau à large bord ou une casquette » ; elle ne cite ni ombrelle, ni pare-soleil, ni porte-bébé, ni bavolet."
+    },
+    {
       "id": "ineris-aida-r221-1",
       "publisher": "INERIS (AIDA), texte du Code de l'environnement",
       "short": "Code de l'environnement",

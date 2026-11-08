@@ -371,7 +371,14 @@ function addOverlays(outfit, plan, ref, R, params, labels) {
     }
   }
   if (ref.some((sl) => sl.gust_kmh >= ov.wind_gust_kmh_at_least)) outfit.notes.push('practical.wind');
+  const t = R.outfit.transport[outfit.transport];
+  if (t.sun_note && ref.some((sl) => sunHatHour(sl, t, R))) outfit.notes.push(t.sun_note);
 }
+
+// Une heure où le chapeau de soleil sert, pour un mode de sortie : soleil (indice UV des repères) et assez doux pour
+// quitter le bonnet (sun_hat_feels_c_at_least du mode, sinon journee.bag.sun_feels_c_at_least).
+const sunHatHour = (sl, t, R) => sl.uv >= R.relay_triggers.uv_at_least
+  && sl.feels_c >= (t.sun_hat_feels_c_at_least ?? R.journee.bag.sun_feels_c_at_least);
 
 function dayRelays(input, R, age, plan, outfit, params) {
   const rt = R.relay_triggers;
@@ -403,6 +410,13 @@ function dayRelays(input, R, age, plan, outfit, params) {
     params.uv = round1(uvDay);
     if (age < rt.under_1y_months) relays.push('relay.sun.under_1y', 'relay.sun.hours');
     else relays.push('relay.sun.hours', 'relay.sun.protect');
+  }
+  // Au soleil ou par fortes chaleurs, en poussette (un mode avec ombrelle, sun_gear) ou en porte-bébé : à l'abri du
+  // soleil direct (déjà dit par fortes chaleurs), et en poussette, jamais de linge ni de couverture par-dessus.
+  const sunGear = Boolean(R.outfit.transport[mode]?.sun_gear);
+  if (uvDay >= rt.uv_at_least || plan.heat) {
+    if ((sunGear || mode === 'porte_bebe') && !relays.includes('relay.heat.stroller_sun')) relays.push('relay.sun.shade');
+    if (sunGear) relays.push('relay.sun.stroller_no_cover');
   }
   if (plan.air) relays.push(plan.ozone ? 'relay.air.ozone' : 'relay.air.particles');
   return sortByPriority(relays, R.relay_priority);
@@ -563,8 +577,12 @@ function planJournee(input, R, age, plan) {
     }
     const rainy = hours.find((sl, k) => ahead(k) && sl.precip_prob >= J.bag.rain_prob_at_least);
     if (rainy) bag.push({ item: t.rain_gear, reason: 'pluie', time: fmtMin(rainy.start) });
-    const sunny = hours.findIndex((sl, k) => ahead(k) && sl.uv >= R.relay_triggers.uv_at_least && sl.feels_c >= J.bag.sun_feels_c_at_least
-      && ![...wornAt(k).values()].some(sun));
+    // Au soleil (indice UV des repères), l'ombre du mode de sortie : en poussette, l'ombrelle ou le pare-soleil
+    // (sun_gear), quelle que soit la température ; en porte-bébé, rien ne lui fait d'ombre, le chapeau vient plus tôt
+    // (sun_hat_feels_c_at_least).
+    const sunHour = hours.find((sl, k) => ahead(k) && sl.uv >= R.relay_triggers.uv_at_least);
+    if (sunHour && t.sun_gear) bag.push({ item: t.sun_gear, reason: 'soleil', time: fmtMin(sunHour.start) });
+    const sunny = hours.findIndex((sl, k) => ahead(k) && sunHatHour(sl, t, R) && ![...wornAt(k).values()].some(sun));
     if (sunny >= 0) bag.push({ item: 'chapeau', reason: 'soleil', time: fmtMin(hours[sunny].start) });
     bag.push(...later.slice(1));
     // Ce qui manquerait à une heure plus fraîche que prévu : le bonnet, les moufles ou les chaussons que la tranche
@@ -608,7 +626,7 @@ function planJournee(input, R, age, plan) {
     bag: packed,
     car: null,
     hours: hours.map((sl) => ({ time: fmtMin(sl.start), feels_c: sl.feels_c, precip_prob: sl.precip_prob, uv: sl.uv })),
-    notes: [...t.notes],
+    notes: [...t.notes, ...(t.sun_note && hours.some((sl) => sunHatHour(sl, t, R)) ? [t.sun_note] : [])],
     check: J.check,
   };
 }
@@ -828,6 +846,8 @@ function planPurchases(input, R) {
       if (owned(buy.code) >= need) continue;
       const reasons = [cat.reason];
       if (buy.code !== sizeFor(system, ageMonths(profile.birth, date)).code) reasons.push('taille');
+      // Achat facultatif (le pare-soleil : la capote baissée peut suffire) : dit comme tel.
+      if (cat.optional) reasons.push('facultatif');
       found.set(cat.id, {
         key: `${cat.id}:${buy.code}`,
         category: cat.id,
@@ -1347,7 +1367,7 @@ export function lint(bundle) {
     ...R.night.always,
     ...R.night.when_room_known,
     ...(R.night.by_age ?? []).map((r) => r.relay),
-    ...Object.values(R.outfit.transport).flatMap((t) => [...t.notes, ...(t.option_note ? [t.option_note] : []), ...(t.cabin?.notes ?? []), ...(t.cabin?.cover_notes ?? [])]),
+    ...Object.values(R.outfit.transport).flatMap((t) => [...t.notes, ...(t.option_note ? [t.option_note] : []), ...(t.sun_note ? [t.sun_note] : []), ...(t.cabin?.notes ?? []), ...(t.cabin?.cover_notes ?? [])]),
     ...Object.values(R.outfit.transport).flatMap((t) => (t.safety ? [t.safety.cover_relay, t.safety.heat_relay, t.safety.slippery_relay, ...t.safety.principles] : [])),
     ...R.purchases.never_suggest.map((p) => p.relay),
     ...R.purchases.categories.flatMap((c) => [
@@ -1366,10 +1386,11 @@ export function lint(bundle) {
     for (const replacement of Object.values(t.replace_items ?? {})) replacement.forEach((item) => items.add(item));
     items.add(t.rain_gear);
     if (!M.labels.rain_gear[t.rain_gear]) errors.push(`protection de pluie sans libellé : ${t.rain_gear}`);
+    if (t.sun_gear) items.add(t.sun_gear);
   }
   for (const item of items) {
     const slot = slotOf(R.journee, item);
-    if (!slot && !Object.values(R.outfit.transport).some((t) => t.rain_gear === item)) errors.push(`vêtement sans emplacement (journee.slots) : ${item}`);
+    if (!slot && !Object.values(R.outfit.transport).some((t) => t.rain_gear === item || t.sun_gear === item)) errors.push(`vêtement sans emplacement (journee.slots) : ${item}`);
     if (slot && R.journee.warmth[item] === undefined) errors.push(`vêtement sans chaleur (journee.warmth) : ${item}`);
     if (!M.labels.items[item]) errors.push(`libellé manquant : ${item}`);
     if (!M.labels.items_short[item]) errors.push(`libellé court manquant : ${item}`);

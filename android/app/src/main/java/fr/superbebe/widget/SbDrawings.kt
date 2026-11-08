@@ -37,6 +37,7 @@ object SbDrawings {
         "chapeau_soleil" to R.drawable.drawing_chapeau_soleil,
         "chanceliere" to R.drawable.drawing_chanceliere,
         "habillage_pluie" to R.drawable.drawing_habillage_pluie,
+        "ombrelle" to R.drawable.drawing_ombrelle,
         "gigoteuse" to R.drawable.drawing_gigoteuse,
         "gigoteuse_chaude" to R.drawable.drawing_gigoteuse_chaude,
         "lunettes" to R.drawable.drawing_lunettes,

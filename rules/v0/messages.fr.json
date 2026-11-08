@@ -177,6 +177,25 @@
       "text": "Pour les enfants : « des vêtements longs, un chapeau à larges bords », « des lunettes de soleil filtrant bien les UV et enveloppantes » et « une crème solaire adaptée aux enfants sur les parties découvertes du corps ».",
       "short": "Vêtements longs, chapeau, lunettes, crème enfant"
     },
+    "relay.sun.shade": {
+      "kind": "officiel",
+      "verbatim": true,
+      "sources": [
+        "spf-fortes-chaleurs-bebes"
+      ],
+      "text": "« Protéger les bébés dans les poussettes ou les porte-bébés dorsaux des rayons directs du soleil. »",
+      "short": "À l'abri du soleil direct, en poussette ou porte-bébé"
+    },
+    "relay.sun.stroller_no_cover": {
+      "kind": "officiel",
+      "verbatim": false,
+      "sources": [
+        "lu-sante-chaleur-bebes",
+        "inspq-chaleur-froid"
+      ],
+      "text": "Ne jamais couvrir la poussette « avec une couverture ou un linge car cela bloque la circulation de l'air et peut provoquer une accumulation de chaleur » (Direction de la santé, Luxembourg) ; « ne recouvrez pas la poussette d'une couverture même si c'est pour protéger votre bébé du soleil » (INSPQ, Québec). Faute de source française trouvée.",
+      "short": "Jamais de linge ni de couverture sur la poussette"
+    },
     "relay.air.particles": {
       "kind": "officiel",
       "verbatim": false,
@@ -429,6 +448,11 @@
       "kind": "pratique",
       "text": "Habillé pour une voiture chauffée ou climatisée : dans le siège, comme à la maison. Par temps froid, la couverture par-dessus le harnais au départ, à enlever quand la voiture est chaude. Le reste de la tenue du dehors est dans le sac, à mettre en sortant.",
       "short": "Voiture chauffée : comme à la maison dans le siège"
+    },
+    "practical.carrier.sun_hat": {
+      "kind": "pratique",
+      "text": "En porte-bébé, aucune capote ne lui fait d'ombre : son chapeau le protège. Un chapeau à larges bords, ou à bavolet qui couvre aussi la nuque et les oreilles.",
+      "short": "Porte-bébé au soleil : chapeau, nuque couverte"
     },
     "practical.carrier.no_footed": {
       "kind": "pratique",
@@ -785,6 +809,7 @@
       "combi_ski": "combinaison de ski",
       "habillage_pluie": "habillage pluie",
       "cape_pluie": "cape de pluie",
+      "pare_soleil": "pare-soleil ou ombrelle de poussette",
       "impermeable": "imperméable à capuche",
       "capuche": "capuche ou parapluie"
     },
@@ -827,6 +852,7 @@
       "combi_ski": "combi de ski",
       "habillage_pluie": "habillage pluie",
       "cape_pluie": "cape de pluie",
+      "pare_soleil": "pare-soleil",
       "impermeable": "imperméable",
       "capuche": "capuche"
     },
@@ -860,6 +886,7 @@
       "combi_ski": "dessus",
       "habillage_pluie": "accessoire",
       "cape_pluie": "accessoire",
+      "pare_soleil": "accessoire",
       "impermeable": "accessoire",
       "capuche": "accessoire",
       "bonnet_fin": "accessoire",
@@ -926,6 +953,7 @@
       "accessoires_hiver": "bonnet, moufles et chaussons",
       "chanceliere": "chancelière pour la poussette",
       "habillage_pluie": "habillage pluie pour la poussette",
+      "pare_soleil": "pare-soleil ou ombrelle pour la poussette",
       "chapeau_soleil": "chapeau à larges bords",
       "vetements_longs_legers": "vêtements longs et légers",
       "lunettes_soleil": "lunettes de soleil enveloppantes",
@@ -954,7 +982,8 @@
       "soleil": "soleil",
       "taille": "changement de taille",
       "lessive": "pour tenir entre deux lessives",
-      "tenue": "pour ses tenues"
+      "tenue": "pour ses tenues",
+      "facultatif": "facultatif si la capote suffit à lui faire de l'ombre"
     },
     "vigilance_colors": {
       "jaune": "jaune",

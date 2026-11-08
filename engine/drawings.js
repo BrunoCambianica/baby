@@ -164,6 +164,14 @@ const POUSSETTE = [
 const CHANCELIERE = [...POUSSETTE, { d: 'M7 13.2 L17 13.2' }];
 const HABILLAGE_PLUIE = [...POUSSETTE, { d: 'M15 3.2 L14.4 4.8' }, { d: 'M18 3.2 L17.4 4.8' }, { d: 'M16.5 6 L15.9 7.6' }];
 
+// Ombrelle de poussette : la toile festonnée, le mât et la pince.
+const OMBRELLE = [
+  { d: 'M2.8 11.6 Q12 0.4 21.2 11.6 Q18.9 9.8 16.6 11.6 Q14.3 9.8 12 11.6 Q9.7 9.8 7.4 11.6 Q5.1 9.8 2.8 11.6 Z' },
+  { d: 'M12 6 L12 4.4' },
+  { d: 'M12 11.6 L12 18.4' },
+  { d: 'M10.2 18.4 L13.8 18.4 L13.8 21 L10.2 21 Z' },
+];
+
 const GIGOTEUSE_OUTLINE = sym('M12 5.2 Q13.5 5.2 14.2 3.6 L15.8 3.6 Q16 6.4 17.8 7.6 Q18.7 13.4 18.4 18.2 Q18.2 21.2 15.4 21.2 L12 21.2');
 const GIGOTEUSE = [{ d: GIGOTEUSE_OUTLINE }, { d: 'M12 5.2 L12 18.4' }];
 const GIGOTEUSE_CHAUDE = [...GIGOTEUSE, ...pair('M8.4 10.6 L10.6 10.6'), ...pair('M8 14 L10.6 14'), ...pair('M8.2 17.4 L10.6 17.4')];
@@ -213,6 +221,7 @@ export const DRAWINGS = {
   chapeau_soleil: CHAPEAU_SOLEIL,
   chanceliere: CHANCELIERE,
   habillage_pluie: HABILLAGE_PLUIE,
+  ombrelle: OMBRELLE,
   gigoteuse: GIGOTEUSE,
   gigoteuse_chaude: GIGOTEUSE_CHAUDE,
   lunettes: LUNETTES,
@@ -256,6 +265,8 @@ export const ITEM_DRAWINGS = {
   cape_pluie: 'cape_pluie',
   impermeable: 'impermeable',
   capuche: 'impermeable',
+  // Ombre au soleil, en poussette.
+  pare_soleil: 'ombrelle',
   bonnet_fin: 'bonnet_fin',
   bonnet: 'bonnet',
   moufles: 'moufles',
@@ -275,6 +286,7 @@ export const CATEGORY_DRAWINGS = {
   accessoires_hiver: 'bonnet',
   chanceliere: 'chanceliere',
   habillage_pluie: 'habillage_pluie',
+  pare_soleil: 'ombrelle',
   chapeau_soleil: 'chapeau',
   vetements_longs_legers: 'haut_ml',
   lunettes_soleil: 'lunettes',

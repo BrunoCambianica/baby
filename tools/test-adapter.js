@@ -110,10 +110,11 @@ test('Widget le soir : la sortie de demain (choisie, sinon au début de la plage
   assert(evening.reminder.startsWith('Body ML, haut ML, pantalon chaud') && evening.reminder.endsWith('nuit 19° : body ML + pyjama + 2 TOG'), evening.reminder);
   const rainy = widgetView({ forecast, profile, date: '2026-10-24', time: '20:30', lat: 45.758 }, bundle);
   assert(rainy.lines[0] === 'Demain, sortie de 8 h à 9 h · 8°' && rainy.lines[2].startsWith('Sac : habillage pluie'), JSON.stringify(rainy.lines));
-  // Choisie dans l'app : sa tenue et son sac (le gilet pour 12 h), pas ceux de toute la journée.
+  // Choisie dans l'app : sa tenue et son sac (le gilet pour 12 h, le pare-soleil pour l'indice UV de 3 à midi), pas ceux de
+  // toute la journée.
   const chosen = widgetView({ forecast, profile, date: '2026-10-26', time: '20:30', lat: 45.758, outings: { '2026-10-27': [{ s: '10:00', d: 4 }] } }, bundle);
-  assert(chosen.lines[0] === 'Demain, sortie de 10 h à 14 h · 8° → 15°' && chosen.lines[2].startsWith('Sac : gilet · nuit'), JSON.stringify(chosen.lines));
-  assert(chosen.reminder.includes('combi pilote') && chosen.reminder.includes(' · sac : gilet · nuit 19°'), chosen.reminder);
+  assert(chosen.lines[0] === 'Demain, sortie de 10 h à 14 h · 8° → 15°' && chosen.lines[2].startsWith('Sac : gilet, pare-soleil · nuit'), JSON.stringify(chosen.lines));
+  assert(chosen.reminder.includes('combi pilote') && chosen.reminder.includes(' · sac : gilet, pare-soleil · nuit 19°'), chosen.reminder);
   const early = widgetView({ forecast, profile, date: '2026-10-27', time: '16:00', lat: 45.758 }, bundle, { reminder: true });
   assert(early.moment === 'jour' && early.reminder?.startsWith('Body ML, haut ML, pantalon') && early.reminder.includes(' · nuit 19° : '), String(early.reminder));
 });
@@ -131,7 +132,7 @@ test('Widget le jour : la sortie de l\'app (en cours ou choisie), sinon maintena
   assert(now.today.journee.from === '08:00', 'la journée reste calculée pour la fiche');
   // Choisie à 10 h pour 4 h : son titre, sa tenue au départ, le changement de 12 h et le gilet dans le sac.
   const chosen = at('07:30', { '2026-10-27': [{ s: '10:00', d: 4 }] });
-  assert(chosen.lines[0] === 'Sortie de 10 h à 14 h · 8° → 15°' && chosen.lines[2] === '12 h : − combi pilote… + gilet · sac : gilet', JSON.stringify(chosen.lines));
+  assert(chosen.lines[0] === 'Sortie de 10 h à 14 h · 8° → 15°' && chosen.lines[2] === '12 h : − combi pilote… + gilet · sac : gilet, pare-soleil', JSON.stringify(chosen.lines));
   assert(chosen.lines[1].label.includes('combi pilote'), JSON.stringify(chosen.lines[1]));
   // En cours : jusqu'à sa fin, la tenue de maintenant.
   const going = at('11:00', { '2026-10-27': [{ s: '10:00', d: 4 }] });
@@ -153,7 +154,7 @@ test('Rappel avant une sortie choisie : sa tenue au départ et son sac ; 30 minu
   const r = outingReminder({ forecast, profile, date: '2026-10-21', time: '11:45', lat: 45.758, outing: { s: '12:00', d: 1 } }, bundle);
   assert(r.title === 'Sortie à 12 h' && r.text.startsWith('Body ML, haut ML') && r.text.endsWith(' · sac : habillage pluie'), JSON.stringify(r));
   const long = outingReminder({ forecast, profile, date: '2026-10-27', time: '09:45', lat: 45.758, outing: { s: '10:00', d: 4 } }, bundle);
-  assert(long.title === 'Sortie à 10 h' && long.text.includes('combi pilote') && long.text.endsWith(' · sac : gilet'), JSON.stringify(long));
+  assert(long.title === 'Sortie à 10 h' && long.text.includes('combi pilote') && long.text.endsWith(' · sac : gilet, pare-soleil'), JSON.stringify(long));
   const household = {
     commune: { nom: 'Lyon', code: '69123', dep: '69', lat: 45.758, lon: 4.8351 }, outing_window: { from: '08:00', to: '18:00' },
     outing_duration_h: 1, outing_short: true, outfit_view: 'dessins', updated: 5,
