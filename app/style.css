@@ -584,6 +584,7 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
 .field em { font-style: normal; color: var(--ink-3); font-size: 0.84rem; }
 .onboard .field { margin-top: 4px; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.trio { display: grid; grid-template-columns: 0.8fr 1.4fr 1fr; gap: 8px; }
 .results { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
 .results button { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 12px 14px; border-radius: 12px; background: var(--fill); text-align: left; font-weight: 600; }
 .results .muted { color: var(--ink-3); font-weight: 500; }
@@ -673,7 +674,7 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
 /* Listes déroulantes (js/listes.js) : une feuille qui monte du bas de l'écran, à la place de la liste du système.
    Les listes ne reçoivent plus le toucher : c'est leur libellé, ou la zone sous le doigt, qui ouvre la feuille. */
 .sheets select { pointer-events: none; }
-.sheets label:has(> select), .sheets .pair { cursor: pointer; }
+.sheets label:has(> select), .sheets .pair, .sheets .trio { cursor: pointer; }
 .pick select:focus-visible { outline: none; }
 .pick:has(select:focus-visible) { outline: 3px solid var(--blue); outline-offset: 2px; }
 .sheet-lock, .sheet-lock body { overflow: hidden; }

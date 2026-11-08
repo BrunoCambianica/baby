@@ -333,6 +333,18 @@
       }
     },
     {
+      "id": "age-mois-seul-le-15",
+      "description": "Naissance en juillet sans le jour, le 5 novembre : le moteur compte le 15 juillet, 3,7 mois",
+      "input": { "profile": { "birth": "2026-07" } },
+      "expect": { "age_months": 3.7 }
+    },
+    {
+      "id": "age-jour-connu",
+      "description": "Né le 1er juillet, le 5 novembre : 4,2 mois, l'âge exact",
+      "input": { "profile": { "birth": "2026-07-01" } },
+      "expect": { "age_months": 4.2 }
+    },
+    {
       "id": "creneau-uv-enfant-20-mois",
       "description": "Même journée, enfant de 20 mois : repères de protection solaire des enfants",
       "input": {

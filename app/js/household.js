@@ -145,6 +145,11 @@ export function fromConfig(cfg, local, { keepView = false } = {}) {
 }
 
 // « 5 mois », « 2 ans », « 2 ans et demi ».
+// Naissance d'un brouillon (mois, année et jour facultatif) : « AAAA-MM », ou « AAAA-MM-JJ » si le jour est connu. Sans
+// jour, le moteur compte le 15 du mois ; avec lui, l'âge est exact.
+export const birthOf = (d) => `${d.birthYear}-${d.birthMonth}${d.birthDay ? `-${d.birthDay}` : ''}`;
+export const daysInMonth = (year, month) => new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
+
 export function ageLabel(months) {
   const m = Math.max(0, Math.floor(months));
   if (m < 24) return `${m} mois`;

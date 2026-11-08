@@ -3,11 +3,11 @@ import { addDays, ageMonths, airLevel, baseTransport, homeStatus, hourFr, needMe
 import { configChildren, parisNow } from '../../engine/adapter.js';
 import { dayLong, dayShort, decimal, esc, guideBandPath, MONTHS } from './format.js';
 import { bagReason } from './fiche.js';
-import { ageLabel, feedbackHint, outingHours } from './household.js';
+import { ageLabel, birthOf, daysInMonth, feedbackHint, outingHours } from './household.js';
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.28.0';
+export const VERSION = '0.29.0';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -89,10 +89,15 @@ function birthSelects(draft, today) {
   }).join('');
   const years = Array.from({ length: 6 }, (_, k) => year - k)
     .map((y) => `<option value="${y}"${draft.birthYear === String(y) ? ' selected' : ''}>${y}</option>`).join('');
-  return `<div class="pair">
+  // Le jour est facultatif : sans lui, le moteur compte le 15 du mois (voir birthOf).
+  const days = Array.from({ length: daysInMonth(draft.birthYear, draft.birthMonth) }, (_, k) => String(k + 1).padStart(2, '0'))
+    .map((v) => `<option value="${v}"${draft.birthDay === v ? ' selected' : ''}>${Number(v)}</option>`).join('');
+  return `<div class="trio">
+      <select id="birth-day" aria-label="Jour de naissance (facultatif)"><option value=""${draft.birthDay ? '' : ' selected'}>Jour</option>${days}</select>
       <select id="birth-month" aria-label="Mois de naissance">${months}</select>
       <select id="birth-year" aria-label="Année de naissance">${years}</select>
     </div>
+    <p class="fine">Le jour est facultatif : avec lui, l'âge est exact.</p>
     ${draft.birthError ? `<p class="error">${esc(draft.birthError)}</p>` : ''}`;
 }
 
@@ -136,7 +141,7 @@ export function viewOnboarding(state) {
   } else {
     body = `<h2>Comment sortez-vous le plus souvent ?</h2>
       <p class="lead">Vous pourrez changer chaque jour. Un autre enfant ? Vous l'ajouterez ensuite dans les réglages.</p>
-      ${transportChoices(state, draft, `${draft.birthYear}-${draft.birthMonth}`)}
+      ${transportChoices(state, draft, birthOf(draft))}
       <p class="fine">Les repères de santé viennent de sources publiques (Santé publique France, ministère de la Santé, Météo-France…), toujours citées : ce n'est pas un avis médical. Vos réglages restent sur ce téléphone.</p>
       <button class="btn" data-action="onboard-finish">C'est parti</button>
       <button class="link" data-action="onboard-back">Retour</button>`;
@@ -1186,7 +1191,7 @@ export function viewChild(state) {
   const fresh = d.child === 'nouveau';
   const index = state.household.children.findIndex((c) => c.id === d.child);
   const title = fresh ? 'Nouvel enfant' : childName({ name: d.name }, index);
-  const birth = `${d.birthYear}-${d.birthMonth}`;
+  const birth = birthOf(d);
   const pref = Math.sign(d.offset ?? 0);
   // Avec ou sans pyjama la journée : seulement tant que ses tenues en comportent un (avant 2 ans).
   const pyjamas = ageMonths(birth, state.today) < (state.bundle.rules.outfit.age_variants?.[0]?.from_months ?? 24);
@@ -1198,7 +1203,7 @@ export function viewChild(state) {
     <section class="group">
       <div class="group-body">
         <div class="row column">${nameField(d)}</div>
-        <div class="row column"><span>Mois de naissance</span>${birthSelects(d, state.today)}</div>
+        <div class="row column"><span>Naissance</span>${birthSelects(d, state.today)}</div>
         <div class="row column"><span>Le plus souvent</span>${modes(state, d.transport, birth)}</div>
         <div class="row column"><span>Tendance</span>
           <div class="seg" role="radiogroup" aria-label="Tendance">${[[-1, 'A chaud'], [0, 'Normal'], [1, 'A froid']].map(([v, l]) =>

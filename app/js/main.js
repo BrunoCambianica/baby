@@ -7,7 +7,7 @@ import {
   api, apiBase, familyKeys, fromB64url, mergeHousehold, newSecret, seal, sharedPart, shortFicheLink, unseal,
 } from './famille.js';
 import { dayLong, dayShort } from './format.js';
-import { ageLabel, feedbackStats, fromConfig, fromShared, isNewer, liveSwaps, migrate, newChild, outingHours, profileOf, withFeedback } from './household.js';
+import { ageLabel, birthOf, daysInMonth, feedbackStats, fromConfig, fromShared, isNewer, liveSwaps, migrate, newChild, outingHours, profileOf, withFeedback } from './household.js';
 import { closeSheet, openSheet } from './listes.js';
 import { store } from './storage.js';
 import * as V from './views.js';
@@ -330,6 +330,7 @@ function newDraft(view) {
       name: child?.name ?? '',
       birthMonth: child?.birth.slice(5, 7) ?? now.slice(5, 7),
       birthYear: child?.birth.slice(0, 4) ?? now.slice(0, 4),
+      birthDay: child?.birth.slice(8, 10) ?? '',
       transport: child?.transport ?? 'poussette',
       offset: child?.outfit_offset ?? 0,
       dayStyle: child?.day_style ?? null,
@@ -342,6 +343,7 @@ function newDraft(view) {
     query: settings ? state.profile.commune.nom : '',
     birthMonth: now.slice(5, 7),
     birthYear: now.slice(0, 4),
+    birthDay: '',
     transport: 'poussette',
     name: '',
   };
@@ -887,8 +889,12 @@ function reportText() {
 const ageMonthsNow = (birth) => ageMonths(birth, parisNow().date);
 
 function validBirth(draft) {
-  const birth = `${draft.birthYear}-${draft.birthMonth}`;
-  draft.birthError = birth > parisNow().date.slice(0, 7) ? 'Ce mois est dans le futur.' : null;
+  // Un jour qui n'existe pas dans le mois choisi (le 31 d'un mois de 30 jours) redevient « jour inconnu ».
+  if (draft.birthDay && Number(draft.birthDay) > daysInMonth(draft.birthYear, draft.birthMonth)) draft.birthDay = '';
+  const birth = birthOf(draft);
+  const today = parisNow().date;
+  const future = draft.birthDay ? birth > today : birth > today.slice(0, 7);
+  draft.birthError = future ? (draft.birthDay ? 'Ce jour est dans le futur.' : 'Ce mois est dans le futur.') : null;
   return draft.birthError ? null : birth;
 }
 
@@ -1570,8 +1576,9 @@ document.addEventListener('change', (event) => {
     return;
   }
   const d = state.draft;
-  if ((id === 'birth-month' || id === 'birth-year') && d) {
+  if ((id === 'birth-month' || id === 'birth-year' || id === 'birth-day') && d) {
     if (id === 'birth-month') d.birthMonth = value;
+    else if (id === 'birth-day') d.birthDay = value;
     else d.birthYear = value;
     const birth = validBirth(d);
     if (birth && currentView() === 'enfant' && d.child !== 'nouveau') updateChild({ birth }, d.child);

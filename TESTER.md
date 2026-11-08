@@ -7,7 +7,7 @@ Merci de tester ! Pendant deux à trois semaines, regardez l'app avant de sortir
 - **iPhone** : ouvrez <https://brunocambianica.github.io/baby/app/> dans **Safari** (l'adresse de l'app, avec `app/` : la page d'accueil du site est le guide des tenues), bouton Partager, puis « Sur l'écran d'accueil ». Ouvrez ensuite Superbébé depuis son icône : plein écran, sans les barres de Safari.
 - **Android** : installez directement l'app Superbébé (voir 2 bis) : elle s'ouvre en plein écran et contient le widget.
 
-Au premier lancement, trois questions : votre commune, le mois de naissance de votre enfant (et son prénom ou un surnom, si vous voulez), et comment vous sortez le plus souvent (poussette, porte-bébé, à pied à partir de 2 ans, ou voiture).
+Au premier lancement, trois questions : votre commune, la naissance de votre enfant (mois et année, et depuis la 0.29 le **jour**, facultatif : sans lui l'app compte le 15 du mois, si bien que l'âge peut être faux d'une dizaine de jours ; avec lui il est exact, et les tailles et repères d'âge suivent ; vous pouvez l'ajouter dans la fiche de l'enfant, Réglages) et son prénom ou un surnom, si vous voulez, et comment vous sortez le plus souvent (poussette, porte-bébé, à pied à partir de 2 ans, ou voiture).
 
 **Plusieurs enfants ?** Réglages, **Ajouter un enfant**. Chacun a son mode de sortie, sa tendance, sa garde-robe et ses relevés de température ; des pastilles en haut de l'écran passent de l'un à l'autre. À partir de 2 ans, les tenues changent (haut et pantalon plutôt que body et pyjama, manteau plutôt que combinaison, pas de chancelière) et les tailles passent en années.
 

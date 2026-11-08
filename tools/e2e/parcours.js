@@ -207,6 +207,41 @@ await test('Deuxième enfant : fiche, pastilles, tenue et mode propres à chacun
   assert(h.children[0].room?.value === 19.5 && !h.children[1].room && !h.children[0].room_day, JSON.stringify(h.children.map((c) => [c.room, c.room_day])));
 });
 
+await test('Jour de naissance facultatif : sans lui le 15 du mois, avec lui l\'âge exact ; un jour qui n\'existe pas est oublié', async (use) => {
+  // Né en juillet 2026, le 8 novembre : sans le jour (le 15 juillet), 3 mois ; né le 1er juillet, 4 mois.
+  const july = { ...LEO, birth: '2026-07' };
+  const page = use(await phone({ at: '2026-11-08T10:00:00+01:00', init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([july]))} }` }));
+  await page.goto(`${APP}#reglages`);
+  await page.waitForSelector('text=Ajouter un enfant');
+  const label = async () => (await page.locator('a.row[href^="#enfant/"]').first().textContent()).replace(/\s+/g, ' ');
+  assert((await label()).includes('3 mois'), await label());
+  await page.goto(`${APP}#enfant/${july.id}`);
+  assert((await page.locator('#birth-day option').count()) === 32, 'liste des jours : « Jour » puis 31 jours en juillet');
+  assert((await page.inputValue('#birth-day')) === '', 'jour inconnu au départ');
+  await page.selectOption('#birth-day', '01');
+  let h = await stored(page);
+  assert(h.children[0].birth === '2026-07-01', JSON.stringify(h.children[0]));
+  await page.goto(`${APP}#reglages`);
+  await page.waitForSelector('text=Ajouter un enfant');
+  assert((await label()).includes('4 mois'), await label());
+  // Le 31 juillet, puis juin : le jour 31 n'existe pas, il redevient inconnu et le 15 juin s'applique.
+  await page.goto(`${APP}#enfant/${july.id}`);
+  await page.selectOption('#birth-day', '31');
+  await page.selectOption('#birth-month', '06');
+  assert((await page.locator('#birth-day option').count()) === 31 && (await page.inputValue('#birth-day')) === '', 'jour 31 gardé en juin');
+  h = await stored(page);
+  assert(h.children[0].birth === '2026-06', JSON.stringify(h.children[0]));
+  // Novembre est le mois en cours : accepté sans jour ; le 20, jour futur, est refusé et le mois reste enregistré seul.
+  await page.selectOption('#birth-month', '11');
+  h = await stored(page);
+  assert(h.children[0].birth === '2026-11', JSON.stringify(h.children[0]));
+  await page.selectOption('#birth-day', '20');
+  assert((await page.textContent('.error')).includes('Ce jour est dans le futur'), 'jour futur accepté');
+  h = await stored(page);
+  assert(h.children[0].birth === '2026-11', `jour futur enregistré : ${JSON.stringify(h.children[0])}`);
+  await shot(page, 'l1-fiche-jour-naissance');
+});
+
 await test('Fiche d\'un enfant : prénom, naissance et retrait', async (use) => {
   const page = use(await phone({ init: `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO, ZOE]))} }` }));
   await page.goto(`${APP}#enfant/zoe222`);
