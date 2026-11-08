@@ -345,6 +345,49 @@
       "expect": { "age_months": 4.2 }
     },
     {
+      "id": "pluie-averse-possible-poussette",
+      "description": "Averse possible (25 %) en poussette : l'habillage pluie dans le sac et le conseil, comme à partir de 20 %",
+      "input": { "forecast": { "hourly": { "base": { "precip_prob": 25 } } } },
+      "expect": {
+        "journee.bag.*.item.include": ["habillage_pluie"],
+        "journee.bag.*.reason.include": ["pluie"],
+        "outfit.notes.include": ["practical.rain.cover"],
+        "outfit.notes.exclude": ["practical.carrier.rain"]
+      }
+    },
+    {
+      "id": "pluie-sous-le-seuil",
+      "description": "15 % de pluie : ni habillage pluie dans le sac, ni conseil",
+      "input": { "forecast": { "hourly": { "base": { "precip_prob": 15 } } } },
+      "expect": { "journee.bag.*.item.exclude": ["habillage_pluie"], "outfit.notes.exclude": ["practical.rain.cover"] }
+    },
+    {
+      "id": "pluie-porte-bebe-probable",
+      "description": "Pluie probable (55 %) en porte-bébé : déconseillé sans parapluie, la cape de pluie dans le sac",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "precip_prob": 55 } } } },
+      "expect": {
+        "outfit.notes.include": ["practical.carrier.rain"],
+        "journee.notes.include": ["practical.carrier.rain"],
+        "journee.bag.*.item.include": ["cape_pluie"]
+      }
+    },
+    {
+      "id": "pluie-porte-bebe-averse",
+      "description": "Averse possible (30 %) en porte-bébé : la cape de pluie dans le sac, mais pas de déconseil",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "precip_prob": 30 } } } },
+      "expect": {
+        "journee.bag.*.item.include": ["cape_pluie"],
+        "outfit.notes.exclude": ["practical.carrier.rain"],
+        "journee.notes.exclude": ["practical.carrier.rain"]
+      }
+    },
+    {
+      "id": "pluie-poussette-probable-sans-conseil-portage",
+      "description": "Pluie probable (55 %) en poussette : habillage pluie, jamais le conseil du porte-bébé",
+      "input": { "forecast": { "hourly": { "base": { "precip_prob": 55 } } } },
+      "expect": { "journee.bag.*.item.include": ["habillage_pluie"], "outfit.notes.exclude": ["practical.carrier.rain"], "journee.notes.exclude": ["practical.carrier.rain"] }
+    },
+    {
       "id": "creneau-uv-enfant-20-mois",
       "description": "Même journée, enfant de 20 mois : repères de protection solaire des enfants",
       "input": {

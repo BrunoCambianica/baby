@@ -502,7 +502,9 @@ await test('Extérieur : maintenant par défaut, le créneau idéal d\'un touche
   assert(back.includes('En rentrant') && back.includes('Combi pilote') && back.includes('Bonnet') && back.includes('le dessous change aussi'), back);
   const tabbar = (await page.locator('.tabbar').boundingBox()).y;
   assert((await page.locator('.day > .dress .dress-ico').first().boundingBox()).y + 60 <= tabbar, 'tenue de la sortie sous la barre d\'onglets');
-  assert(!(await page.isVisible('.bag')), 'sac pour une heure sèche sans changement');
+  // 23 % d'averse (« averse possible ») : l'habillage pluie, seul dans le sac, sans changement de tenue en route.
+  const bagItems = (await page.locator('.bag .bag-list li strong').allTextContents()).map((t) => t.trim());
+  assert(bagItems.length === 1 && bagItems[0] === 'Habillage pluie', bagItems.join());
   assert(await page.isVisible('text=Touchez sa nuque, pas ses mains'), 'geste de la nuque absent');
   await shot(page, 'l2-sortie-matin');
   // Quatre heures à partir de 10 h : un changement en route, et le gilet dans le sac pour ce moment-là.
@@ -698,6 +700,25 @@ await test('Qualité de l\'air : l\'indice de la prévision dans le ciel ; un pi
   await page.waitForSelector('.day');
   sub = await page.textContent('.hero-sub');
   assert(!sub.includes('air '), sub);
+});
+
+await test('Pluie : l\'habillage pluie dès l\'averse possible ; par pluie probable, le porte-bébé déconseillé sans parapluie', async (use) => {
+  // La météo de Lyon, 55 % de risque de pluie toute la journée (« pluie probable »).
+  const wet = { ...forecast, hourly: { ...forecast.hourly, precipitation_probability: forecast.hourly.precipitation_probability.map(() => 55) } };
+  const init = `if (!localStorage.getItem('sb.profil')) { ${seed(household([LEO], { outing_window: { from: '08:00', to: '18:00' } }))} }`;
+  const page = use(await phone({ at: '2026-10-27T07:30:00+01:00', init, meteo: wet }));
+  await page.goto(APP);
+  await page.waitForSelector('.day');
+  assert((await page.textContent('.hero-sub')).includes('pluie probable'), await page.textContent('.hero-sub'));
+  const bag = (await page.textContent('.day .bag')).replace(/\s+/g, ' ');
+  assert(bag.includes('Habillage pluie'), bag);
+  const tips = async () => (await page.locator('.day .notes li').allTextContents()).join(' | ').replace(/\u00a0/g, ' ');
+  assert(!(await tips()).includes('sans parapluie'), await tips());
+  await shot(page, 'l2-pluie-poussette');
+  await page.click('.modes [data-value="porte_bebe"]');
+  assert((await tips()).includes('porte-bébé déconseillé sans parapluie'), await tips());
+  assert((await page.textContent('.day .bag')).includes('Cape de pluie'), await page.textContent('.day .bag'));
+  await shot(page, 'l2-pluie-porte-bebe');
 });
 
 await test('Soleil : en poussette, le pare-soleil dans le sac et jamais de linge dessus ; en porte-bébé, le chapeau, nuque couverte', async (use) => {

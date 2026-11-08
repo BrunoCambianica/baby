@@ -449,6 +449,11 @@
       "text": "Habillé pour une voiture chauffée ou climatisée : dans le siège, comme à la maison. Par temps froid, la couverture par-dessus le harnais au départ, à enlever quand la voiture est chaude. Le reste de la tenue du dehors est dans le sac, à mettre en sortant.",
       "short": "Voiture chauffée : comme à la maison dans le siège"
     },
+    "practical.carrier.rain": {
+      "kind": "pratique",
+      "text": "Pluie probable : le porte-bébé est déconseillé sans parapluie. Prenez-en un (ou une cape de pluie qui vous couvre tous les deux), ou choisissez la poussette avec son habillage pluie.",
+      "short": "Pluie : porte-bébé déconseillé sans parapluie"
+    },
     "practical.carrier.sun_hat": {
       "kind": "pratique",
       "text": "En porte-bébé, aucune capote ne lui fait d'ombre : son chapeau le protège. Un chapeau à larges bords, ou à bavolet qui couvre aussi la nuque et les oreilles.",

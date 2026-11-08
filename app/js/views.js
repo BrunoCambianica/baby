@@ -7,7 +7,7 @@ import { ageLabel, birthOf, daysInMonth, feedbackHint, outingHours } from './hou
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.29.1';
+export const VERSION = '0.29.2';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
@@ -188,7 +188,8 @@ function airLabel(slots, state) {
 
 function conditions(slots, state) {
   const rain = Math.max(...slots.map((s) => s.precip_prob));
-  const parts = [rain >= 50 ? 'pluie probable' : rain >= 20 ? `averse possible (${rain} %)` : 'sec'];
+  // « Averse possible » dès le seuil où l'app prévoit l'habillage pluie (overlays.rain_cover_prob_at_least).
+  const parts = [rain >= 50 ? 'pluie probable' : rain >= state.bundle.rules.outfit.overlays.rain_cover_prob_at_least ? `averse possible (${rain} %)` : 'sec'];
   if (Math.max(...slots.map((s) => s.gust_kmh)) >= 40) parts.push('venteux');
   const uv = Math.max(...slots.map((s) => s.uv));
   if (uv >= 3) parts.push(`UV ${Math.round(uv)}`);
