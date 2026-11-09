@@ -717,7 +717,10 @@ await test('Pluie : l\'habillage pluie dès l\'averse possible ; par pluie proba
   await shot(page, 'l2-pluie-poussette');
   await page.click('.modes [data-value="porte_bebe"]');
   assert((await tips()).includes('porte-bébé déconseillé sans parapluie'), await tips());
-  assert((await page.textContent('.day .bag')).includes('Cape de pluie'), await page.textContent('.day .bag'));
+  assert((await page.textContent('.day .bag')).includes('Parapluie'), await page.textContent('.day .bag'));
+  assert(!(await page.textContent('.day .bag')).includes('Cape'), 'cape de pluie encore proposée en porte-bébé');
+  // Le repère officiel de Santé Canada accompagne le déconseil : rien ne recouvre le bébé.
+  assert((await tips()).includes('jamais sur son visage'), await tips());
   await shot(page, 'l2-pluie-porte-bebe');
 });
 

@@ -363,22 +363,42 @@
     },
     {
       "id": "pluie-porte-bebe-probable",
-      "description": "Pluie probable (55 %) en porte-bébé : déconseillé sans parapluie, la cape de pluie dans le sac",
+      "description": "Pluie probable (55 %) en porte-bébé : déconseillé sans parapluie, le parapluie dans le sac, et le repère officiel : rien ne recouvre le bébé",
       "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "precip_prob": 55 } } } },
       "expect": {
-        "outfit.notes.include": ["practical.carrier.rain"],
-        "journee.notes.include": ["practical.carrier.rain"],
-        "journee.bag.*.item.include": ["cape_pluie"]
+        "outfit.notes.include": ["practical.carrier.rain", "relay.carrier.cover_face"],
+        "journee.notes.include": ["practical.carrier.rain", "relay.carrier.cover_face"],
+        "journee.bag.*.item.include": ["parapluie"],
+        "journee.bag.*.item.exclude": ["cape_pluie"]
       }
     },
     {
       "id": "pluie-porte-bebe-averse",
-      "description": "Averse possible (30 %) en porte-bébé : la cape de pluie dans le sac, mais pas de déconseil",
+      "description": "Averse possible (30 %) en porte-bébé : le parapluie dans le sac, mais pas de déconseil",
       "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "precip_prob": 30 } } } },
       "expect": {
-        "journee.bag.*.item.include": ["cape_pluie"],
+        "journee.bag.*.item.include": ["parapluie"],
         "outfit.notes.exclude": ["practical.carrier.rain"],
         "journee.notes.exclude": ["practical.carrier.rain"]
+      }
+    },
+    {
+      "id": "pluie-porte-bebe-douce-repere-officiel",
+      "description": "Journée douce (18 °C ressentis, aucune couverture de portage) et pluie probable en porte-bébé : le déconseil amène seul le repère officiel, rien ne recouvre le bébé",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 18, "precip_prob": 55 } } } },
+      "expect": {
+        "outfit.notes.include": ["practical.carrier.rain", "relay.carrier.cover_face"],
+        "journee.notes.include": ["practical.carrier.rain", "relay.carrier.cover_face"]
+      }
+    },
+    {
+      "id": "pluie-porte-bebe-douce-averse",
+      "description": "Même journée douce, averse possible seulement (30 %) : le parapluie dans le sac, ni déconseil ni repère de couverture",
+      "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 18, "precip_prob": 30 } } } },
+      "expect": {
+        "journee.bag.*.item.include": ["parapluie"],
+        "outfit.notes.exclude": ["practical.carrier.rain", "relay.carrier.cover_face"],
+        "journee.notes.exclude": ["practical.carrier.rain", "relay.carrier.cover_face"]
       }
     },
     {
@@ -1238,7 +1258,7 @@
       "id": "pluie-porte-bebe",
       "description": "Porte-bébé, averses possibles : une cape de pluie",
       "input": { "profile": { "transport": "porte_bebe" }, "forecast": { "hourly": { "base": { "feels_c": 12, "precip_prob": 40 } } } },
-      "expect": { "outfit.notes.include": ["practical.rain.cover"], "params.gear_short": "cape de pluie" }
+      "expect": { "outfit.notes.include": ["practical.rain.cover"], "params.gear_short": "parapluie" }
     },
     {
       "id": "pluie-chaude-poussette",

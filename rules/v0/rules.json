@@ -103,7 +103,7 @@
           "combi_pilote_doublee": ["manteau_portage"]
         },
         "notes": ["practical.carrier.body_heat", "practical.carrier.no_footed"],
-        "rain_gear": "cape_pluie",
+        "rain_gear": "parapluie",
         "sun_hat_feels_c_at_least": 14,
         "sun_note": "practical.carrier.sun_hat",
         "sun_note_doc": "En porte-bébé, aucune capote ne lui fait d'ombre : au soleil (indice UV des repères), le chapeau entre dans le sac dès sun_hat_feels_c_at_least °C ressentis (22 °C dans les autres modes, journee.bag.sun_feels_c_at_least), et le conseil du chapeau à larges bords ou à bavolet s'affiche. Le bavolet (nuque et oreilles couvertes) est une suggestion pratique : aucune source officielle trouvée ne le cite.",

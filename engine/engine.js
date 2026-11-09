@@ -707,9 +707,13 @@ function carrierNotes(mode, items, age, plan, R, hours = []) {
   if (items.some((item) => S.cover_items.includes(item))) notes.push(S.cover_relay);
   if (plan.heat && age < S.heat_under_months) notes.push(S.heat_relay);
   if (plan.inPlage.some((sl) => S.slippery_weather_codes.includes(sl.weather_code))) notes.push(S.slippery_relay);
-  // Pluie probable pendant la sortie (pas pour une averse possible : la cape de pluie est dans le sac) : le porte-bébé
-  // est déconseillé sans parapluie. Suggestion pratique, sans source officielle.
-  if (S.rain_relay && hours.some((sl) => sl.precip_prob >= S.rain_prob_at_least)) notes.push(S.rain_relay);
+  // Pluie probable pendant la sortie (pour une averse possible, le parapluie est seulement dans le sac) : le porte-bébé
+  // est déconseillé sans parapluie (suggestion pratique, sans source officielle), avec le repère officiel : rien ne
+  // recouvre le bébé, ni couverture, ni manteau, ni cape ou housse de pluie.
+  if (S.rain_relay && hours.some((sl) => sl.precip_prob >= S.rain_prob_at_least)) {
+    notes.push(S.rain_relay);
+    if (!notes.includes(S.cover_relay)) notes.push(S.cover_relay);
+  }
   return notes;
 }
 

@@ -451,7 +451,7 @@
     },
     "practical.carrier.rain": {
       "kind": "pratique",
-      "text": "Pluie probable : le porte-bébé est déconseillé sans parapluie. Prenez-en un (ou une cape de pluie qui vous couvre tous les deux), ou choisissez la poussette avec son habillage pluie.",
+      "text": "Pluie probable : le porte-bébé est déconseillé sans parapluie. Prenez-en un, ou choisissez la poussette avec son habillage pluie. Ni cape ni housse qui recouvre bébé : voir le repère officiel.",
       "short": "Pluie : porte-bébé déconseillé sans parapluie"
     },
     "practical.carrier.sun_hat": {
@@ -813,7 +813,7 @@
       "manteau_chaud": "manteau chaud",
       "combi_ski": "combinaison de ski",
       "habillage_pluie": "habillage pluie",
-      "cape_pluie": "cape de pluie",
+      "parapluie": "parapluie",
       "pare_soleil": "pare-soleil ou ombrelle de poussette",
       "impermeable": "imperméable à capuche",
       "capuche": "capuche ou parapluie"
@@ -856,7 +856,7 @@
       "manteau_chaud": "manteau chaud",
       "combi_ski": "combi de ski",
       "habillage_pluie": "habillage pluie",
-      "cape_pluie": "cape de pluie",
+      "parapluie": "parapluie",
       "pare_soleil": "pare-soleil",
       "impermeable": "imperméable",
       "capuche": "capuche"
@@ -890,7 +890,7 @@
       "manteau_chaud": "dessus",
       "combi_ski": "dessus",
       "habillage_pluie": "accessoire",
-      "cape_pluie": "accessoire",
+      "parapluie": "accessoire",
       "pare_soleil": "accessoire",
       "impermeable": "accessoire",
       "capuche": "accessoire",
@@ -906,7 +906,7 @@
     },
     "rain_gear": {
       "habillage_pluie": "l'habillage pluie",
-      "cape_pluie": "une cape de pluie",
+      "parapluie": "un parapluie",
       "impermeable": "un imperméable à capuche",
       "capuche": "une capuche ou un parapluie"
     },

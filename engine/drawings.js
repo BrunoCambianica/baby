@@ -112,11 +112,6 @@ const MANTEAU = [...MANTEAU_FORME, dot(13.4, 12.2), dot(13.4, 16.2)];
 // Gouttes de pluie, en haut à droite.
 const GOUTTES = [{ d: 'M20.6 1.6 L20 3.2' }, { d: 'M22.6 4.6 L22 6.2' }];
 const IMPERMEABLE = [...MANTEAU, ...GOUTTES];
-const CAPE_PLUIE = [
-  { d: sym('M12 2.6 C14.5 2.6 15.8 4.2 15.8 6.6 L20.2 18.4 Q20.6 20.4 18.6 20.4 L12 20.4') },
-  { d: 'M12 4.4 C13.3 4.4 14 5.3 14 6.6 C14 7.9 13.3 8.6 12 8.6 C10.7 8.6 10 7.9 10 6.6 C10 5.3 10.7 4.4 12 4.4 Z' },
-  ...GOUTTES,
-];
 const MANTEAU_CHAUD = [...MANTEAU_FORME, ...pair('M8.4 11.4 L10.6 11.4'), ...pair('M8.2 14.8 L10.6 14.8'), ...pair('M8 18.2 L10.6 18.2')];
 
 const COUVERTURE = [
@@ -172,6 +167,14 @@ const OMBRELLE = [
   { d: 'M10.2 18.4 L13.8 18.4 L13.8 21 L10.2 21 Z' },
 ];
 
+// Parapluie ouvert, sa poignée en crochet et la pluie : à la place d'une cape, qui recouvrirait le bébé en porte-bébé.
+const PARAPLUIE = [
+  OMBRELLE[0],
+  OMBRELLE[1],
+  { d: 'M12 11.6 L12 19.4 Q12 21.4 10 21.4 Q8.2 21.4 8.2 19.8' },
+  { d: 'M3.2 16.2 L2.6 17.8' }, { d: 'M20.8 16.2 L20.2 17.8' }, { d: 'M17 17 L16.4 18.6' },
+];
+
 const GIGOTEUSE_OUTLINE = sym('M12 5.2 Q13.5 5.2 14.2 3.6 L15.8 3.6 Q16 6.4 17.8 7.6 Q18.7 13.4 18.4 18.2 Q18.2 21.2 15.4 21.2 L12 21.2');
 const GIGOTEUSE = [{ d: GIGOTEUSE_OUTLINE }, { d: 'M12 5.2 L12 18.4' }];
 const GIGOTEUSE_CHAUDE = [...GIGOTEUSE, ...pair('M8.4 10.6 L10.6 10.6'), ...pair('M8 14 L10.6 14'), ...pair('M8.2 17.4 L10.6 17.4')];
@@ -211,7 +214,7 @@ export const DRAWINGS = {
   manteau: MANTEAU,
   manteau_chaud: MANTEAU_CHAUD,
   impermeable: IMPERMEABLE,
-  cape_pluie: CAPE_PLUIE,
+  parapluie: PARAPLUIE,
   couverture: COUVERTURE,
   bonnet_fin: BONNET_FIN,
   bonnet: BONNET,
@@ -262,7 +265,7 @@ export const ITEM_DRAWINGS = {
   combi_ski: 'combi_doublee',
   // Protection contre la pluie, selon le mode de sortie.
   habillage_pluie: 'habillage_pluie',
-  cape_pluie: 'cape_pluie',
+  parapluie: 'parapluie',
   impermeable: 'impermeable',
   capuche: 'impermeable',
   // Ombre au soleil, en poussette.

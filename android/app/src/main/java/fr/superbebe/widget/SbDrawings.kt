@@ -27,7 +27,7 @@ object SbDrawings {
         "manteau" to R.drawable.drawing_manteau,
         "manteau_chaud" to R.drawable.drawing_manteau_chaud,
         "impermeable" to R.drawable.drawing_impermeable,
-        "cape_pluie" to R.drawable.drawing_cape_pluie,
+        "parapluie" to R.drawable.drawing_parapluie,
         "couverture" to R.drawable.drawing_couverture,
         "bonnet_fin" to R.drawable.drawing_bonnet_fin,
         "bonnet" to R.drawable.drawing_bonnet,

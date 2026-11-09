@@ -7,7 +7,7 @@ import { ageLabel, birthOf, daysInMonth, feedbackHint, outingHours } from './hou
 import { icon, weatherIcon } from './icons.js';
 import { CATEGORY_DRAWINGS, drawingSvg, ITEM_DRAWINGS } from '../../engine/drawings.js';
 
-export const VERSION = '0.29.2';
+export const VERSION = '0.29.3';
 // Durées de sortie proposées, en heures : 30 minutes (les courses, l'école), puis 1 à 4 h (une sortie de 4 h peut avoir
 // un changement en route).
 export const OUTING_HOURS = [0.5, 1, 2, 3, 4];
