@@ -1,14 +1,20 @@
 // Icônes Tabler (https://tabler.io/icons), licence MIT, © 2020-2024 Paweł Kuna.
 // Tracés repris de @tabler/icons 3.19.0 ; dessinées en trait par icon().
 const PATHS = {
-  sun: '<path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/>',
-  moon: '<path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/>',
-  moonStars: '<path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/><path d="M17 4a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2"/><path d="M19 11h2m-1 -1v2"/>',
-  cloud: '<path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878"/>',
-  rain: '<path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7"/><path d="M11 13v2m0 3v2m4 -5v2m0 3v2"/>',
-  snow: '<path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7"/><path d="M11 15v.01m0 3v.01m0 3v.01m4 -4v.01m0 3v.01"/>',
-  fog: '<path d="M7 16a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-12"/><path d="M5 20l14 0"/>',
-  storm: '<path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"/><path d="M13 14l-2 4l3 0l-2 4"/>',
+  // Météo : chaque partie porte une classe (w-sun, w-cloud, w-rain…) ; dessinée par icon(…, { wx: true }), elle prend sa couleur
+  // (soleil doré, nuage plein, gouttes bleues : voir « Pictogrammes météo » dans style.css), ailleurs elle reste au trait, d'une couleur.
+  // Soleil, lune et nuage seul viennent de Tabler ; les nuages à pluie, neige, brouillard, orage et les éclaircies sont redessinés
+  // dans le même trait, le nuage fermé et remonté pour que ce qui tombe se lise dessous.
+  sun: '<path class="w-sun w-body" d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path class="w-sun" d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/>',
+  moon: '<path class="w-moon w-body" d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/>',
+  moonStars: '<path class="w-moon w-body" d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/><path class="w-moon w-body" d="M17 4a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2"/><path class="w-moon" d="M19 11h2m-1 -1v2"/>',
+  cloud: '<path class="w-cloud w-body" d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878"/>',
+  partlyCloudy: '<path class="w-sun w-body" d="M16 9.5m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path class="w-sun" d="M16 3.3v1m6.2 5.2h-1m-.82 -4.38l-.7 .7m-8.06 -.7l.7 .7"/><path class="w-cloud w-body" d="M6 21a4.15 3.97 0 0 1 0 -8.1a4.5 4.05 0 0 1 9.9 1.8h.9a3.15 3.15 0 0 1 0 6.3z"/>',
+  partlyCloudyNight: '<path class="w-moon w-body" d="M16.5 3.6h.17a3.15 3.15 0 0 0 3.33 5.23a3.78 3.78 0 1 1 -3.5 -5.23z"/><path class="w-cloud w-body" d="M6 21a4.15 3.97 0 0 1 0 -8.1a4.5 4.05 0 0 1 9.9 1.8h.9a3.15 3.15 0 0 1 0 6.3z"/>',
+  rain: '<path class="w-cloud w-body" d="M7.3 14.5a3.9 3.74 0 0 1 0 -7.65a4.25 3.83 0 0 1 9.35 1.7h.85a2.975 2.975 0 0 1 0 5.95z"/><path class="w-rain" d="M8.5 17.5l-1 3m5.5 -3l-1 3m5.5 -3l-1 3"/>',
+  snow: '<path class="w-cloud w-body" d="M7.3 14.5a3.9 3.74 0 0 1 0 -7.65a4.25 3.83 0 0 1 9.35 1.7h.85a2.975 2.975 0 0 1 0 5.95z"/><path class="w-snow" d="M8 18v.01m4 -.01v.01m4 -.01v.01m-6 3.19v.01m4 -.01v.01"/>',
+  fog: '<path class="w-cloud w-body" d="M7.3 14.5a3.9 3.74 0 0 1 0 -7.65a4.25 3.83 0 0 1 9.35 1.7h.85a2.975 2.975 0 0 1 0 5.95z"/><path class="w-fog" d="M5 18h14m-11 3h8"/>',
+  storm: '<path class="w-cloud w-body" d="M7.3 14.5a3.9 3.74 0 0 1 0 -7.65a4.25 3.83 0 0 1 9.35 1.7h.85a2.975 2.975 0 0 1 0 5.95z"/><path class="w-bolt" d="M13 13l-2.5 4h3.5l-2.5 4.5"/>',
   wind: '<path d="M5 8h8.5a2.5 2.5 0 1 0 -2.34 -3.24"/><path d="M3 12h15.5a2.5 2.5 0 1 1 -2.34 3.24"/><path d="M4 16h5.5a2.5 2.5 0 1 1 -2.34 3.24"/>',
   droplet: '<path d="M7.502 19.423c2.602 2.105 6.395 2.105 8.996 0c2.602 -2.105 3.262 -5.708 1.566 -8.546l-4.89 -7.26c-.42 -.625 -1.287 -.803 -1.936 -.397a1.376 1.376 0 0 0 -.41 .397l-4.893 7.26c-1.695 2.838 -1.035 6.441 1.567 8.546z"/>',
   umbrella: '<path d="M4 12a8 8 0 0 1 16 0z"/><path d="M12 12v6a2 2 0 0 0 4 0"/>',
@@ -40,22 +46,40 @@ const PATHS = {
   sunglasses: '<path d="M8 4h-2l-3 10"/><path d="M16 4h2l3 10"/><path d="M10 16h4"/><path d="M21 16.5a3.5 3.5 0 0 1 -7 0v-2.5h7v2.5"/><path d="M10 16.5a3.5 3.5 0 0 1 -7 0v-2.5h7v2.5"/><path d="M4 14l4.5 4.5"/><path d="M15 14l4.5 4.5"/>',
   sparkles: '<path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z"/>',
   clock: '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/>',
+  leaf: '<path d="M5 21c.5 -4.5 2.5 -8 7 -10"/><path d="M9 18c6.218 0 10.5 -3.288 11 -12v-2h-4.014c-9 0 -11.986 4 -12 9c0 1 0 3 2 5h3z"/>',
   users: '<path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/>',
   send: '<path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/>',
 };
 
-export function icon(name, { size = 24, stroke = 1.8, label = '' } = {}) {
+// `wx` : pictogramme météo en couleurs (les classes w-* des tracés prennent les teintes du conteneur).
+export function icon(name, { size = 24, stroke = 1.8, label = '', wx = false } = {}) {
   const a11y = label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"';
-  return `<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" ${a11y}>${PATHS[name] ?? ''}</svg>`;
+  return `<svg class="ico${wx ? ' wx' : ''}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" ${a11y}>${PATHS[name] ?? ''}</svg>`;
 }
 
 // Pictogramme météo à partir du code WMO d'Open-Meteo (repli sur la pluie si le code manque).
 export function weatherIcon(code, { night = false, precipProb = 0 } = {}) {
   if (code == null) return precipProb >= 50 ? 'rain' : night ? 'moon' : 'sun';
   if (code <= 1) return night ? 'moon' : 'sun';
-  if (code <= 3) return 'cloud';
+  if (code === 2) return night ? 'partlyCloudyNight' : 'partlyCloudy';
+  if (code === 3) return 'cloud';
   if (code === 45 || code === 48) return 'fog';
   if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
   if (code >= 95) return 'storm';
   return 'rain';
+}
+
+// Le ciel en un ou deux mots, pour le lire sans déchiffrer le pictogramme (codes WMO d'Open-Meteo).
+export function weatherWord(code, { night = false, precipProb = 0 } = {}) {
+  if (code == null) return precipProb >= 50 ? 'Pluie' : '';
+  if (code === 0) return night ? 'Ciel dégagé' : 'Ensoleillé';
+  if (code === 1) return 'Peu nuageux';
+  if (code === 2) return night ? 'Nuages épars' : 'Éclaircies';
+  if (code === 3) return 'Couvert';
+  if (code === 45 || code === 48) return 'Brouillard';
+  if (code >= 51 && code <= 57) return 'Bruine';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'Neige';
+  if (code >= 80 && code <= 82) return 'Averses';
+  if (code >= 95) return 'Orage';
+  return 'Pluie';
 }

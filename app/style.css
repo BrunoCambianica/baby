@@ -30,10 +30,20 @@
   --rose-soft: #fff1f2;
   --shadow: 0 2px 14px -2px rgba(15, 23, 42, 0.07), 0 1px 3px rgba(15, 23, 42, 0.04);
   --glass: rgba(255, 255, 255, 0.86);
+  --smoke: rgba(15, 23, 42, 0.42);
   --display: "Plus Jakarta Sans", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --gutter: max(16px, env(safe-area-inset-left, 0px));
   --tabbar: calc(80px + env(safe-area-inset-bottom, 0px));
+  --wx-sun: #d97706;
+  --wx-sun-fill: #fcd34d;
+  --wx-moon: #6366f1;
+  --wx-moon-fill: #c7d2fe;
+  --wx-cloud: #64748b;
+  --wx-cloud-fill: #e2e8f0;
+  --wx-rain: #2563eb;
+  --wx-snow: #0284c7;
+  --wx-bolt: #d97706;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -56,6 +66,15 @@
   --rose-soft: #3b1824;
   --shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
   --glass: rgba(22, 34, 56, 0.86);
+  --wx-sun: #fbbf24;
+  --wx-sun-fill: #f59e0b;
+  --wx-moon: #c7d2fe;
+  --wx-moon-fill: #6366f1;
+  --wx-cloud: #cbd5e1;
+  --wx-cloud-fill: #475569;
+  --wx-rain: #60a5fa;
+  --wx-snow: #bae6fd;
+  --wx-bolt: #fbbf24;
   color-scheme: dark;
 }
 
@@ -88,13 +107,16 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   padding: calc(env(safe-area-inset-top, 0px) + 10px) var(--gutter) 44px;
 }
 .hero { isolation: isolate; }
+/* Sur le ciel, les pictogrammes météo : nuage blanc, soleil jaune, pluie bleu pâle. */
+.hero { --wx-sun: #fde047; --wx-sun-fill: #fde047; --wx-moon: #fef3c7; --wx-moon-fill: #fef3c7; --wx-cloud: #fff; --wx-cloud-fill: rgba(255, 255, 255, 0.92); --wx-rain: #dbeafe; --wx-snow: #fff; --wx-bolt: #fde047; }
+.hero--chaleur { --wx-sun: #fff; --wx-sun-fill: #fff3c4; }
 .hero::before, .hero::after { z-index: -1; }
 .hero::before { content: ""; position: absolute; inset: -20%; pointer-events: none; background: radial-gradient(circle at 88% 8%, rgba(255, 222, 120, 0.26) 0%, transparent 42%), radial-gradient(circle at 8% 38%, rgba(120, 130, 255, 0.28) 0%, transparent 50%); }
-.hero--clair { background: linear-gradient(170deg, #1f4fc4 0%, #3b82f0 38%, #62a9fb 72%, #a8d2ff 100%); }
-.hero--nuageux { background: linear-gradient(165deg, #5b7aa0 0%, #82a0c1 60%, #aec3da 100%); }
+.hero--clair { background: linear-gradient(170deg, #1d4ed8 0%, #2f6fe6 34%, #3f86f2 62%, #7db8fb 88%, #a8d2ff 100%); }
+.hero--nuageux { background: linear-gradient(165deg, #4a6587 0%, #5f7da1 42%, #7491b4 68%, #aec3da 100%); }
 .hero--pluie { background: linear-gradient(165deg, #3f5d7c 0%, #66839f 60%, #8ea7be 100%); }
-.hero--chaleur { background: linear-gradient(165deg, #ec7f24 0%, #f4a843 60%, #f9cd84 100%); }
-.hero--froid { background: linear-gradient(165deg, #4a72c0 0%, #7ea7e3 60%, #b8d3f4 100%); }
+.hero--chaleur { background: linear-gradient(165deg, #c2410c 0%, #dc5f10 40%, #e5701a 66%, #f6b45a 100%); }
+.hero--froid { background: linear-gradient(165deg, #3b63b5 0%, #527fd0 42%, #6792db 68%, #b8d3f4 100%); }
 .hero--soir { background: linear-gradient(165deg, #3d3aa8 0%, #7a55b8 55%, #d98fa8 100%); }
 .hero--nuit { background: linear-gradient(165deg, #121a33 0%, #1e2a4a 55%, #2f3f70 100%); }
 .hero--nuit::after, .hero--soir::after {
@@ -118,7 +140,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .hero-art { position: absolute; right: -18px; top: calc(env(safe-area-inset-top, 0px) + 28px); opacity: 0.2; pointer-events: none; }
 .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; position: relative; }
 .hero-place { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; font-size: 1.02rem; color: #fff; }
-.hero-date { font-size: 0.92rem; opacity: 0.85; margin-top: 2px; }
+.hero-date { font-size: 0.92rem; font-weight: 500; margin-top: 2px; }
 .hero-date::first-letter { text-transform: uppercase; }
 .hero-label { margin-top: 22px; font-size: 0.8rem; font-weight: 650; letter-spacing: 0.07em; text-transform: uppercase; opacity: 0.88; position: relative; }
 .hero-big {
@@ -138,8 +160,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .hero-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; position: relative; }
 
 .glass {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  /* Verre fumé : un voile sombre sous le texte blanc, pour qu'il reste lisible (4,5:1) sur le plus clair des ciels. */
+  background: var(--smoke);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
 }
@@ -157,30 +180,32 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .why-btn { color: #fff; font-weight: 650; font-size: 0.95rem; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; min-height: 32px; flex: none; }
 .why-btn[aria-expanded="true"] { text-decoration: none; opacity: 0.8; }
 .hero-note { margin-top: 10px; font-size: 0.92rem; opacity: 0.95; position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-/* Votre sortie : la durée, puis la bande des heures où l'on touche l'heure de départ ; la sortie surlignée en blanc. */
-.outing-pick { position: relative; margin-top: 8px; }
-.hero-label:has(+ .when-row) { margin-top: 12px; }
-.hero-big.when { font-size: clamp(2.6rem, 12.5vw, 3.1rem); min-width: 0; }
-/* Le cockpit : la fenêtre idéale dans une vitre, avec son chip, son heure en grand et « Choisir » en or. */
-.cockpit { position: relative; margin-top: 10px; padding: 10px 14px 12px; border-radius: 24px; background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.34); box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12); }
-.cockpit > .hero-label { margin-top: 0; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: rgba(251, 191, 36, 0.22); border: 1px solid rgba(252, 211, 77, 0.35); color: #fef3c7; font-size: 0.7rem; opacity: 1; }
-.cockpit > .hero-label:has(+ .when-row) { margin-top: 0; }
-.cockpit .when-row { margin-top: 2px; }
-.cockpit .hero-big.when { font-size: clamp(2.3rem, 11vw, 2.8rem); }
-.cockpit .hero-sub { margin-top: 4px; font-size: 0.98rem; }
-.cockpit .pick-btn { margin-top: 0; }
-.cockpit .hero-big { margin-top: 2px; }
-/* Le créneau idéal et « Choisir », qui y fait partir la sortie. */
-.when-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: relative; }
-.pick-btn { position: relative; overflow: hidden; flex: none; margin-top: 4px; background: linear-gradient(90deg, #fbbf24, #fcd34d); border: 0; color: #1c1917; font-weight: 700; box-shadow: 0 0 22px -4px rgba(251, 191, 36, 0.55); -webkit-backdrop-filter: none; backdrop-filter: none; }
-
-.pick-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.pick-head .hero-label { margin-top: 0; }
-.dur { display: inline-flex; padding: 3px; border-radius: 999px; }
-.dur button { min-width: 44px; padding: 5px 10px; border-radius: 999px; color: #fff; font-weight: 650; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
-.dur button[aria-checked="true"] { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; }
-.less { display: grid; gap: 6px; }
+/* Le temps qu'il fait à l'heure de la sortie, à lire d'un coup d'œil : pictogramme, température, ressenti, ciel en un mot.
+   Sur le ciel, seul le texte gros et gras se pose à nu ; le petit texte a un fond sombre (pastilles, créneau idéal). */
+.now { position: relative; margin-top: 12px; }
+.now-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }
+.now-row > .ico { flex: none; width: clamp(54px, 18.5vw, 72px); height: auto; aspect-ratio: 1; filter: drop-shadow(0 4px 10px rgba(15, 23, 42, 0.2)); }
+.hero-big.now-temp { margin-top: 0; font-size: clamp(3.2rem, 17vw, 4.2rem); font-weight: 800; line-height: 1; }
+.now-text { flex: 1 1 7em; min-width: 0; display: grid; gap: 1px; font-size: 1.17rem; font-weight: 700; line-height: 1.22; }
+.now-feels { font-size: 1.25rem; font-weight: 800; white-space: nowrap; }
+/* Les conditions de la sortie, en pastilles : ce qui demande une précaution en pastille pleine. */
+.conds { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.cond { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 12px 4px 9px; border-radius: 999px; background: var(--smoke); font-size: 0.86rem; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cond.alert { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; }
+/* Le créneau idéal et « Choisir », qui y fait partir la sortie ; sans créneau, la raison. */
+.ideal { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 8px 10px 8px 16px; border-radius: 22px; }
+.ideal-text { min-width: 0; display: grid; gap: 1px; }
+.ideal-label { font-size: 0.86rem; font-weight: 600; }
+.ideal-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
+.ideal-when { font-family: var(--display); font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ideal-feels { font-size: 0.92rem; font-weight: 600; white-space: nowrap; }
+.ideal-none { font-size: 1.05rem; font-weight: 700; line-height: 1.3; text-wrap: balance; }
+.ideal.lone { display: block; margin-top: 16px; padding: 14px 16px 16px; }
+.ideal.lone .hero-big { margin-top: 4px; text-wrap: balance; }
+.pick-btn { position: relative; overflow: hidden; flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 8px 20px; border-radius: 999px; background: linear-gradient(90deg, #fbbf24, #fcd34d); color: #1c1917; font-weight: 700; font-size: 0.95rem; box-shadow: 0 0 22px -4px rgba(251, 191, 36, 0.55); }
 .pick-btn::after { content: ""; position: absolute; inset: 0; pointer-events: none; transform: translateX(-130%); background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%); }
+.hero :focus-visible { outline-color: #fff; }
+.less { display: grid; gap: 6px; }
 /* Fiche de la journée : une carte nuit, pour la retrouver d'un coup d'œil */
 .card.fiche-card { position: relative; overflow: hidden; gap: 14px; color: #fff; border-color: transparent; background: linear-gradient(140deg, #312e81 0%, #1e293b 58%, #172554 100%); }
 .fiche-card::before { content: ""; position: absolute; right: -50px; bottom: -60px; width: 200px; height: 200px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, transparent 70%); }
@@ -320,7 +345,7 @@ details.card:not([open]) { gap: 0; }
 .tl-head { display: flex; align-items: baseline; gap: 0 8px; flex-wrap: wrap; font-size: 0.95rem; line-height: 1.35; }
 .tl-head strong { font-weight: 650; }
 .tl-weather { font-size: 0.86rem; color: var(--ink-2); }
-.tl-legend { font-size: 0.82rem; margin-top: -6px; }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.82rem; margin-top: -4px; }
 .change-time { font-size: 0.86rem; font-weight: 650; color: var(--ink-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .change-time .hint { font-weight: 500; }
 .changes { display: grid; gap: 10px; }
@@ -330,9 +355,22 @@ p.change { display: block; font-size: 0.92rem; color: var(--ink-2); }
 .dress.small .dress-name { overflow-wrap: normal; font-size: 0.72rem; }
 .dress.small .dress-ico { width: 44px; height: 44px; border-radius: 14px; }
 .dress-ico { position: relative; }
-.sign { position: absolute; right: -5px; top: -5px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; line-height: 1; color: #fff; background: var(--ink-3); }
+.sign { position: absolute; right: -5px; top: -5px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; line-height: 1; color: var(--card); background: var(--ink-3); }
 .plus .sign { background: var(--amber); }
 .minus .dress-ico { background: var(--card); color: var(--ink-3); }
+/* La tenue par groupes : ce qu'on ajoute pour sortir, ce qu'on enlève, ce qu'il garde. Le titre de chaque groupe porte
+   le signe de ses pièces : il en est la légende. */
+.wear { display: grid; gap: 16px; }
+.wear-group { display: grid; gap: 10px; min-width: 0; }
+.wear-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; line-height: 1.3; color: var(--ink); }
+.wear-title .sign, .key .sign { position: static; flex: none; }
+.wear-group.add .wear-title { color: var(--amber); }
+.wear-group.add .wear-title .sign { background: var(--amber); }
+.wear-group.keep .wear-title, .wear-group.less .wear-title { font-size: 0.9rem; font-weight: 650; color: var(--ink-2); }
+.wear-note { margin-top: -2px; }
+.homecoming { border-top: 1px solid var(--line); padding-top: 12px; }
+.key { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink-2); }
+.key .sign { width: 18px; height: 18px; font-size: 0.8rem; }
 .bag { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
 .bag-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 650; color: var(--ink-2); }
 .bag-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -383,41 +421,59 @@ p.check { display: block; }
 .carrier-guide .principles strong { color: var(--ink); }
 .carrier-guide .principles { margin-bottom: 10px; }
 
-/* Heure par heure */
-.hours { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 8px; scrollbar-width: none; margin: 0 -8px; padding: 0 8px; }
-.hours::-webkit-scrollbar { display: none; }
+/* Pictogrammes météo en deux tons (icons.js, option `wx`) : le soleil doré, le nuage gris clair, la pluie bleue. */
+.wx .w-sun { stroke: var(--wx-sun); }
+.wx .w-sun.w-body { fill: var(--wx-sun-fill); }
+.wx .w-moon { stroke: var(--wx-moon); }
+.wx .w-moon.w-body { fill: var(--wx-moon-fill); }
+.wx .w-cloud { stroke: var(--wx-cloud); fill: var(--wx-cloud-fill); }
+.wx .w-fog { stroke: var(--wx-cloud); }
+.wx .w-rain { stroke: var(--wx-rain); }
+.wx .w-snow { stroke: var(--wx-snow); }
+.wx .w-bolt { stroke: var(--wx-bolt); }
+
+/* Prévoir ma sortie, en tête de la carte de la tenue : quand, l'heure par heure à déplier, la durée, puis le mode. */
+.hours-fold { min-width: 0; }
+.hours-fold summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 12px 8px 14px; border-radius: 16px; background: var(--blue-soft); cursor: pointer; }
+.hours-fold summary::-webkit-details-marker { display: none; }
+.hours-fold summary > .ico, .hours-fold .chev { flex: none; color: var(--blue); }
+.plan-when { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.3; }
+.plan-when strong { font-size: 1.02rem; font-weight: 700; }
+.hours-toggle { font-size: 0.86rem; font-weight: 650; color: var(--blue); }
+.hours-fold .if-open, .hours-fold[open] .if-closed { display: none; }
+.hours-fold[open] .if-open { display: inline; }
+.hours-fold .chev { transform: rotate(90deg); transition: transform 0.2s var(--ease-out); }
+.hours-fold[open] .chev { transform: rotate(-90deg); }
+.hours-hint { margin-top: 8px; }
+.dur { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; background: var(--fill); border-radius: 999px; }
+.dur button { min-height: 40px; padding: 6px 2px; border-radius: 999px; font-size: 0.86rem; font-weight: 650; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dur button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+/* La bande des heures : on y touche l'heure de départ ; la sortie est cerclée de bleu, le créneau idéal doré. */
+.strip { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 16px; scrollbar-width: none; margin: 10px -16px 0; padding: 0 16px; }
+.strip::-webkit-scrollbar { display: none; }
 .h-cell {
   flex: none;
   width: 54px;
   display: grid;
   justify-items: center;
-  gap: 6px;
-  padding: 10px 0 9px;
+  gap: 3px;
+  padding: 6px 0;
   border-radius: 16px;
   scroll-snap-align: start;
   font-variant-numeric: tabular-nums;
   border: 2px solid transparent;
+  background: var(--fill);
+  color: var(--ink);
 }
+.h-flag { font-size: 0.68rem; font-weight: 700; color: var(--ink-2); min-height: 0.9rem; white-space: nowrap; letter-spacing: -0.01em; }
 .h-time { font-size: 0.8rem; color: var(--ink-2); font-weight: 600; }
 .h-cell .ico { color: var(--ink-2); }
 .h-temp { font-size: 1.05rem; font-weight: 700; }
-.h-flag { font-size: 0.68rem; font-weight: 700; color: var(--ink-3); min-height: 0.9rem; }
-.h-cell.best { background: var(--blue-soft); }
-.h-cell.best .h-flag, .h-cell.best .ico { color: var(--blue); }
-.h-cell.off { opacity: 0.45; }
-.h-cell[aria-pressed="true"] { border-color: var(--blue); }
-/* La bande des heures de « Votre sortie », dans le ciel */
-.strip { position: relative; display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter); scrollbar-width: none; margin: 10px calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter); }
-.strip::-webkit-scrollbar { display: none; }
-.strip .h-cell { background: rgba(255, 255, 255, 0.14); color: #fff; gap: 2px; padding: 5px 0 4px; }
-.strip .h-time, .strip .h-cell .ico, .strip .h-flag { color: inherit; }
-.strip .h-time { opacity: 0.9; }
-.strip .h-flag { opacity: 0.85; text-transform: lowercase; white-space: nowrap; letter-spacing: -0.01em; }
-.strip .h-cell.best { background: rgba(255, 255, 255, 0.26); }
-.strip .h-cell.best .h-flag, .strip .h-cell.best .ico { color: inherit; opacity: 1; }
-.strip .h-cell.off { opacity: 0.6; }
-.strip .h-cell.sel { background: rgba(255, 255, 255, 0.95); color: #1d2a3a; border-color: transparent; }
-.strip .h-cell.sel .h-flag { color: var(--blue); }
+.h-cell.best { background: var(--amber-soft); }
+.h-cell.best .h-flag { color: var(--amber); }
+.h-cell.off > * { opacity: 0.6; }
+.h-cell.sel { background: var(--blue-soft); border-color: var(--blue); }
+.h-cell.sel:not(.best) .h-flag { color: var(--blue); }
 
 /* Repère officiel */
 .official summary { list-style: none; display: flex; gap: 12px; align-items: center; cursor: pointer; }
@@ -776,7 +832,6 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
     padding: calc(env(safe-area-inset-top, 0px) + 12px) 18px calc(var(--tabbar-side) + 16px) max(18px, env(safe-area-inset-left, 0px));
   }
   #app:has(> .tabbar) .hero-label { margin-top: 14px; }
-  #app:has(> .tabbar) .days { margin-top: 10px; }
   #app:has(> .tabbar) .hero-big { font-size: 3.2rem; }
   #app:has(> .tabbar) > .content, #app:has(> .tabbar) > .sheet-page { margin-top: 0; padding: calc(env(safe-area-inset-top, 0px) + 16px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) 0; }
   #app:has(> .tabbar) > .tabbar {
@@ -791,7 +846,19 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
   }
   #app:has(> .tabbar) > .tabbar button { padding: 4px 0; }
   #app:has(> .tabbar) .tab-ico { width: 44px; }
-  #app:has(> .tabbar) .cockpit > .hero-label { margin-top: 0; }
+  /* Le ciel, colonne basse : la date à côté de la commune, la lecture du temps resserrée, pour que le créneau idéal
+     reste au-dessus des onglets même avec les pastilles des enfants. */
+  #app:has(> .tabbar) .hero-top > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
+  #app:has(> .tabbar) .hero-date { margin-top: 0; }
+  #app:has(> .tabbar) .kids { margin-top: 6px; }
+  #app:has(> .tabbar) .days { margin-top: 8px; }
+  #app:has(> .tabbar) .now { margin-top: 8px; }
+  #app:has(> .tabbar) .now-row > .ico { width: 50px; }
+  #app:has(> .tabbar) .hero-big.now-temp { font-size: 2.9rem; }
+  #app:has(> .tabbar) .now-text { font-size: 1rem; }
+  #app:has(> .tabbar) .now-feels { font-size: 1.08rem; }
+  #app:has(> .tabbar) .conds { margin-top: 6px; }
+  #app:has(> .tabbar) .ideal { margin-top: 8px; padding-block: 6px; }
 }
 
 /* Animations : l'écran qui arrive monte en douceur, les pièces de la tenue se posent une à une, ce qu'on touche rebondit.
@@ -812,7 +879,7 @@ textarea { resize: vertical; font-size: 0.9rem; line-height: 1.4; }
   .anim .hero > :nth-child(4) { animation-delay: 0.08s; }
   .anim .hero > :nth-child(5) { animation-delay: 0.12s; }
   .anim .hero > :nth-child(n+6) { animation-delay: 0.16s; }
-  .anim .hero .cockpit { animation-name: riseScale; }
+  .anim .hero .ideal { animation-name: riseScale; }
   .anim .content > *, .anim .page > * { animation: rise 0.55s var(--ease-out) both; }
   .anim .content > :nth-child(1), .anim .page > :nth-child(1) { animation-delay: 0.1s; }
   .anim .content > :nth-child(2), .anim .page > :nth-child(2) { animation-delay: 0.16s; }

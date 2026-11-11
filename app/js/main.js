@@ -255,7 +255,8 @@ function outingSlot(ctx) {
   const first = ctx.tomorrow ? Math.min(7, hourOf(state.profile.outing_window.from)) : Math.max(6, hourOf(now.time));
   const last = Math.min(LAST_START, 24 - hours);
   const cells = ctx.input.forecast.hourly
-    .map((h) => ({ time: h.time.slice(11, 16), feels_c: h.feels_c, weather_code: h.weather_code, precip_prob: h.precip_prob }))
+    .map((h) => ({ time: h.time.slice(11, 16), temp_c: h.temp_c, feels_c: h.feels_c, weather_code: h.weather_code, precip_prob: h.precip_prob,
+      gust_kmh: h.gust_kmh, uv: h.uv, aqi: h.aqi ?? null }))
     .filter((h) => hourOf(h.time) >= first && hourOf(h.time) <= last)
     .map((h) => ({ ...h, now: !ctx.tomorrow && hourOf(h.time) === hourOf(now.time) }));
   if (!cells.length) return { cells, hours };
@@ -373,6 +374,9 @@ function applyPulse() {
   find({ action: p.action, value: p.value })?.classList.add('pop');
 }
 
+// L'onglet Extérieur tel qu'il vient d'être dessiné (sa sortie choisie) : le ciel de la barre d'état et le thème sombre
+// suivent l'heure affichée.
+let shown = null;
 let lastKey = '';
 let lastTab = '';
 let lastHtml = '';
@@ -414,8 +418,10 @@ function paint() {
   else {
     // Version navigateur sur Android : le widget Maison renvoie vers l'app Android (lien qui l'ouvre ou la télécharge).
     if (state.device === 'android' && !host && state.household) state.androidLink = androidLink();
-    html = V.viewApp(state, state.tab === 'dehors' ? dehorsCtx() : compute('aujourdhui'));
+    shown = state.tab === 'dehors' ? dehorsCtx() : null;
+    html = V.viewApp(state, shown ?? compute('aujourdhui'));
   }
+  if (view !== 'app') shown = null;
   if (state.updateReady) {
     html += '<div class="update" role="status">Nouvelle version prête<button class="btn small" data-action="apply-update">Recharger</button></div>';
   }
@@ -441,22 +447,29 @@ function paint() {
   // La bande des heures garde sa position quand on y touche ; un autre jour, ou le créneau idéal choisi depuis le ciel,
   // elle s'ouvre sur la sortie choisie.
   const before = app.querySelector('.strip');
-  const kept = before ? { key: before.dataset.key, left: before.scrollLeft } : null;
+  const kept = before?.clientWidth ? { key: before.dataset.key, left: before.scrollLeft } : null;
   app.innerHTML = html;
   const strip = app.querySelector('.strip');
-  if (strip) {
-    const chosen = strip.querySelector('[aria-checked="true"]');
-    if (kept && kept.key === strip.dataset.key && !state.centerStrip) strip.scrollLeft = kept.left;
-    else if (chosen) strip.scrollLeft = chosen.offsetLeft - (strip.clientWidth - chosen.offsetWidth) / 2;
-  }
+  // Redessinée dépliée : placée ici, et l'écouteur « toggle » (qui la voit s'ouvrir) n'y retouche pas.
+  if (strip && placeStrip(strip, kept && kept.key === strip.dataset.key && !state.centerStrip ? kept.left : null)) strip.dataset.placed = '1';
   state.centerStrip = false;
   applyPulse();
   setThemeColor(view);
 }
 
+// La bande des heures à sa position gardée (`left`), sinon centrée sur l'heure de départ choisie. Repliée (« Heure par
+// heure » masqué), elle n'a pas de largeur : rien à placer, elle le sera en se dépliant. Renvoie true une fois placée.
+function placeStrip(strip, left = null) {
+  if (!strip.clientWidth) return false;
+  const chosen = strip.querySelector('[aria-checked="true"]');
+  if (left != null) strip.scrollLeft = left;
+  else if (chosen) strip.scrollLeft = chosen.offsetLeft - (strip.clientWidth - chosen.offsetWidth) / 2;
+  return true;
+}
+
 // Barre d'état d'Android assortie au ciel de l'écran (iOS garde sa barre standard).
 const SKY = {
-  clair: '#3b8cf6', nuageux: '#5b7aa0', pluie: '#3f5d7c', chaleur: '#ec7f24', froid: '#4a72c0',
+  clair: '#2052da', nuageux: '#4c6789', pluie: '#3f5d7c', chaleur: '#c5450d', froid: '#3e66b7',
   soir: '#5650c6', nuit: '#1e2a4a', prevoir: '#7c4ddb', maison: '#2f9a78', reglages: '#3b4a6b',
 };
 
@@ -468,8 +481,7 @@ function darkTheme(view) {
   const now = parisNow().time;
   if (view === 'app' && state.tab === 'dedans') return state.inside === 'nuit';
   if (view === 'app' && state.tab === 'dehors') {
-    const ctx = compute(dehorsDay());
-    const start = ctx?.slot?.start ?? (dehorsDay() === 'demain' ? '09:00' : now);
+    const start = shown?.slot?.start ?? (dehorsDay() === 'demain' ? '09:00' : now);
     return isNight(start, bed);
   }
   return isNight(now, bed);
@@ -483,7 +495,7 @@ function setThemeColor(view) {
   let color = dark ? '#0b1324' : '#f8fafc';
   if (view === 'onboarding') color = SKY.clair;
   if (view === 'app') {
-    const ctx = state.tab === 'dehors' ? compute(dehorsDay()) : null;
+    const ctx = state.tab === 'dehors' ? shown ?? compute(dehorsDay()) : null;
     if (state.tab === 'dedans') color = state.inside === 'nuit' ? SKY.nuit : SKY.maison;
     else if (state.tab === 'prevoir') color = SKY.prevoir;
     else color = ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
@@ -1632,6 +1644,10 @@ document.addEventListener('toggle', (event) => {
     event.target.classList.add('opened');
     state.open.add(name);
     state.closed.delete(name);
+    // « Heure par heure » déplié au toucher : la bande s'ouvre sur l'heure de départ choisie.
+    const strip = event.target.querySelector('.strip');
+    if (strip?.dataset.placed) delete strip.dataset.placed;
+    else if (strip) placeStrip(strip);
   } else {
     state.open.delete(name);
     state.closed.add(name);
