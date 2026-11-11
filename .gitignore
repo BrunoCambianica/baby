@@ -8,3 +8,6 @@ android/local.properties
 android/.kotlin/
 tools/e2e/captures/
 deploy/.env
+
+# Impeccable (skill de design) : le moteur natif se retélécharge tout seul, avec vérification de son empreinte.
+.claude/skills/impeccable/scripts/bin/
