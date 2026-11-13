@@ -29,6 +29,9 @@ const PATHS = {
   settings: '<path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>',
   chevronRight: '<path d="M9 6l6 6l-6 6"/>',
   chevronLeft: '<path d="M15 6l-6 6l6 6"/>',
+  chevronDown: '<path d="M6 9l6 6l6 -6"/>',
+  user: '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
+  bell: '<path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/>',
   check: '<path d="M5 12l5 5l10 -10"/>',
   x: '<path d="M18 6l-12 12"/><path d="M6 6l12 12"/>',
   plus: '<path d="M12 5l0 14"/><path d="M5 12l14 0"/>',
@@ -71,7 +74,8 @@ export function weatherIcon(code, { night = false, precipProb = 0 } = {}) {
 
 // Le ciel en un ou deux mots, pour le lire sans déchiffrer le pictogramme (codes WMO d'Open-Meteo).
 export function weatherWord(code, { night = false, precipProb = 0 } = {}) {
-  if (code == null) return precipProb >= 50 ? 'Pluie' : '';
+  // Sans code (certains modèles n'en donnent pas à l'heure) : le mot suit le pictogramme, tiré du risque de pluie.
+  if (code == null) return precipProb >= 50 ? 'Pluie' : precipProb >= 20 ? 'Averse possible' : night ? 'Nuit sans pluie' : 'Sans pluie';
   if (code === 0) return night ? 'Ciel dégagé' : 'Ensoleillé';
   if (code === 1) return 'Peu nuageux';
   if (code === 2) return night ? 'Nuages épars' : 'Éclaircies';
@@ -81,5 +85,9 @@ export function weatherWord(code, { night = false, precipProb = 0 } = {}) {
   if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'Neige';
   if (code >= 80 && code <= 82) return 'Averses';
   if (code >= 95) return 'Orage';
+  if (code === 61) return 'Pluie faible';
+  if (code === 63) return 'Pluie modérée';
+  if (code === 65) return 'Forte pluie';
+  if (code === 66 || code === 67) return 'Pluie verglaçante';
   return 'Pluie';
 }

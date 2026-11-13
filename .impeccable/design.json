@@ -1,0 +1,876 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T23:38:53+00:00",
+  "title": "Design System: Superbébé",
+  "extensions": {
+    "colorMeta": {
+      "salmon": {
+        "role": "primary",
+        "displayName": "Saumon",
+        "canonical": "#f6a493",
+        "tonalRamp": [
+          "oklch(15% 0.040 32)",
+          "oklch(26% 0.056 32)",
+          "oklch(38% 0.071 32)",
+          "oklch(49% 0.087 32)",
+          "oklch(61% 0.100 32)",
+          "oklch(72% 0.085 32)",
+          "oklch(84% 0.069 32)",
+          "oklch(95% 0.054 32)"
+        ]
+      },
+      "on-salmon": {
+        "role": "primary",
+        "displayName": "Brun saumon foncé",
+        "canonical": "#5e2216",
+        "tonalRamp": [
+          "oklch(15% 0.036 33)",
+          "oklch(26% 0.050 33)",
+          "oklch(38% 0.064 33)",
+          "oklch(49% 0.078 33)",
+          "oklch(61% 0.090 33)",
+          "oklch(72% 0.076 33)",
+          "oklch(84% 0.062 33)",
+          "oklch(95% 0.048 33)"
+        ]
+      },
+      "salmon-soft": {
+        "role": "primary",
+        "displayName": "Saumon voile",
+        "canonical": "#fde6e0",
+        "tonalRamp": [
+          "oklch(15% 0.011 35)",
+          "oklch(26% 0.015 35)",
+          "oklch(38% 0.019 35)",
+          "oklch(49% 0.023 35)",
+          "oklch(61% 0.026 35)",
+          "oklch(72% 0.022 35)",
+          "oklch(84% 0.018 35)",
+          "oklch(95% 0.014 35)"
+        ]
+      },
+      "salmon-ink": {
+        "role": "primary",
+        "displayName": "Encre saumon",
+        "canonical": "#8a3f30",
+        "tonalRamp": [
+          "oklch(15% 0.042 33)",
+          "oklch(26% 0.059 33)",
+          "oklch(38% 0.075 33)",
+          "oklch(49% 0.091 33)",
+          "oklch(61% 0.105 33)",
+          "oklch(72% 0.089 33)",
+          "oklch(84% 0.073 33)",
+          "oklch(95% 0.057 33)"
+        ]
+      },
+      "salmon-deep": {
+        "role": "primary",
+        "displayName": "Saumon profond",
+        "canonical": "#a8432e",
+        "tonalRamp": [
+          "oklch(15% 0.055 33)",
+          "oklch(26% 0.076 33)",
+          "oklch(38% 0.097 33)",
+          "oklch(49% 0.118 33)",
+          "oklch(61% 0.137 33)",
+          "oklch(72% 0.116 33)",
+          "oklch(84% 0.095 33)",
+          "oklch(95% 0.074 33)"
+        ]
+      },
+      "ideal-green": {
+        "role": "secondary",
+        "displayName": "Vert sortie idéale",
+        "canonical": "#1f6b44",
+        "tonalRamp": [
+          "oklch(15% 0.039 157)",
+          "oklch(26% 0.054 157)",
+          "oklch(38% 0.069 157)",
+          "oklch(49% 0.083 157)",
+          "oklch(61% 0.096 157)",
+          "oklch(72% 0.082 157)",
+          "oklch(84% 0.067 157)",
+          "oklch(95% 0.052 157)"
+        ]
+      },
+      "ideal-green-soft": {
+        "role": "secondary",
+        "displayName": "Vert idéal voile",
+        "canonical": "#dcf1e2",
+        "tonalRamp": [
+          "oklch(15% 0.012 155)",
+          "oklch(26% 0.016 155)",
+          "oklch(38% 0.021 155)",
+          "oklch(49% 0.026 155)",
+          "oklch(61% 0.030 155)",
+          "oklch(72% 0.025 155)",
+          "oklch(84% 0.020 155)",
+          "oklch(95% 0.016 155)"
+        ]
+      },
+      "ideal-chip": {
+        "role": "secondary",
+        "displayName": "Pastille verte",
+        "canonical": "#cdebd6",
+        "tonalRamp": [
+          "oklch(15% 0.017 155)",
+          "oklch(26% 0.023 155)",
+          "oklch(38% 0.030 155)",
+          "oklch(49% 0.036 155)",
+          "oklch(61% 0.042 155)",
+          "oklch(72% 0.036 155)",
+          "oklch(84% 0.029 155)",
+          "oklch(95% 0.023 155)"
+        ]
+      },
+      "ideal-chip-ink": {
+        "role": "secondary",
+        "displayName": "Encre de pastille verte",
+        "canonical": "#1f5c3a",
+        "tonalRamp": [
+          "oklch(15% 0.034 156)",
+          "oklch(26% 0.047 156)",
+          "oklch(38% 0.060 156)",
+          "oklch(49% 0.073 156)",
+          "oklch(61% 0.084 156)",
+          "oklch(72% 0.071 156)",
+          "oklch(84% 0.058 156)",
+          "oklch(95% 0.045 156)"
+        ]
+      },
+      "bag-cream": {
+        "role": "secondary",
+        "displayName": "Crème du sac",
+        "canonical": "#fdf6e3",
+        "tonalRamp": [
+          "oklch(15% 0.010 90)",
+          "oklch(26% 0.014 90)",
+          "oklch(38% 0.018 90)",
+          "oklch(49% 0.022 90)",
+          "oklch(61% 0.026 90)",
+          "oklch(72% 0.022 90)",
+          "oklch(84% 0.018 90)",
+          "oklch(95% 0.014 90)"
+        ]
+      },
+      "bag-cream-line": {
+        "role": "secondary",
+        "displayName": "Filet crème",
+        "canonical": "#f1e2b6",
+        "tonalRamp": [
+          "oklch(15% 0.024 91)",
+          "oklch(26% 0.033 91)",
+          "oklch(38% 0.042 91)",
+          "oklch(49% 0.051 91)",
+          "oklch(61% 0.059 91)",
+          "oklch(72% 0.050 91)",
+          "oklch(84% 0.041 91)",
+          "oklch(95% 0.032 91)"
+        ]
+      },
+      "bag-cream-ink": {
+        "role": "secondary",
+        "displayName": "Encre crème",
+        "canonical": "#6b5a1e",
+        "tonalRamp": [
+          "oklch(15% 0.032 93)",
+          "oklch(26% 0.045 93)",
+          "oklch(38% 0.057 93)",
+          "oklch(49% 0.069 93)",
+          "oklch(61% 0.080 93)",
+          "oklch(72% 0.068 93)",
+          "oklch(84% 0.055 93)",
+          "oklch(95% 0.043 93)"
+        ]
+      },
+      "alert-amber": {
+        "role": "tertiary",
+        "displayName": "Ambre d'alerte",
+        "canonical": "#8a5300",
+        "tonalRamp": [
+          "oklch(15% 0.044 67)",
+          "oklch(26% 0.060 67)",
+          "oklch(38% 0.077 67)",
+          "oklch(49% 0.094 67)",
+          "oklch(61% 0.108 67)",
+          "oklch(72% 0.092 67)",
+          "oklch(84% 0.075 67)",
+          "oklch(95% 0.058 67)"
+        ]
+      },
+      "alert-amber-soft": {
+        "role": "tertiary",
+        "displayName": "Ambre voile",
+        "canonical": "#fdecc8",
+        "tonalRamp": [
+          "oklch(15% 0.020 86)",
+          "oklch(26% 0.028 86)",
+          "oklch(38% 0.036 86)",
+          "oklch(49% 0.043 86)",
+          "oklch(61% 0.050 86)",
+          "oklch(72% 0.042 86)",
+          "oklch(84% 0.035 86)",
+          "oklch(95% 0.027 86)"
+        ]
+      },
+      "soft-red": {
+        "role": "tertiary",
+        "displayName": "Rouge doux",
+        "canonical": "#c9382c",
+        "tonalRamp": [
+          "oklch(15% 0.064 29)",
+          "oklch(26% 0.088 29)",
+          "oklch(38% 0.113 29)",
+          "oklch(49% 0.137 29)",
+          "oklch(61% 0.158 29)",
+          "oklch(72% 0.134 29)",
+          "oklch(84% 0.110 29)",
+          "oklch(95% 0.085 29)"
+        ]
+      },
+      "soft-red-wash": {
+        "role": "tertiary",
+        "displayName": "Rouge doux voile",
+        "canonical": "#fde2e0",
+        "tonalRamp": [
+          "oklch(15% 0.012 23)",
+          "oklch(26% 0.017 23)",
+          "oklch(38% 0.021 23)",
+          "oklch(49% 0.026 23)",
+          "oklch(61% 0.030 23)",
+          "oklch(72% 0.025 23)",
+          "oklch(84% 0.021 23)",
+          "oklch(95% 0.016 23)"
+        ]
+      },
+      "violet": {
+        "role": "tertiary",
+        "displayName": "Violet",
+        "canonical": "#5b3fa3",
+        "tonalRamp": [
+          "oklch(15% 0.062 292)",
+          "oklch(26% 0.085 292)",
+          "oklch(38% 0.109 292)",
+          "oklch(49% 0.132 292)",
+          "oklch(61% 0.153 292)",
+          "oklch(72% 0.129 292)",
+          "oklch(84% 0.106 292)",
+          "oklch(95% 0.082 292)"
+        ]
+      },
+      "violet-soft": {
+        "role": "tertiary",
+        "displayName": "Violet voile",
+        "canonical": "#ece6fa",
+        "tonalRamp": [
+          "oklch(15% 0.011 300)",
+          "oklch(26% 0.015 300)",
+          "oklch(38% 0.019 300)",
+          "oklch(49% 0.024 300)",
+          "oklch(61% 0.027 300)",
+          "oklch(72% 0.023 300)",
+          "oklch(84% 0.019 300)",
+          "oklch(95% 0.015 300)"
+        ]
+      },
+      "info-blue-wash": {
+        "role": "tertiary",
+        "displayName": "Bleu info voile",
+        "canonical": "#e3eefb",
+        "tonalRamp": [
+          "oklch(15% 0.008 252)",
+          "oklch(26% 0.012 252)",
+          "oklch(38% 0.015 252)",
+          "oklch(49% 0.018 252)",
+          "oklch(61% 0.021 252)",
+          "oklch(72% 0.018 252)",
+          "oklch(84% 0.015 252)",
+          "oklch(95% 0.011 252)"
+        ]
+      },
+      "info-blue-ink": {
+        "role": "tertiary",
+        "displayName": "Encre bleu info",
+        "canonical": "#1f4f8f",
+        "tonalRamp": [
+          "oklch(15% 0.047 257)",
+          "oklch(26% 0.065 257)",
+          "oklch(38% 0.083 257)",
+          "oklch(49% 0.101 257)",
+          "oklch(61% 0.117 257)",
+          "oklch(72% 0.099 257)",
+          "oklch(84% 0.081 257)",
+          "oklch(95% 0.063 257)"
+        ]
+      },
+      "warm-table": {
+        "role": "neutral",
+        "displayName": "Table chaude",
+        "canonical": "#fbf8f5",
+        "tonalRamp": [
+          "oklch(15% 0.005 68)",
+          "oklch(26% 0.005 68)",
+          "oklch(38% 0.005 68)",
+          "oklch(49% 0.005 68)",
+          "oklch(61% 0.005 68)",
+          "oklch(72% 0.005 68)",
+          "oklch(84% 0.005 68)",
+          "oklch(95% 0.005 68)"
+        ]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Blanc carte",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.000 90)",
+          "oklch(26% 0.000 90)",
+          "oklch(38% 0.000 90)",
+          "oklch(49% 0.000 90)",
+          "oklch(61% 0.000 90)",
+          "oklch(72% 0.000 90)",
+          "oklch(84% 0.000 90)",
+          "oklch(95% 0.000 90)"
+        ]
+      },
+      "tile-white": {
+        "role": "neutral",
+        "displayName": "Blanc tuile",
+        "canonical": "#faf8f6",
+        "tonalRamp": [
+          "oklch(15% 0.003 68)",
+          "oklch(26% 0.003 68)",
+          "oklch(38% 0.003 68)",
+          "oklch(49% 0.003 68)",
+          "oklch(61% 0.003 68)",
+          "oklch(72% 0.003 68)",
+          "oklch(84% 0.003 68)",
+          "oklch(95% 0.003 68)"
+        ]
+      },
+      "warm-fill": {
+        "role": "neutral",
+        "displayName": "Remplissage chaud",
+        "canonical": "#f6f2ee",
+        "tonalRamp": [
+          "oklch(15% 0.007 68)",
+          "oklch(26% 0.007 68)",
+          "oklch(38% 0.007 68)",
+          "oklch(49% 0.007 68)",
+          "oklch(61% 0.007 68)",
+          "oklch(72% 0.007 68)",
+          "oklch(84% 0.007 68)",
+          "oklch(95% 0.007 68)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Filet",
+        "canonical": "#efe9e4",
+        "tonalRamp": [
+          "oklch(15% 0.009 63)",
+          "oklch(26% 0.009 63)",
+          "oklch(38% 0.009 63)",
+          "oklch(49% 0.009 63)",
+          "oklch(61% 0.009 63)",
+          "oklch(72% 0.009 63)",
+          "oklch(84% 0.009 63)",
+          "oklch(95% 0.009 63)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Encre",
+        "canonical": "#1c1b22",
+        "tonalRamp": [
+          "oklch(15% 0.005 292)",
+          "oklch(26% 0.007 292)",
+          "oklch(38% 0.010 292)",
+          "oklch(49% 0.012 292)",
+          "oklch(61% 0.013 292)",
+          "oklch(72% 0.011 292)",
+          "oklch(84% 0.009 292)",
+          "oklch(95% 0.007 292)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Encre 2",
+        "canonical": "#56525c",
+        "tonalRamp": [
+          "oklch(15% 0.007 304)",
+          "oklch(26% 0.009 304)",
+          "oklch(38% 0.012 304)",
+          "oklch(49% 0.014 304)",
+          "oklch(61% 0.017 304)",
+          "oklch(72% 0.014 304)",
+          "oklch(84% 0.012 304)",
+          "oklch(95% 0.009 304)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Encre 3",
+        "canonical": "#716c77",
+        "tonalRamp": [
+          "oklch(15% 0.007 306)",
+          "oklch(26% 0.010 306)",
+          "oklch(38% 0.013 306)",
+          "oklch(49% 0.015 306)",
+          "oklch(61% 0.018 306)",
+          "oklch(72% 0.015 306)",
+          "oklch(84% 0.012 306)",
+          "oklch(95% 0.010 306)"
+        ]
+      },
+      "sky-dawn-blue": {
+        "role": "neutral",
+        "displayName": "Ciel bleu pâle",
+        "canonical": "#cfe4fb",
+        "tonalRamp": [
+          "oklch(15% 0.015 251)",
+          "oklch(26% 0.021 251)",
+          "oklch(38% 0.027 251)",
+          "oklch(49% 0.033 251)",
+          "oklch(61% 0.038 251)",
+          "oklch(72% 0.032 251)",
+          "oklch(84% 0.027 251)",
+          "oklch(95% 0.021 251)"
+        ]
+      },
+      "sky-peach": {
+        "role": "neutral",
+        "displayName": "Ciel pêche",
+        "canonical": "#ffe7d6",
+        "tonalRamp": [
+          "oklch(15% 0.014 58)",
+          "oklch(26% 0.019 58)",
+          "oklch(38% 0.025 58)",
+          "oklch(49% 0.030 58)",
+          "oklch(61% 0.034 58)",
+          "oklch(72% 0.029 58)",
+          "oklch(84% 0.024 58)",
+          "oklch(95% 0.019 58)"
+        ]
+      },
+      "night-table": {
+        "role": "neutral",
+        "displayName": "Table de nuit",
+        "canonical": "#16141b",
+        "tonalRamp": [
+          "oklch(15% 0.006 298)",
+          "oklch(26% 0.008 298)",
+          "oklch(38% 0.010 298)",
+          "oklch(49% 0.012 298)",
+          "oklch(61% 0.014 298)",
+          "oklch(72% 0.012 298)",
+          "oklch(84% 0.010 298)",
+          "oklch(95% 0.008 298)"
+        ]
+      },
+      "night-card": {
+        "role": "neutral",
+        "displayName": "Carte de nuit",
+        "canonical": "#211e28",
+        "tonalRamp": [
+          "oklch(15% 0.008 299)",
+          "oklch(26% 0.011 299)",
+          "oklch(38% 0.014 299)",
+          "oklch(49% 0.017 299)",
+          "oklch(61% 0.019 299)",
+          "oklch(72% 0.016 299)",
+          "oklch(84% 0.013 299)",
+          "oklch(95% 0.010 299)"
+        ]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Encre de nuit",
+        "canonical": "#f4f0ee",
+        "tonalRamp": [
+          "oklch(15% 0.005 49)",
+          "oklch(26% 0.005 49)",
+          "oklch(38% 0.005 49)",
+          "oklch(49% 0.005 49)",
+          "oklch(61% 0.005 49)",
+          "oklch(72% 0.005 49)",
+          "oklch(84% 0.005 49)",
+          "oklch(95% 0.005 49)"
+        ]
+      },
+      "night-sky-top": {
+        "role": "neutral",
+        "displayName": "Ciel de nuit, haut",
+        "canonical": "#232b4f",
+        "tonalRamp": [
+          "oklch(15% 0.026 272)",
+          "oklch(26% 0.036 272)",
+          "oklch(38% 0.046 272)",
+          "oklch(49% 0.057 272)",
+          "oklch(61% 0.065 272)",
+          "oklch(72% 0.055 272)",
+          "oklch(84% 0.045 272)",
+          "oklch(95% 0.035 272)"
+        ]
+      },
+      "night-sky-end": {
+        "role": "neutral",
+        "displayName": "Ciel de nuit, bas",
+        "canonical": "#45305a",
+        "tonalRamp": [
+          "oklch(15% 0.030 306)",
+          "oklch(26% 0.041 306)",
+          "oklch(38% 0.053 306)",
+          "oklch(49% 0.064 306)",
+          "oklch(61% 0.074 306)",
+          "oklch(72% 0.063 306)",
+          "oklch(84% 0.051 306)",
+          "oklch(95% 0.040 306)"
+        ]
+      },
+      "night-salmon-deep": {
+        "role": "primary",
+        "displayName": "Saumon clair de nuit",
+        "canonical": "#ffb4a3",
+        "tonalRamp": [
+          "oklch(15% 0.037 33)",
+          "oklch(26% 0.050 33)",
+          "oklch(38% 0.064 33)",
+          "oklch(49% 0.078 33)",
+          "oklch(61% 0.091 33)",
+          "oklch(72% 0.077 33)",
+          "oklch(84% 0.063 33)",
+          "oklch(95% 0.049 33)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "La température de la carte du ciel, seule ; halo de la couleur du ciel."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Grand nombre des autres en-têtes (chambre, achats)."
+      },
+      "page-title": {
+        "displayName": "Titre de page",
+        "purpose": "Pages de réglages et premier lancement."
+      },
+      "title": {
+        "displayName": "Titre",
+        "purpose": "Titre principal d'une carte (heure de la sortie)."
+      },
+      "card-title": {
+        "displayName": "Titre de carte",
+        "purpose": "Titres de cartes et de replis."
+      },
+      "body": {
+        "displayName": "Texte",
+        "purpose": "Phrases d'explication."
+      },
+      "body-small": {
+        "displayName": "Petit texte",
+        "purpose": "Sources, notes, sous-titres en encre 2 ou 3."
+      },
+      "label": {
+        "displayName": "Libellé",
+        "purpose": "Pastilles, segments, sélecteurs, onglets."
+      },
+      "tile-label": {
+        "displayName": "Nom de pièce",
+        "purpose": "Sous le dessin d'une tuile ; jamais tronqué."
+      },
+      "state-chip": {
+        "displayName": "Pastille d'état",
+        "purpose": "« Sortie idéale » en capitales espacées, en ligne seulement, jamais au-dessus d'un titre."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 14px 34px -16px rgba(96, 62, 42, 0.22), 0 2px 6px -2px rgba(96, 62, 42, 0.06)",
+        "purpose": "Cartes, carte du ciel, groupes de réglages. Thème sombre : 0 16px 34px -18px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.3)."
+      },
+      {
+        "name": "pill",
+        "value": "0 2px 6px -2px rgba(96, 62, 42, 0.18)",
+        "purpose": "Élément blanc posé sur un fond teinté (segment choisi, Ressenti, Choisir). Thème sombre : 0 2px 6px -2px rgba(0, 0, 0, 0.5)."
+      },
+      {
+        "name": "floating-bar",
+        "value": "0 16px 36px -14px rgba(96, 62, 42, 0.32), 0 2px 8px -2px rgba(96, 62, 42, 0.08)",
+        "purpose": "La barre d'onglets flottante. Thème sombre : 0 16px 36px -12px rgba(0, 0, 0, 0.8)."
+      },
+      {
+        "name": "salmon-glow",
+        "value": "0 14px 26px -14px rgba(240, 138, 116, 0.55)",
+        "purpose": "Le seul bouton d'appel principal de l'écran."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -12px 40px -12px rgba(28, 20, 16, 0.35)",
+        "purpose": "Feuille du bas, sur un voile rgba(28, 20, 16, 0.42)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "purpose": "Courbe de toutes les entrées et retours d'état."
+      },
+      {
+        "name": "rise",
+        "value": "0.42s, translateY(10px) et fondu, décalages 0,06 / 0,1 / 0,14 s",
+        "purpose": "Entrée composée : ciel, puis cartes."
+      },
+      {
+        "name": "settle-art",
+        "value": "0.7s, translateY(-10px) scale(0.94) et fondu",
+        "purpose": "La forme du ciel se pose."
+      },
+      {
+        "name": "tile-in",
+        "value": "0.34s, translateY(6px) scale(0.96), cascade de 30 ms à partir de 0,12 s",
+        "purpose": "Tuiles de vêtements en cascade."
+      },
+      {
+        "name": "press",
+        "value": "transform 0.14s, scale(0.97) (0.96 pour les onglets)",
+        "purpose": "Retour de pression sur tout ce qui se touche."
+      },
+      {
+        "name": "state",
+        "value": "0.2s ease",
+        "purpose": "Couleur de fond, couleur, ombre, rotation du chevron."
+      },
+      {
+        "name": "sheet",
+        "value": "0.26s translateY(100%) vers 0 ; voile 0.22s",
+        "purpose": "Ouverture des feuilles du bas."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion",
+        "purpose": "Toute animation n'existe que sous no-preference ; feuilles et chevrons sans transition sous reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "app-column",
+        "value": "480px"
+      },
+      {
+        "name": "landscape-split",
+        "value": "(orientation: landscape) and (min-width: 640px)"
+      },
+      {
+        "name": "landscape-short",
+        "value": "(orientation: landscape) and (min-width: 640px) and (max-height: 460px)"
+      },
+      {
+        "name": "landscape-max",
+        "value": "1040px"
+      }
+    ],
+    "skyVariants": {
+      "jour": "linear-gradient(165deg, #cfe4fb 0%, #eef5fd 38%, #fff6ee 70%, #ffe7d6 100%)",
+      "nuageux": "linear-gradient(165deg, #dbe3ee 0%, #f3f5f8 45%, #fbf1ea 100%)",
+      "pluie": "linear-gradient(165deg, #d3e2f6 0%, #eff3fa 40%, #fdf3ee 72%, #fbe3da 100%)",
+      "chaleur": "linear-gradient(165deg, #ffe9c9 0%, #fff6e8 45%, #ffd9c2 100%)",
+      "froid": "linear-gradient(165deg, #d3e8fb 0%, #f1f8ff 50%, #eef0fb 100%)",
+      "soir": "linear-gradient(165deg, #e3dbf7 0%, #f8effa 48%, #ffe2d2 100%)",
+      "prevoir": "linear-gradient(165deg, #ece4fb 0%, #f8f3fd 50%, #fde9e4 100%)",
+      "nuit-et-theme-sombre": "linear-gradient(165deg, #232b4f 0%, #2b2850 55%, #45305a 100%)"
+    },
+    "garmentFamilies": {
+      "dessous": [
+        "#ffe9d6",
+        "#ffc7a0",
+        "#bf6428"
+      ],
+      "nuit": [
+        "#efe9ff",
+        "#cfc0f8",
+        "#6450b4"
+      ],
+      "bas": [
+        "#e2eefc",
+        "#abcdf1",
+        "#3a6fb0"
+      ],
+      "pieds": [
+        "#ffe0da",
+        "#ffa497",
+        "#c9463a"
+      ],
+      "mailles": [
+        "#ffeaee",
+        "#f9c2ce",
+        "#bd4f6d"
+      ],
+      "dehors": [
+        "#e9e8f2",
+        "#bbb8d4",
+        "#57527f"
+      ],
+      "tete": [
+        "#ece2fa",
+        "#bda1e8",
+        "#583796"
+      ],
+      "pluie": [
+        "#dff4f1",
+        "#9ddbd3",
+        "#1f7d75"
+      ],
+      "soleil": [
+        "#fff4cf",
+        "#ffd978",
+        "#a87200"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "L'action principale de l'écran, pleine largeur ; la variante d'appel porte la lueur saumon.",
+      "html": "<button class=\"ds-btn ds-btn-cta\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 14l11 -11\"/><path d=\"M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5\"/></svg>Envoyer la fiche du jour</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:12px 22px;border:0;border-radius:999px;background:var(--accent,#f6a493);color:var(--on-accent,#5e2216);font:600 1rem/1.2 Poppins,ui-rounded,system-ui,sans-serif;width:100%;cursor:pointer;transition:transform .14s cubic-bezier(.2,.8,.2,1),box-shadow .2s ease}.ds-btn-cta{min-height:58px;box-shadow:0 14px 26px -14px rgba(240,138,116,.55)}.ds-btn:hover{box-shadow:0 18px 30px -14px rgba(240,138,116,.65)}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:3px solid var(--accent-deep,#a8432e);outline-offset:2px}"
+    },
+    {
+      "name": "Bouton doux",
+      "kind": "button",
+      "refersTo": "button-soft",
+      "description": "Action neutre ou secondaire, en petit format.",
+      "html": "<button class=\"ds-btn-soft\">Plus tard</button> <button class=\"ds-btn-tint\">Choisir cette heure</button>",
+      "css": ".ds-btn-soft,.ds-btn-tint{min-height:44px;padding:8px 16px;border:0;border-radius:999px;font:600 .9rem/1.2 Poppins,ui-rounded,system-ui,sans-serif;cursor:pointer;transition:transform .14s cubic-bezier(.2,.8,.2,1),background-color .2s ease}.ds-btn-soft{background:var(--fill,#f6f2ee);color:var(--ink,#1c1b22)}.ds-btn-tint{background:var(--accent-soft,#fde6e0);color:var(--accent-ink,#8a3f30)}.ds-btn-soft:active,.ds-btn-tint:active{transform:scale(.97)}.ds-btn-soft:focus-visible,.ds-btn-tint:focus-visible{outline:3px solid var(--accent-deep,#a8432e);outline-offset:2px}"
+    },
+    {
+      "name": "Barre d'onglets",
+      "kind": "nav",
+      "refersTo": "tab-bar",
+      "description": "Trois onglets dans une pilule blanche flottante ; l'actif en voile saumon.",
+      "html": "<nav class=\"ds-tabs\"><button aria-selected=\"true\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7\"/></svg>Journée</button><button>Nuit</button><button>Achats <span class=\"ds-badge\">3</span></button></nav>",
+      "css": ".ds-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;padding:6px;max-width:448px;border-radius:999px;background:var(--card,#fff);border:1px solid var(--line,#efe9e4);box-shadow:0 16px 36px -14px rgba(96,62,42,.32),0 2px 8px -2px rgba(96,62,42,.08)}.ds-tabs button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding:0 8px;border:0;border-radius:999px;background:none;color:var(--ink-3,#716c77);font:500 .9rem Poppins,ui-rounded,system-ui,sans-serif;cursor:pointer;transition:background-color .2s ease,transform .14s cubic-bezier(.2,.8,.2,1)}.ds-tabs button:hover{color:var(--ink,#1c1b22)}.ds-tabs button:active{transform:scale(.96)}.ds-tabs [aria-selected=true]{background:var(--accent-soft,#fde6e0);color:var(--accent-ink,#8a3f30);font-weight:600}.ds-tabs button:focus-visible{outline:3px solid var(--accent-deep,#a8432e);outline-offset:2px}.ds-badge{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--badge,#c9382c);color:var(--on-badge,#fff);font-size:.7rem;font-weight:700;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Pastilles et étiquettes",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Pastille d'état « Sortie idéale », condition d'alerte, étiquette neutre.",
+      "html": "<span class=\"ds-chip\">Sortie idéale</span> <span class=\"ds-cond\">Averse possible · 25 %</span> <span class=\"ds-tag\">2 à 4 ans</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;min-height:22px;padding:2px 9px;border-radius:999px;background:var(--chip-green,#cdebd6);color:var(--chip-green-ink,#1f5c3a);font:600 .68rem Poppins,ui-rounded,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase}.ds-cond{display:inline-flex;align-items:center;min-height:30px;padding:0 11px;border-radius:999px;background:var(--amber-soft,#fdecc8);color:var(--amber,#8a5300);font:600 .8rem Poppins,ui-rounded,system-ui,sans-serif;font-variant-numeric:tabular-nums}.ds-tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:var(--fill,#f6f2ee);color:var(--ink-2,#56525c);font:500 .76rem Poppins,ui-rounded,system-ui,sans-serif}"
+    },
+    {
+      "name": "Carte",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "La surface de contenu : blanche, 28 px, filet et ombre chaude unique.",
+      "html": "<article class=\"ds-card\"><h3>Maintenant</h3><p>Jusqu'à 14 h 10</p></article>",
+      "css": ".ds-card{display:grid;gap:4px;padding:18px;border-radius:28px;background:var(--card,#fff);border:1px solid var(--line,#efe9e4);box-shadow:0 14px 34px -16px rgba(96,62,42,.22),0 2px 6px -2px rgba(96,62,42,.06);font-family:Poppins,ui-rounded,system-ui,sans-serif;color:var(--ink,#1c1b22)}.ds-card h3{margin:0;font-size:1.32rem;font-weight:700;letter-spacing:-.01em}.ds-card p{margin:0;font-size:.86rem;color:var(--ink-3,#716c77)}"
+    },
+    {
+      "name": "Carte du ciel",
+      "kind": "custom",
+      "refersTo": "sky-card",
+      "description": "Signature : dégradé pastel, le grand nombre devant la forme météo, Ressenti en pastille blanche.",
+      "html": "<section class=\"ds-sky\"><div class=\"ds-now\"><svg class=\"ds-art\" viewBox=\"0 0 200 150\"><defs><radialGradient id=\"dsun\" cx=\".36\" cy=\".3\" r=\".8\"><stop offset=\"0\" stop-color=\"#fff2ae\"/><stop offset=\".55\" stop-color=\"#ffc940\"/><stop offset=\"1\" stop-color=\"#f4971a\"/></radialGradient><linearGradient id=\"dcl\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff\"/><stop offset=\".6\" stop-color=\"#f1f5fb\"/><stop offset=\"1\" stop-color=\"#cdd7e7\"/></linearGradient></defs><circle cx=\"134\" cy=\"50\" r=\"31\" fill=\"url(#dsun)\"/><g fill=\"url(#dcl)\" transform=\"translate(18 36) scale(1.28)\"><circle cx=\"38\" cy=\"46\" r=\"24\"/><circle cx=\"66\" cy=\"34\" r=\"30\"/><circle cx=\"92\" cy=\"48\" r=\"22\"/><rect x=\"20\" y=\"44\" width=\"92\" height=\"28\" rx=\"14\"/></g></svg><span class=\"ds-temp\">12°</span><span class=\"ds-feels\">Ressenti 10°</span></div><button class=\"ds-fold\">Éclaircies <span>Détails et demain</span></button></section>",
+      "css": ".ds-sky{position:relative;display:grid;gap:10px;padding:14px;border-radius:28px;background:linear-gradient(165deg,#cfe4fb 0%,#eef5fd 38%,#fff6ee 70%,#ffe7d6 100%);border:1px solid rgba(255,255,255,.9);box-shadow:0 14px 34px -16px rgba(96,62,42,.22),0 2px 6px -2px rgba(96,62,42,.06);font-family:Poppins,ui-rounded,system-ui,sans-serif;color:#1c1b22;max-width:360px}.ds-now{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:4px;padding:64px 0 20px;isolation:isolate}.ds-art{position:absolute;z-index:-1;left:42%;top:0;width:200px}.ds-temp{font-weight:700;font-size:5rem;line-height:.84;letter-spacing:-.04em;font-variant-numeric:tabular-nums;paint-order:stroke fill;-webkit-text-stroke:.08em #f2f7fd}.ds-feels{display:inline-flex;align-items:center;min-height:38px;margin-top:12px;padding:0 15px;border-radius:999px;background:#fff;box-shadow:0 2px 6px -2px rgba(96,62,42,.18);font-weight:600;font-size:.94rem}.ds-fold{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:0 14px;border:0;border-radius:24px;background:rgba(255,255,255,.86);font:600 .95rem Poppins,ui-rounded,system-ui,sans-serif;color:#1c1b22;cursor:pointer}.ds-fold span{font-weight:400;font-size:.82rem;color:#524e59}.ds-fold:hover{background:#fff}.ds-fold:focus-visible{outline:3px solid #1c1b22;outline-offset:2px}"
+    },
+    {
+      "name": "Tuile de vêtement",
+      "kind": "custom",
+      "refersTo": "garment-tile",
+      "description": "Une pièce de la tenue : dessin deux tons de sa famille, nom, signe de changement.",
+      "html": "<div class=\"ds-tile\"><span class=\"ds-sign\">+</span><svg width=\"64\" height=\"64\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#583796\" stroke-width=\"1.15\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><defs><linearGradient id=\"dtete\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ece2fa\"/><stop offset=\"1\" stop-color=\"#bda1e8\"/></linearGradient></defs><path d=\"M5 15a7 7 0 0 1 14 0z\" fill=\"url(#dtete)\"/><path d=\"M4 15h16v3h-16z\" fill=\"url(#dtete)\"/></svg><span class=\"ds-tile-name\">Bonnet fin</span></div>",
+      "css": ".ds-tile{position:relative;display:grid;justify-items:center;gap:5px;width:110px;padding:10px 8px;border-radius:20px;background:var(--tile,#faf8f6);border:1px solid var(--line,#efe9e4);font-family:Poppins,ui-rounded,system-ui,sans-serif;text-align:center}.ds-tile-name{font-size:.78rem;font-weight:600;line-height:1.22;letter-spacing:-.01em;color:var(--ink,#1c1b22)}.ds-sign{position:absolute;right:6px;top:6px;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--amber,#8a5300);color:var(--card,#fff);font-weight:700;font-size:.82rem;line-height:1}"
+    },
+    {
+      "name": "Le sac",
+      "kind": "card",
+      "refersTo": "bag-note",
+      "description": "La seule carte crème : ce qu'on emporte, posé dans la carte de la tenue.",
+      "html": "<div class=\"ds-bag\"><strong class=\"ds-bag-title\">Dans le sac</strong><div class=\"ds-bag-item\"><span class=\"ds-bag-ico\"></span><span><b>Habillage pluie</b><small>Pluie dès maintenant</small></span></div></div>",
+      "css": ".ds-bag{display:grid;gap:10px;padding:13px 14px 14px;border-radius:22px;background:var(--cream,#fdf6e3);border:1px solid var(--cream-line,#f1e2b6);font-family:Poppins,ui-rounded,system-ui,sans-serif}.ds-bag-title{font-size:.86rem;font-weight:600;color:var(--cream-ink,#6b5a1e)}.ds-bag-item{display:flex;align-items:center;gap:12px;font-size:.94rem;color:var(--ink,#1c1b22)}.ds-bag-item b{display:block;font-weight:600}.ds-bag-item small{font-size:.82rem;color:var(--cream-ink,#6b5a1e)}.ds-bag-ico{width:46px;height:46px;border-radius:15px;background:var(--card,#fff)}"
+    },
+    {
+      "name": "Segments et sélecteur",
+      "kind": "input",
+      "refersTo": "segmented",
+      "description": "Choix exclusif en rail ; sélecteur en pilule qui ouvre une feuille ; champ.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button aria-checked=\"false\">30 min</button><button aria-checked=\"true\">1 h</button><button aria-checked=\"false\">2 h</button></div> <input class=\"ds-field\" placeholder=\"Rechercher une commune\">",
+      "css": ".ds-seg{display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--fill,#f6f2ee);max-width:320px}.ds-seg button{flex:1;min-height:40px;border:0;border-radius:999px;background:none;color:var(--ink-2,#56525c);font:500 .88rem Poppins,ui-rounded,system-ui,sans-serif;cursor:pointer;transition:background-color .2s ease}.ds-seg button:hover{color:var(--ink,#1c1b22)}.ds-seg [aria-checked=true]{background:var(--card,#fff);color:var(--ink,#1c1b22);font-weight:600;box-shadow:0 2px 6px -2px rgba(96,62,42,.18)}.ds-seg button:focus-visible{outline:3px solid var(--accent-deep,#a8432e);outline-offset:2px}.ds-field{min-height:46px;margin-top:10px;padding:10px 12px;border:0;border-radius:14px;background:var(--fill,#f6f2ee);color:var(--ink,#1c1b22);font:400 1rem Poppins,ui-rounded,system-ui,sans-serif;width:100%;max-width:320px}.ds-field::placeholder{color:var(--ink-3,#716c77)}.ds-field:focus-visible{outline:3px solid var(--accent-deep,#a8432e);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "La fiche du jour sur la table claire",
+    "overview": "L'app est une feuille de papier chaud posée sur une table : un fond blanc cassé tiède, des cartes blanches très arrondies qui flottent sur une seule ombre diffuse, et en tête une carte de ciel pastel qui donne la réponse avant toute lecture. La couleur n'habille pas : chaque teinte a un emploi (agir, sortie idéale, sac, alerte, famille de vêtements) et rien d'autre ne la porte. Une seule famille de caractères, Poppins, fait toute la hiérarchie par la graisse et la taille.\n\nLa densité est celle d'une fiche, pas d'un tableau de bord : une carte, une idée ; marges de 14 à 18 px dans les cartes, 14 px entre elles ; le détail se replie (heure par heure, repères, à la maison). Les illustrations sont dessinées dans le code : un ciel modelé par dégradés, sans trait, et des vêtements en deux tons (aplat pastel et trait plus profond) dont la teinte dit la famille. Le thème sombre garde la même grammaire sur des bleus nuit chauds ; il suit l'heure du coucher de l'enfant, pas seulement le système.\n\nLe geste signature tient en une image : le très grand nombre de la température passe devant la forme météo modelée et en couvre le bas, et la pastille blanche « Ressenti » s'accroche à son flanc. C'est le seul endroit de l'app où l'image et le texte se chevauchent.",
+    "keyCharacteristics": [
+      "Fond blanc cassé chaud, cartes blanches à 28 px, une seule ombre chaude et diffuse.",
+      "Saumon pour l'action et la sélection, vert tendre pour la sortie idéale, crème pour le sac, ambre pour l'alerte.",
+      "Poppins seule, 400 à 700, chiffres tabulaires partout où un nombre change.",
+      "Tout ce qui se touche est une pilule ou un carré très arrondi, d'au moins 44 px.",
+      "Illustrations codées : ciel modelé en dégradés, vêtements en deux tons par famille.",
+      "Une entrée composée (le ciel, puis les cartes, puis les tuiles en cascade), des retours d'état courts, rien sans l'accord de « réduire les animations »."
+    ],
+    "rules": [
+      {
+        "name": "The Salmon Acts Rule",
+        "body": "Le saumon marque ce qu'on touche pour agir et ce qui est choisi ; il ne décore jamais une surface, un titre ou une illustration.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Green Rule",
+        "body": "Le vert dit « sortie idéale » ou « confirmé » ; une seule chose verte en tête du ciel.",
+        "section": "colors"
+      },
+      {
+        "name": "The Measured Sky Rule",
+        "body": "Le petit texte posé sur un ciel est toujours sur une pastille blanche (opaque à 86 %, ou blanche pleine pour Ressenti, Choisir et le segment choisi) ; le contraste est mesuré à 4,5:1 sur chaque variante de ciel avant d'en ajouter une.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Poppins seule, hiérarchie par graisse et taille ; aucune police système en titre, aucune seconde famille (le monospace reste réservé aux codes à copier).",
+        "section": "typography"
+      },
+      {
+        "name": "The Steady Numbers Rule",
+        "body": "Toute valeur qui change (températures, heures, pourcentages, compteurs, badges) est en chiffres tabulaires.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Warm Shadow Rule",
+        "body": "Une carte a l'ombre de carte, une tuile n'a qu'un filet ; on ne cumule jamais ombre et bordure épaisse, et aucune ombre n'est dure ou décalée sans flou.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No Frost Rule",
+        "body": "Aucun flou d'arrière-plan : la lisibilité sur le ciel vient de pastilles blanches opaques, pas de verre dépoli.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** réserver le saumon à l'action principale et à la sélection, et n'avoir qu'un bouton d'appel saumon par écran.",
+      "**Do** poser tout petit texte d'un ciel sur une pastille blanche et mesurer 4,5:1 sur chaque variante de ciel, claire et sombre.",
+      "**Do** donner aux cartes 28 px, aux tuiles 20 px, et faire de tout contrôle une pilule d'au moins 44 px.",
+      "**Do** dessiner les nouvelles météos sur la toile de 200 × 150 en volumes dégradés, et les nouveaux vêtements en deux tons dans la teinte de leur famille.",
+      "**Do** mettre tout nombre qui change en chiffres tabulaires.",
+      "**Do** décliner tout nouvel écran avec la même grammaire : une carte d'en-tête de ciel, puis des cartes de contenu.",
+      "**Do** passer chaque entrée par la courbe cubic-bezier(0.2, 0.8, 0.2, 1) et la couper sous « réduire les animations »."
+    ],
+    "donts": [
+      "**Don't** utiliser le saumon, le vert ou la crème pour décorer : chacun a un seul sens.",
+      "**Don't** poser de libellé en capitales au-dessus d'un titre ; l'état se dit par une pastille en ligne.",
+      "**Don't** utiliser d'emoji comme icônes ; les icônes sont au trait (jeu Tabler) ou des illustrations codées.",
+      "**Don't** ajouter de flou d'arrière-plan ni de verre dépoli décoratif.",
+      "**Don't** faire chevaucher texte et image ailleurs que le grand nombre sur la forme du ciel.",
+      "**Don't** introduire une seconde famille de caractères ni une police système en titre.",
+      "**Don't** donner une ombre aux tuiles ou au sac, ni d'ombre dure décalée sans flou."
+    ]
+  }
+}

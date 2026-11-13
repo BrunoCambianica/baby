@@ -74,8 +74,6 @@ const state = {
   tab: 'dehors',
   // Dehors : « aujourdhui » ou « demain » choisi par le parent ; null, selon l'heure (voir dehorsDay).
   day: null,
-  // Dedans : « jour » (la pièce où il passe la journée) ou « nuit » (sa chambre), selon l'heure à l'ouverture.
-  inside: homeMoment(parisNow().time),
   draft: null,
   results: [],
   open: new Set(),
@@ -129,7 +127,7 @@ function currentView() {
   if (!state.household) return state.received || route() === 'recevoir' ? 'recevoir' : 'onboarding';
   const r = route();
   if (r.startsWith('enfant/')) return 'enfant';
-  if (r === 'reglages/commune') return 'reglages';
+  if (r === 'reglages/commune' || r === 'reglages/rappel') return 'reglages';
   if (['reglages', 'widget', 'apropos', 'recevoir'].includes(r)) return r;
   return state.received ? 'recevoir' : 'app';
 }
@@ -137,15 +135,21 @@ function currentView() {
 // La température de chaque pièce, gardée d'un jour à l'autre comme une habitude (un thermostat) : `nuit`, sa chambre ;
 // `jour`, la pièce où il passe la journée. Jamais notée : null, la tenue vaut pour le repère (en le disant).
 const roomHabit = (profile, kind = 'nuit') => (kind === 'jour' ? profile.room_day : profile.room)?.value ?? null;
-// Le widget Maison ouvre l'onglet Dedans sur la pièce du moment : le jour de 6 h à 18 h, la nuit ensuite.
+// Le widget Maison ouvre la pièce du moment : le jour (de 6 h à 18 h), la carte « À la maison » de l'onglet Journée,
+// dépliée et amenée à l'écran ; la nuit ensuite, l'onglet Nuit.
 function openHome() {
-  state.tab = 'dedans';
-  state.inside = homeMoment(parisNow().time);
+  if (homeMoment(parisNow().time) === 'nuit') {
+    state.tab = 'dedans';
+    return;
+  }
+  state.tab = 'dehors';
+  state.open.add('maison');
+  state.reveal = 'maison';
 }
 const clock = (ms) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
   .format(new Date(ms)).replace(':', ' h ');
 
-// Les onglets Dedans et Achats parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Dehors.
+// Les onglets Nuit et Achats parlent toujours d'aujourd'hui ; « Demain » ne concerne que l'onglet Journée.
 // `window` : une sortie ({ from, to }) à la place de la plage horaire, pour la tenue de cette sortie seulement.
 // Le profil du moteur pour l'enfant affiché.
 const engineProfile = (p, window = null) => ({
@@ -374,7 +378,7 @@ function applyPulse() {
   find({ action: p.action, value: p.value })?.classList.add('pop');
 }
 
-// L'onglet Extérieur tel qu'il vient d'être dessiné (sa sortie choisie) : le ciel de la barre d'état et le thème sombre
+// L'onglet Journée tel qu'il vient d'être dessiné (sa sortie choisie) : le ciel de la barre d'état et le thème sombre
 // suivent l'heure affichée.
 let shown = null;
 let lastKey = '';
@@ -388,7 +392,7 @@ const REPLAY_MS = 150;
 function paint() {
   const view = currentView();
   if (['onboarding', 'reglages', 'enfant'].includes(view) && !state.draft) state.draft = newDraft(view);
-  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.inside}|${state.draft?.step ?? ''}`;
+  const key = `${view}|${route()}|${state.tab}|${state.day}|${state.draft?.step ?? ''}`;
   const tab = view === 'app' ? state.tab : view;
   let html;
   if (!state.bundle) html = state.error ? V.fatal(state.error) : V.loading();
@@ -455,6 +459,14 @@ function paint() {
   state.centerStrip = false;
   applyPulse();
   setThemeColor(view);
+  // Une carte à amener à l'écran une fois dessinée (« À la maison », ouverte depuis le widget Maison).
+  if (state.reveal && view === 'app') {
+    const card = document.getElementById(state.reveal);
+    if (card) {
+      state.reveal = null;
+      card.scrollIntoView({ block: 'start' });
+    }
+  }
 }
 
 // La bande des heures à sa position gardée (`left`), sinon centrée sur l'heure de départ choisie. Repliée (« Heure par
@@ -467,19 +479,13 @@ function placeStrip(strip, left = null) {
   return true;
 }
 
-// Barre d'état d'Android assortie au ciel de l'écran (iOS garde sa barre standard).
-const SKY = {
-  clair: '#2052da', nuageux: '#4c6789', pluie: '#3f5d7c', chaleur: '#c5450d', froid: '#3e66b7',
-  soir: '#5650c6', nuit: '#1e2a4a', prevoir: '#7c4ddb', maison: '#2f9a78', reglages: '#3b4a6b',
-};
-
-// Clair le jour, sombre la nuit : Intérieur de nuit, ou une sortie qui part après l'heure du coucher de bébé, passent
+// Clair le jour, sombre la nuit : l'onglet Nuit, ou une sortie qui part après l'heure du coucher de bébé, passent
 // en sombre ; les autres écrans suivent l'heure qu'il est (sombre après le coucher, et avant 6 h).
 const isNight = (time, bed) => time >= bed || time < '06:00';
 function darkTheme(view) {
   const bed = store.bedtime();
   const now = parisNow().time;
-  if (view === 'app' && state.tab === 'dedans') return state.inside === 'nuit';
+  if (view === 'app' && state.tab === 'dedans') return true;
   if (view === 'app' && state.tab === 'dehors') {
     const start = shown?.slot?.start ?? (dehorsDay() === 'demain' ? '09:00' : now);
     return isNight(start, bed);
@@ -492,19 +498,10 @@ function setThemeColor(view) {
   const dark = darkTheme(view);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   if (!meta) return;
-  let color = dark ? '#0b1324' : '#f8fafc';
-  if (view === 'onboarding') color = SKY.clair;
-  if (view === 'app') {
-    const ctx = state.tab === 'dehors' ? shown ?? compute(dehorsDay()) : null;
-    if (state.tab === 'dedans') color = state.inside === 'nuit' ? SKY.nuit : SKY.maison;
-    else if (state.tab === 'prevoir') color = SKY.prevoir;
-    else color = ctx ? SKY[V.sortirTheme(ctx)] : SKY.clair;
-  }
-  if (view === 'reglages') color = SKY.reglages;
+  // La barre d'état et la barre du bas prennent la couleur de la page (--bg) : l'écran va d'un bord à l'autre.
+  const color = dark ? '#16141b' : '#fbf8f5';
   meta.setAttribute('content', color);
-  // Barres du système de l'app Android : ciel en haut, couleur de la barre d'onglets en bas.
-  const bottom = view === 'app' || view === 'reglages' ? (dark ? '#162238' : '#ffffff') : dark ? '#0b1324' : '#f8fafc';
-  if (host === 'android') ask(() => android.colors(color, bottom));
+  if (host === 'android') ask(() => android.colors(color, color));
 }
 
 // Rappel du soir : réglé sur ce téléphone, transmis à l'app Android ou au widget iPhone, qui le programment,
@@ -965,17 +962,24 @@ const actions = {
   reload: () => location.reload(),
   'apply-update': () => location.reload(),
   refresh: () => loadData({ force: true }),
-  // Réglages est un onglet comme les autres : on y va, ou on en revient, dans le même fondu.
   tab(el) {
-    const value = el.dataset.value;
     transition(() => {
-      if (value !== 'reglages') state.tab = value;
-      if (value === 'reglages') {
-        if (currentView() !== 'reglages') navigate('reglages');
-      } else if (currentView() !== 'app') navigate('');
+      state.tab = el.dataset.value;
+      if (currentView() !== 'app') navigate('');
       else paint();
       window.scrollTo(0, 0);
     });
+  },
+  // « Maintenant ⌄ », en tête de la carte de la tenue : l'heure et la durée de la sortie se règlent dans le ciel, sous
+  // « Détails ». On le déplie et on l'amène à l'écran.
+  hours() {
+    state.open.add('heures');
+    state.closed?.delete('heures');
+    state.centerStrip = true;
+    paint();
+    const fold = app.querySelector('.hours-fold');
+    fold?.scrollIntoView({ block: 'center', behavior: calm() ? 'auto' : 'smooth' });
+    fold?.querySelector('summary')?.focus({ preventScroll: true });
   },
   // Réglages repliés sous une tenue (la pièce de la carte « Dedans ») : ouverts ou fermés, gardés le temps de la session.
   fold(el) {
@@ -988,14 +992,6 @@ const actions = {
     transition(() => {
       state.day = el.dataset.value;
       state.tab = 'dehors';
-      paint();
-    });
-  },
-  // Dedans : le jour (la pièce où il passe la journée) ou la nuit (sa chambre), chacun avec sa température gardée.
-  inside(el) {
-    transition(() => {
-      state.inside = el.dataset.value === 'nuit' ? 'nuit' : 'jour';
-      state.tab = 'dedans';
       paint();
     });
   },
@@ -1673,8 +1669,9 @@ window.addEventListener('hashchange', () => {
   state.results = [];
   state.confirmClear = false;
   paint();
-  // La commune en haut de l'écran mène droit à son réglage (rubrique Sorties).
-  const target = route() === 'reglages/commune' && document.getElementById('reglage-commune');
+  // La commune et la cloche, en haut de l'écran, mènent droit à leur réglage (rubriques Sorties et Rappels).
+  const anchor = { 'reglages/commune': 'reglage-commune', 'reglages/rappel': 'reglage-rappel' }[route()];
+  const target = anchor && document.getElementById(anchor);
   if (target) target.scrollIntoView({ block: 'center' });
   else window.scrollTo(0, 0);
   if (route() === 'widget') preloadLoader();
@@ -1704,10 +1701,7 @@ document.addEventListener('visibilitychange', () => {
     hiddenAt = Date.now();
     return;
   }
-  if (hiddenAt && Date.now() - hiddenAt > 30 * 60 * 1000) {
-    state.day = null;
-    state.inside = homeMoment(parisNow().time);
-  }
+  if (hiddenAt && Date.now() - hiddenAt > 30 * 60 * 1000) state.day = null;
   if (state.updateReady) {
     location.reload();
     return;
@@ -1747,8 +1741,8 @@ window.sbChoisirEnfant = (id) => {
 window.sbOnglet = (tab) => {
   if (tab !== 'maison') return;
   openHome();
-  if (route()) location.hash = '';
-  paint();
+  if (route()) navigate('');
+  else paint();
 };
 
 // App Android : la dernière version publiée de l'APK, pour proposer la mise à jour dans les réglages.

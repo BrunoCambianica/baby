@@ -1,10 +1,11 @@
 // Page de la fiche du jour : lue par la nounou, la crèche ou les grands-parents, sans rien installer.
 // Les données sont dans le lien, après le # (voir app/js/fiche.js) : rien n'est envoyé au site.
-import { drawingSvg, ITEM_DRAWINGS } from '../engine/drawings.js';
+import { ITEM_DRAWINGS } from '../engine/drawings.js';
 import { hourFr, render } from '../engine/engine.js';
 import { dayLong, esc } from '../app/js/format.js';
 import { bagReason, decodeFiche, nightText } from '../app/js/fiche.js';
 import { readShortFiche } from '../app/js/famille.js';
+import { garment } from '../app/js/illus.js';
 
 const root = document.getElementById('fiche');
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
@@ -43,25 +44,25 @@ async function main() {
     return;
   }
   const label = (i) => esc(capitalize(M.labels.items_short[i] ?? i));
-  const tile = (i, sign = '') => `<li class="${sign === '−' ? 'minus' : sign ? 'plus' : ''}"><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[i], { size: 34 })}${sign ? `<span class="sign" aria-label="${sign === '−' ? 'enlever' : 'mettre'}">${sign}</span>` : ''}</span><span class="dress-name">${label(i)}</span></li>`;
+  const tile = (i, sign = '', size = 64) => `<li${sign ? ` class="${sign === '−' ? 'minus' : 'plus'}"` : ''}><span class="dress-ico">${garment(ITEM_DRAWINGS[i], { size })}${sign ? `<span class="sign" role="img" aria-label="${sign === '−' ? 'enlever' : 'mettre'}">${sign}</span>` : ''}</span><span class="dress-name">${label(i)}</span></li>`;
   const f = data.f;
   const feels = Math.abs(f[1] - f[0]) >= 2 ? `${f[0]}° → ${f[1]}°` : `${f[0]}°`;
   const changes = data.c.map(([time, remove, add]) => `<div class="change"><p class="change-time">Vers ${hourFr(time)}</p>
-      <ul class="dress small">${remove.map((i) => tile(i, '−')).join('')}${add.map((i) => tile(i, '+')).join('')}</ul></div>`).join('');
+      <ul class="dress small">${remove.map((i) => tile(i, '−', 40)).join('')}${add.map((i) => tile(i, '+', 40)).join('')}</ul></div>`).join('');
   const bag = data.s.length
-    ? `<section class="card"><h2 class="card-title">Dans le sac</h2><ul class="bag-list">${data.s.map((b) => `<li><span class="dress-ico">${drawingSvg(ITEM_DRAWINGS[b[0]], { size: 28 })}</span>
-        <span><strong>${label(b[0])}</strong>${bagReason(b) ? `<span class="hint"> · ${esc(bagReason(b))}</span>` : ''}</span></li>`).join('')}</ul></section>`
+    ? `<div class="bag"><h3 class="bag-title">Dans le sac</h3><ul class="bag-list">${data.s.map((b) => `<li><span class="dress-ico">${garment(ITEM_DRAWINGS[b[0]], { size: 30 })}</span>
+        <span class="bag-text"><strong>${label(b[0])}</strong>${bagReason(b) ? `<span class="hint">${esc(capitalize(bagReason(b)))}</span>` : ''}</span></li>`).join('')}</ul></div>`
     : '';
   document.title = `${data.p ? `${data.p} · ` : ''}${dayLong(data.d)} · Superbébé`;
-  show(`<header class="hero hero--clair fiche-hero">
-      <p class="hero-label">${esc(capitalize(dayLong(data.d)))}</p>
-      <p class="hero-big words">${esc(data.p || 'La journée')}</p>
+  show(`<header class="hero hero--clair"><section class="sky sky--fiche">
+      <h1 class="hero-big words">${esc(data.p || 'La journée')}</h1>
+      <p class="sky-title">${esc(capitalize(dayLong(data.d)))}</p>
       <p class="hero-sub">Ressenti ${esc(feels)} · de ${hourFr(data.h[0])} à ${hourFr(data.h[1])}</p>
-    </header>
+    </section></header>
     <main class="content no-tabbar">
-      <section class="card"><h2 class="card-title">Le matin</h2><ul class="dress">${data.m.map((i) => tile(i)).join('')}</ul>
-        ${changes ? `<div class="changes">${changes}</div>` : ''}</section>
-      ${bag}
+      <section class="card"><h2 class="card-title main">Le matin</h2><ul class="dress">${data.m.map((i) => tile(i)).join('')}</ul>
+        ${changes ? `<div class="changes">${changes}</div>` : ''}
+        ${bag}</section>
       <section class="card"><p>${esc(nightText(M, data.n))}</p>
         <p class="check"><strong>${esc(render(M, 'relay.check_neck', 'short'))}</strong> : ${esc(render(M, 'relay.check_neck', 'text'))}</p></section>
       <div class="share-row">

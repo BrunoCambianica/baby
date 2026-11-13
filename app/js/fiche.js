@@ -94,39 +94,51 @@ export function ficheCanvas(data, M, dayLabel, doc = document) {
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const font = (size, weight = 500) => `${weight} ${size}px -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-  const sky = ctx.createLinearGradient(0, 0, 0, 360);
-  sky.addColorStop(0, '#3b8cf6');
-  sky.addColorStop(1, '#9dcdff');
-  ctx.fillStyle = '#f2f3f7';
+  const font = (size, weight = 500) => `${weight} ${size}px Poppins, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+  // Les couleurs de l'app (style.css) : page chaude, carte du ciel pastel, encre presque noire.
+  const INK = '#1c1b22';
+  const INK_2 = '#56525c';
+  const sky = ctx.createLinearGradient(40, 40, W - 40, 350);
+  sky.addColorStop(0, '#cfe4fb');
+  sky.addColorStop(0.38, '#eef5fd');
+  sky.addColorStop(0.7, '#fff6ee');
+  sky.addColorStop(1, '#ffe7d6');
+  ctx.fillStyle = '#fbf8f5';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, 360);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = font(44, 600);
-  ctx.fillText(dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1), 72, 110);
-  ctx.font = font(92, 750);
-  ctx.fillText(data.p || 'La journée', 72, 220);
-  ctx.font = font(48, 600);
-  ctx.fillText(`Ressenti ${range(data.f)}`, 72, 300);
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(40, 40, W - 80, 310, 64);
+  else ctx.rect(40, 40, W - 80, 310);
+  ctx.fill();
+  ctx.fillStyle = INK;
+  ctx.font = font(88, 700);
+  ctx.fillText(fit(ctx, data.p || 'La journée', W - 192), 96, 158);
+  ctx.font = font(42, 600);
+  ctx.fillText(dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1), 96, 232);
+  ctx.fillStyle = INK_2;
+  ctx.font = font(42, 500);
+  ctx.fillText(`Ressenti ${range(data.f)}`, 96, 298);
 
   // Tenue du matin : un dessin par vêtement, nom dessous, quatre par rangée.
-  let y = 420;
-  ctx.fillStyle = '#5b6474';
-  ctx.font = font(36, 650);
+  let y = 430;
+  ctx.fillStyle = INK_2;
+  ctx.font = font(36, 600);
   ctx.fillText(`Le matin, dès ${hourFr(data.h[0])}`, 72, y);
   y += 30;
   const cell = 234;
   data.m.forEach((item, i) => {
     const x = 72 + (i % 4) * cell;
     const top = y + Math.floor(i / 4) * 220;
-    ctx.fillStyle = '#e8f0fe';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#efe9e4';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, top, 200, 150, 32);
+    if (ctx.roundRect) ctx.roundRect(x, top, 200, 150, 40);
     else ctx.rect(x, top, 200, 150);
     ctx.fill();
-    drawItem(ctx, ITEM_DRAWINGS[item], x + 50, top + 25, 100, '#2f6fd8');
-    ctx.fillStyle = '#1d2a3a';
+    ctx.stroke();
+    drawItem(ctx, ITEM_DRAWINGS[item], x + 50, top + 25, 100, '#57527f');
+    ctx.fillStyle = INK;
     ctx.font = font(28, 600);
     ctx.textAlign = 'center';
     ctx.fillText(fit(ctx, capitalize(M.labels.items_short[item] ?? item), 220), x + 100, top + 192);
@@ -134,7 +146,7 @@ export function ficheCanvas(data, M, dayLabel, doc = document) {
   });
   y += Math.ceil(data.m.length / 4) * 220 + 40;
 
-  ctx.fillStyle = '#1d2a3a';
+  ctx.fillStyle = INK;
   const lines = [
     ...data.c.map((c) => changeText(M, c)),
     data.s.length ? `Dans le sac : ${data.s.map((b) => M.labels.items_short[b[0]] ?? b[0]).join(', ')}` : '',
@@ -143,7 +155,7 @@ export function ficheCanvas(data, M, dayLabel, doc = document) {
   ctx.font = font(38, 600);
   for (const line of lines) y = wrap(ctx, line, 72, y, W - 144, 50) + 18;
 
-  ctx.fillStyle = '#5b6474';
+  ctx.fillStyle = INK_2;
   ctx.font = font(32, 500);
   y = wrap(ctx, render(M, 'relay.check_neck', 'card'), 72, y + 20, W - 144, 42);
   const height = Math.max(1350, y + 90);
